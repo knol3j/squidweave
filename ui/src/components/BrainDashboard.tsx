@@ -1,0 +1,746 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { motion } from 'motion/react';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import {
+  Activity,
+  Bot,
+  BrainCircuit,
+  Cable,
+  ClipboardList,
+  FolderKanban,
+  ExternalLink,
+  Globe2,
+  Inbox,
+  MemoryStick,
+  Network,
+  Play,
+  Sparkles,
+  Target,
+  Workflow,
+} from 'lucide-react';
+import { useCollaboration } from './CollaborationProvider';
+import { ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
+
+type BrainState = {
+  campaigns?: Record<string, any>;
+  decisions?: any[];
+  contentPacks?: any[];
+  automationRuns?: any[];
+  memory?: {
+    targetProfiles?: TargetProfile[];
+    tacticObservations?: any[];
+    playbooks?: MemoryPlaybook[];
+    memoryConsolidations?: any[];
+  };
+  scheduler?: {
+    running: boolean;
+    intervalSeconds: number;
+    lastTickAt: string | null;
+  };
+};
+
+const TABS = ['Knowledge Graph', 'Research Feed', 'Memory Recall', 'Reengagement'] as const;
+
+function shortDate(value?: string | null) {
+  if (!value) {
+    return 'No live timestamp';
+  }
+  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function percent(value?: number | null) {
+  if (typeof value !== 'number') {
+    return 'N/A';
+  }
+  return `${Math.round(value * 100)}%`;
+}
+
+function buildGraphNodes(state: BrainState, campaign: any) {
+  const latestPack = state.contentPacks?.at(-1);
+  const latestDecision = state.decisions?.at(-1);
+  const locales = campaign?.locales?.length ? campaign.locales : [];
+  const modules = campaign?.enabledModules?.slice(0, 5) || [];
+  const playbooks = state.memory?.playbooks?.slice(0, 2) || [];
+
+  const nodes = [
+    { id: 'brain', label: 'Local Brain', x: 50, y: 48, size: 18, tone: 'bg-violet-500' },
+    { id: 'campaign', label: campaign?.name || campaign?.id || 'Campaign', x: 27, y: 32, size: 14, tone: 'bg-indigo-500' },
+  ];
+
+  if (latestDecision?.plan?.recommendedAction?.type) {
+    nodes.push({
+      id: 'decision',
+      label: latestDecision.plan.recommendedAction.type,
+      x: 36,
+      y: 70,
+      size: 12,
+      tone: 'bg-sky-500',
+    });
+  }
+
+  locales.forEach((locale: string, index: number) => {
+    nodes.push({
+      id: `locale-${locale}`,
+      label: locale,
+      x: 66 + index * 9,
+      y: 26 + (index % 2) * 17,
+      size: 11,
+      tone: 'bg-amber-400',
+    });
+  });
+
+  modules.forEach((module: string, index: number) => {
+    nodes.push({
+      id: `module-${module}`,
+      label: module,
+      x: 18 + (index * 10),
+      y: 82,
+      size: 10,
+      tone: 'bg-emerald-500',
+    });
+  });
+
+  playbooks.forEach((playbook, index) => {
+    nodes.push({
+      id: `playbook-${playbook.id}`,
+      label: `${playbook.segment}/${playbook.recommendedChannel}`,
+      x: 74 + (index * 10),
+      y: 56,
+      size: 10,
+      tone: 'bg-rose-400',
+    });
+  });
+
+  (latestPack?.variants || []).slice(0, 2).forEach((variant: any, index: number) => {
+    nodes.push({
+      id: `variant-${variant.locale}`,
+      label: variant.locale,
+      x: 80 + index * 8,
+      y: 72,
+      size: 10,
+      tone: 'bg-fuchsia-400',
+    });
+  });
+
+  const edges = [
+    ['brain', 'campaign'],
+    ...locales.map((locale: string) => ['brain', `locale-${locale}`]),
+    ...modules.map((module: string) => ['campaign', `module-${module}`]),
+    ...playbooks.map((playbook) => ['brain', `playbook-${playbook.id}`]),
+    ...(latestPack?.variants || []).slice(0, 2).map((variant: any) => ['brain', `variant-${variant.locale}`]),
+  ];
+
+  if (latestDecision?.plan?.recommendedAction?.type) {
+    edges.push(['brain', 'decision']);
+  }
+
+  return { nodes, edges };
+}
+
+export default function BrainDashboard() {
+  const { campaignState } = useCollaboration();
+  const [state, setState] = useState<BrainState>({});
+  const [activeTab, setActiveTab] = useState<typeof TABS[number]>('Knowledge Graph');
+  const [recall, setRecall] = useState<MemoryRecall | null>(null);
+  const [reengagement, setReengagement] = useState<{ updatedAt: string; queue: any[] } | null>(null);
+  const [researchRecords, setResearchRecords] = useState<ResearchRecord[]>([]);
+  const [targetDecision, setTargetDecision] = useState<any>(null);
+  const [connectorStatuses, setConnectorStatuses] = useState<ConnectorStatus[]>([]);
+  const [connectorDrafts, setConnectorDrafts] = useState<Record<string, { baseUrl: string; token: string }>>({});
+  const [connectorSaving, setConnectorSaving] = useState<string | null>(null);
+  const [connectorMessage, setConnectorMessage] = useState<string | null>(null);
+  const [analyticsEvents, setAnalyticsEvents] = useState<any[]>([]);
+  const [outreachEvents, setOutreachEvents] = useState<any[]>([]);
+  const [setupRequirements, setSetupRequirements] = useState<SetupRequirements | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      try {
+        const [nextState, nextRecall, nextReengagement, nextResearch, nextDecision, nextConnectors, nextAnalytics, nextOutreach, nextRequirements] = await Promise.all([
+          dataService.getState(),
+          dataService.getMemoryRecall(campaignState.id || 'main-campaign'),
+          dataService.getReengagementQueue(campaignState.id || 'main-campaign'),
+          dataService.getResearchRecords(campaignState.id || 'main-campaign'),
+          dataService.getTargetDecision(campaignState.id || 'main-campaign'),
+          dataService.getConnectorStatuses(false),
+          dataService.getAnalyticsEvents(campaignState.id || 'main-campaign'),
+          dataService.getOutreachEvents(campaignState.id || 'main-campaign'),
+          dataService.getSetupRequirements(),
+        ]);
+        if (active) {
+          setState(nextState);
+          setRecall(nextRecall);
+          setReengagement(nextReengagement);
+          setResearchRecords(nextResearch);
+          setTargetDecision(nextDecision);
+          setConnectorStatuses(nextConnectors);
+          setConnectorDrafts(current => {
+            const next = { ...current };
+            for (const status of nextConnectors) {
+              if (!next[status.connector]) {
+                next[status.connector] = {
+                  baseUrl: status.baseUrl || '',
+                  token: '',
+                };
+              } else if (!next[status.connector].baseUrl && status.baseUrl) {
+                next[status.connector] = {
+                  ...next[status.connector],
+                  baseUrl: status.baseUrl,
+                };
+              }
+            }
+            return next;
+          });
+          setAnalyticsEvents(nextAnalytics);
+          setOutreachEvents(nextOutreach);
+          setSetupRequirements(nextRequirements);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    run();
+    const timer = window.setInterval(run, 4000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [campaignState.id]);
+
+  const decisionSeries = useMemo(() => {
+    const decisions = state.decisions || [];
+    return decisions.slice(-7).map((decision: any) => ({
+      name: shortDate(decision.createdAt),
+      activity: decision.summary?.eventCount || 0,
+      variants: state.contentPacks?.filter((pack: any) => pack.decisionId === decision.id).length || 0,
+    }));
+  }, [state]);
+
+  const cards = useMemo(() => {
+    const latestPack = state.contentPacks?.at(-1);
+    return [
+      {
+        label: 'Agent Studio',
+        value: `${state.contentPacks?.length || 0} packs`,
+        detail: latestPack?.sourceLocale || campaignState.sourceLocale || 'No live source locale',
+        icon: FolderKanban,
+      },
+      {
+        label: 'Memory Layer',
+        value: `${state.memory?.playbooks?.length || 0} playbooks`,
+        detail: `${state.memory?.targetProfiles?.length || 0} target profiles`,
+        icon: MemoryStick,
+      },
+      {
+        label: 'Translation Layer',
+        value: `${campaignState.locales?.length || 0} locales`,
+        detail: campaignState.audience || 'No audience configured',
+        icon: Workflow,
+      },
+      {
+        label: 'Reengagement',
+        value: `${reengagement?.queue?.length || 0} queued`,
+        detail: reengagement?.updatedAt ? `Updated ${shortDate(reengagement.updatedAt)}` : 'No queue built',
+        icon: Target,
+      },
+    ];
+  }, [campaignState, state, reengagement]);
+
+  const { nodes, edges } = useMemo(() => buildGraphNodes(state, campaignState), [state, campaignState]);
+  const latestPack = state.contentPacks?.at(-1);
+  const latestDecision = state.decisions?.at(-1);
+  const playbooks = recall?.proceduralMemories || [];
+  const targetProfiles = recall?.semanticMemories?.targetProfiles || [];
+  const episodicEvents = recall?.episodicMemories?.outreachEvents || [];
+  const rankedTargets = targetDecision?.topTargets || [];
+
+  const saveConnector = async (connector: string) => {
+    const draft = connectorDrafts[connector];
+    if (!draft?.baseUrl || !draft?.token) {
+      setConnectorMessage(`Enter both base URL and token for ${connector}.`);
+      return;
+    }
+
+    setConnectorSaving(connector);
+    setConnectorMessage(null);
+    try {
+      const result = await dataService.updateConnectorConfig(connector, {
+        baseUrl: draft.baseUrl,
+        token: draft.token,
+        probe: true,
+      });
+      setConnectorStatuses(current => current.map(status => status.connector === connector ? result.status : status));
+      setConnectorDrafts(current => ({
+        ...current,
+        [connector]: {
+          baseUrl: result.config.baseUrl || draft.baseUrl,
+          token: '',
+        },
+      }));
+      setConnectorMessage(
+        result.status.mode === 'live'
+          ? `${connector} token updated and verified.`
+          : `${connector} credentials saved, but probe returned ${result.status.mode}.`,
+      );
+    } catch (error) {
+      setConnectorMessage(error instanceof Error ? error.message : `Failed to update ${connector}.`);
+    } finally {
+      setConnectorSaving(null);
+    }
+  };
+
+  return (
+    <div className="h-full overflow-y-auto px-6 py-5 custom-scrollbar bg-[#f7f4fb] text-slate-900">
+      <div className="mx-auto max-w-7xl space-y-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Brain</div>
+            <h2 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Agent Platform</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {campaignState.locales?.join(' • ') || 'No locales configured'} · {campaignState.channel || 'No channel configured'} · persistent memory recall with live reengagement timing
+            </p>
+          </div>
+          <button
+            onClick={() => dataService.runAutomation(campaignState.id || 'main-campaign', 'brain-dashboard')}
+            className="inline-flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 shadow-sm hover:bg-violet-100"
+          >
+            <Play className="h-4 w-4" />
+            Trigger Brain
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {cards.map(card => (
+            <div key={card.label} className="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-[0_8px_30px_rgba(102,70,170,0.06)]">
+              <div className="flex items-center gap-2 text-violet-500">
+                <div className="rounded-full bg-violet-50 p-1.5">
+                  <card.icon className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-semibold text-slate-500">{card.label}</span>
+              </div>
+              <div className="mt-4 text-xl font-semibold text-slate-900">{card.value}</div>
+              <div className="mt-1 text-xs text-slate-400">{card.detail}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-[0_8px_30px_rgba(102,70,170,0.06)]">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Sparkles className="h-4 w-4 text-violet-500" />
+              Weekly Activity
+            </div>
+            <div className="text-xs text-slate-400">{state.decisions?.length || 0} decisions</div>
+          </div>
+          <div className="h-28">
+            {decisionSeries.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                No live decision history yet.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={decisionSeries}>
+                  <defs>
+                    <linearGradient id="brain-activity" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.45} />
+                      <stop offset="95%" stopColor="#a78bfa" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="brain-variants" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#c4b5fd" stopOpacity={0.28} />
+                      <stop offset="95%" stopColor="#c4b5fd" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="#efeaf8" />
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#9a90ab' }} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #ede7f8', borderRadius: '16px', fontSize: '12px' }} />
+                  <Area type="monotone" dataKey="variants" stroke="#ddd6fe" fill="url(#brain-variants)" strokeWidth={1.5} />
+                  <Area type="monotone" dataKey="activity" stroke="#8b5cf6" fill="url(#brain-activity)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-[28px] border border-slate-200 bg-white shadow-[0_8px_30px_rgba(102,70,170,0.06)]">
+          <div className="border-b border-slate-100 px-5 pt-4">
+            <div className="flex gap-6 text-sm">
+              {TABS.map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`border-b-2 pb-3 transition-colors ${
+                    activeTab === tab ? 'border-violet-500 text-violet-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-0 xl:grid-cols-[1.8fr_0.9fr]">
+            <div className="min-h-[470px] border-r border-slate-100 p-5">
+              {activeTab === 'Knowledge Graph' && (
+                <div className="relative h-full min-h-[430px] overflow-hidden rounded-[24px] bg-[#fcfbfe]">
+                  <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+                    {edges.map(([from, to], index) => {
+                      const a = nodes.find(node => node.id === from);
+                      const b = nodes.find(node => node.id === to);
+                      if (!a || !b) return null;
+                      return <line key={`${from}-${to}-${index}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#ddd6fe" strokeWidth="0.35" />;
+                    })}
+                  </svg>
+                  {nodes.map(node => (
+                    <motion.div
+                      key={node.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                    >
+                      <div className={`rounded-full ${node.tone} shadow-[0_0_0_12px_rgba(167,139,250,0.06)]`} style={{ width: node.size * 2, height: node.size * 2 }} />
+                      <div className="mt-2 whitespace-nowrap text-center text-[11px] font-medium text-slate-600">{node.label}</div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'Memory Recall' && (
+                <div className="space-y-3">
+                  {playbooks.length === 0 ? (
+                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-slate-50 text-sm text-slate-400">
+                      No procedural memory has been promoted yet.
+                    </div>
+                  ) : (
+                    playbooks.map(playbook => (
+                      <div key={playbook.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-slate-800">{playbook.segment} · {playbook.region}</div>
+                          <div className="text-xs font-semibold text-violet-600">{percent(playbook.confidence)}</div>
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500">
+                          {playbook.recommendedChannel} every {playbook.cadenceDays} days · win rate {percent(playbook.winRate)} · risk {percent(playbook.riskRate)}
+                        </div>
+                        <div className="mt-2 text-sm text-slate-600">{playbook.rationale}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'Research Feed' && (
+                <div className="space-y-3">
+                  {researchRecords.length === 0 ? (
+                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-slate-50 text-sm text-slate-400">
+                      No sourced research records have been ingested yet.
+                    </div>
+                  ) : (
+                    researchRecords
+                      .slice()
+                      .sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
+                      .map(record => (
+                        <div key={record.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <div className="text-sm font-medium text-slate-800">{record.company || record.targetId}</div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                {record.segment || 'No segment'} · {record.region || 'No region'} · {record.preferredChannel || 'No preferred channel'}
+                              </div>
+                            </div>
+                            {record.metadata?.sourceUrl && (
+                              <a
+                                href={record.metadata.sourceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-700"
+                              >
+                                Source
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
+                          <div className="mt-3 text-sm text-slate-600">{record.notes || 'No analyst note recorded.'}</div>
+                          <div className="mt-3 grid gap-2 md:grid-cols-3">
+                            <div className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-500">Fit {percent(record.fitScore)}</div>
+                            <div className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-500">Intent {percent(record.intentScore)}</div>
+                            <div className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-500">Recency {percent(record.recencyScore)}</div>
+                          </div>
+                          {!!record.metadata?.evidence?.length && (
+                            <div className="mt-3 space-y-1">
+                              {record.metadata.evidence.slice(0, 3).map((item, index) => (
+                                <div key={`${record.id}-evidence-${index}`} className="text-xs text-slate-500">
+                                  {item}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'Reengagement' && (
+                <div className="space-y-3">
+                  {(reengagement?.queue || []).length === 0 ? (
+                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-slate-50 text-sm text-slate-400">
+                      No reengagement queue is ready yet.
+                    </div>
+                  ) : (
+                    reengagement?.queue.map((target: any) => (
+                      <div key={target.targetId} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-slate-800">{target.company || target.targetId}</div>
+                          <div className="text-xs text-slate-500">{target.recommendedChannel || 'No channel'}</div>
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500">
+                          next touch {shortDate(target.nextEligibleAt)} · score {percent(target.score)}
+                        </div>
+                        <div className="mt-2 text-sm text-slate-600">{(target.reasons || []).join(' · ') || 'No memory-backed reason recorded.'}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4 p-5">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <BrainCircuit className="h-4 w-4 text-violet-500" />
+                  Brain Summary
+                </div>
+                <div className="mt-4 space-y-3 text-sm text-slate-600">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Latest Action</div>
+                    <div className="mt-1 font-medium text-slate-800">{latestDecision?.plan?.recommendedAction?.type || 'No live action'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Memory Status</div>
+                    <div className="mt-1">{state.memory?.memoryConsolidations?.length ? `Consolidated ${state.memory.memoryConsolidations.length} times` : 'No consolidation history yet'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Where Data Lives</div>
+                    <div className="mt-1">{campaignState.channel || 'No channel configured'} · {analyticsEvents.length} analytics · {outreachEvents.length} outreach</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <MemoryStick className="h-4 w-4 text-violet-500" />
+                  Memory Recall
+                </div>
+                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <div className="flex justify-between">
+                    <span>Playbooks</span>
+                    <span>{playbooks.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Target Profiles</span>
+                    <span>{targetProfiles.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Episodic Events</span>
+                    <span>{episodicEvents.length}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <Inbox className="h-4 w-4 text-violet-500" />
+                  Signal Intake
+                </div>
+                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <div className="flex justify-between">
+                    <span>Research Records</span>
+                    <span>{researchRecords.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Outreach Events</span>
+                    <span>{outreachEvents.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Analytics Events</span>
+                    <span>{analyticsEvents.length}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <Cable className="h-4 w-4 text-violet-500" />
+                  Connector Rails
+                </div>
+                <div className="mt-4 space-y-2">
+                  {connectorStatuses.map(status => (
+                    <div key={status.connector} className="rounded-2xl bg-white px-3 py-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-semibold text-slate-700">{status.connector}</div>
+                        <div className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                          status.mode === 'live' || status.mode === 'ready'
+                            ? 'text-emerald-600'
+                            : status.mode === 'dry-run'
+                              ? 'text-amber-600'
+                              : status.mode === 'auth-error'
+                                ? 'text-rose-600'
+                                : 'text-slate-400'
+                        }`}>
+                          {status.mode}
+                        </div>
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {status.configured ? status.baseUrl || 'Configured' : 'Missing base URL or token'}
+                      </div>
+                      {status.tokenLikelyRotated && (
+                        <div className="mt-1 text-[11px] text-rose-500">Token rejected by connector. Replace it below.</div>
+                      )}
+                      {status.error && <div className="mt-1 text-[11px] text-rose-500">{status.error}</div>}
+                      <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                        <input
+                          value={connectorDrafts[status.connector]?.baseUrl || ''}
+                          onChange={event => setConnectorDrafts(current => ({
+                            ...current,
+                            [status.connector]: {
+                              baseUrl: event.target.value,
+                              token: current[status.connector]?.token || '',
+                            },
+                          }))}
+                          placeholder={`${status.connector} base URL`}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-violet-300"
+                        />
+                        <input
+                          type="password"
+                          value={connectorDrafts[status.connector]?.token || ''}
+                          onChange={event => setConnectorDrafts(current => ({
+                            ...current,
+                            [status.connector]: {
+                              baseUrl: current[status.connector]?.baseUrl || status.baseUrl || '',
+                              token: event.target.value,
+                            },
+                          }))}
+                          placeholder={`New ${status.connector} token`}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-violet-300"
+                        />
+                        <button
+                          onClick={() => saveConnector(status.connector)}
+                          disabled={connectorSaving === status.connector}
+                          className="w-full rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {connectorSaving === status.connector ? 'Saving...' : `Update ${status.connector}`}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {connectorStatuses.length === 0 && (
+                    <div className="text-xs text-slate-400">No connector rails discovered.</div>
+                  )}
+                  {connectorMessage && (
+                    <div className="text-xs text-slate-500">{connectorMessage}</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <ClipboardList className="h-4 w-4 text-violet-500" />
+                  Setup Requirements
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Live Connector Env</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(setupRequirements?.environment.requiredForLiveConnectors || []).map(item => (
+                        <span key={item} className="rounded-full bg-white px-2.5 py-1 text-[11px] text-slate-600">{item}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Accepted Outreach Events</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(setupRequirements?.outreachEventTypes || []).map(item => (
+                        <span key={item} className="rounded-full bg-white px-2.5 py-1 text-[11px] text-slate-600">{item}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <Target className="h-4 w-4 text-violet-500" />
+                  Top Targets
+                </div>
+                <div className="mt-4 space-y-2">
+                  {rankedTargets.slice(0, 3).map((profile: any) => (
+                    <div key={profile.id} className="rounded-2xl bg-white px-3 py-2">
+                      <div className="text-xs font-semibold text-slate-700">{profile.company || profile.targetId}</div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {profile.segment || 'No segment'} · {profile.recommendedChannel || 'No channel'} · {profile.recommendation || 'no recommendation'}
+                      </div>
+                    </div>
+                  ))}
+                  {rankedTargets.length === 0 && (
+                    <div className="text-xs text-slate-400">No memory-backed targets available yet.</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <Bot className="h-4 w-4 text-violet-500" />
+                  Scheduler
+                </div>
+                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <div className="flex justify-between">
+                    <span>Status</span>
+                    <span className={state.scheduler?.running ? 'text-emerald-600' : 'text-slate-500'}>
+                      {state.scheduler?.running ? 'Running' : 'Stopped'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Interval</span>
+                    <span>{state.scheduler?.intervalSeconds ? `${state.scheduler.intervalSeconds}s` : 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Last Tick</span>
+                    <span>{shortDate(state.scheduler?.lastTickAt || undefined)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <Sparkles className="h-4 w-4 text-violet-500" />
+                  Agent Studio Output
+                </div>
+                <div className="mt-4 space-y-2">
+                  {(latestPack?.variants || []).slice(0, 3).map((variant: any) => (
+                    <div key={variant.locale} className="rounded-2xl bg-white px-3 py-2">
+                      <div className="text-xs font-semibold text-slate-700">{variant.locale}</div>
+                      <div className="mt-1 text-xs text-slate-500">{variant.cta}</div>
+                    </div>
+                  ))}
+                  {!(latestPack?.variants || []).length && (
+                    <div className="text-xs text-slate-400">No live content pack available.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

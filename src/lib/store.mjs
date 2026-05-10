@@ -1,0 +1,227 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const defaultState = () => ({
+  campaigns: {},
+  connectorConfigs: {},
+  analyticsEvents: [],
+  researchRecords: [],
+  outreachEvents: [],
+  targetProfiles: [],
+  tacticObservations: [],
+  playbooks: [],
+  memoryConsolidations: [],
+  decisions: [],
+  contentPacks: [],
+  automationRuns: [],
+});
+
+export class Store {
+  constructor(fileUrl) {
+    this.fileUrl = fileUrl;
+    this.state = defaultState();
+  }
+
+  async init() {
+    await mkdir(dirname(fileURLToPath(this.fileUrl)), { recursive: true });
+    try {
+      const raw = await readFile(this.fileUrl, "utf8");
+      this.state = { ...defaultState(), ...JSON.parse(raw) };
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        throw error;
+      }
+      await this.persist();
+    }
+    return this;
+  }
+
+  async persist() {
+    await writeFile(this.fileUrl, JSON.stringify(this.state, null, 2));
+  }
+
+  listCampaigns() {
+    return Object.values(this.state.campaigns);
+  }
+
+  getCampaign(campaignId) {
+    return this.state.campaigns[campaignId] || null;
+  }
+
+  async upsertCampaign(campaign) {
+    const current = this.getCampaign(campaign.id);
+    this.state.campaigns[campaign.id] = {
+      ...current,
+      ...campaign,
+      lastUpdatedAt: new Date().toISOString(),
+    };
+    await this.persist();
+    return this.state.campaigns[campaign.id];
+  }
+
+  listConnectorConfigs() {
+    return { ...this.state.connectorConfigs };
+  }
+
+  getConnectorConfig(connectorName) {
+    return this.state.connectorConfigs[connectorName] || null;
+  }
+
+  async upsertConnectorConfig(connectorName, config) {
+    this.state.connectorConfigs[connectorName] = {
+      ...this.getConnectorConfig(connectorName),
+      ...config,
+      connector: connectorName,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.persist();
+    return this.state.connectorConfigs[connectorName];
+  }
+
+  listEvents(campaignId) {
+    if (!campaignId) {
+      return [...this.state.analyticsEvents];
+    }
+    return this.state.analyticsEvents.filter(event => event.campaignId === campaignId);
+  }
+
+  async addEvent(event) {
+    this.state.analyticsEvents.push(event);
+    await this.persist();
+    return event;
+  }
+
+  listResearchRecords(campaignId) {
+    if (!campaignId) {
+      return [...this.state.researchRecords];
+    }
+    return this.state.researchRecords.filter(record => record.campaignId === campaignId);
+  }
+
+  async addResearchRecord(record) {
+    this.state.researchRecords.push(record);
+    await this.persist();
+    return record;
+  }
+
+  listOutreachEvents(campaignId, targetId) {
+    return this.state.outreachEvents.filter(event => {
+      if (campaignId && event.campaignId !== campaignId) {
+        return false;
+      }
+      if (targetId && event.targetId !== targetId) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  async addOutreachEvent(event) {
+    this.state.outreachEvents.push(event);
+    await this.persist();
+    return event;
+  }
+
+  listTargetProfiles(campaignId) {
+    if (!campaignId) {
+      return [...this.state.targetProfiles];
+    }
+    return this.state.targetProfiles.filter(profile => profile.campaignId === campaignId);
+  }
+
+  async replaceTargetProfiles(campaignId, profiles) {
+    this.state.targetProfiles = this.state.targetProfiles.filter(profile => profile.campaignId !== campaignId);
+    this.state.targetProfiles.push(...profiles);
+    await this.persist();
+    return profiles;
+  }
+
+  listTacticObservations(campaignId) {
+    if (!campaignId) {
+      return [...this.state.tacticObservations];
+    }
+    return this.state.tacticObservations.filter(observation => observation.campaignId === campaignId);
+  }
+
+  async replaceTacticObservations(campaignId, observations) {
+    this.state.tacticObservations = this.state.tacticObservations.filter(observation => observation.campaignId !== campaignId);
+    this.state.tacticObservations.push(...observations);
+    await this.persist();
+    return observations;
+  }
+
+  listPlaybooks(campaignId) {
+    if (!campaignId) {
+      return [...this.state.playbooks];
+    }
+    return this.state.playbooks.filter(playbook => playbook.campaignId === campaignId);
+  }
+
+  async replacePlaybooks(campaignId, playbooks) {
+    this.state.playbooks = this.state.playbooks.filter(playbook => playbook.campaignId !== campaignId);
+    this.state.playbooks.push(...playbooks);
+    await this.persist();
+    return playbooks;
+  }
+
+  listMemoryConsolidations(campaignId) {
+    if (!campaignId) {
+      return [...this.state.memoryConsolidations];
+    }
+    return this.state.memoryConsolidations.filter(snapshot => snapshot.campaignId === campaignId);
+  }
+
+  async addMemoryConsolidation(snapshot) {
+    this.state.memoryConsolidations.push(snapshot);
+    await this.persist();
+    return snapshot;
+  }
+
+  async addDecision(decision) {
+    this.state.decisions.push(decision);
+    await this.persist();
+    return decision;
+  }
+
+  listDecisions(campaignId) {
+    if (!campaignId) {
+      return [...this.state.decisions];
+    }
+    return this.state.decisions.filter(decision => decision.campaignId === campaignId);
+  }
+
+  async addContentPack(contentPack) {
+    this.state.contentPacks.push(contentPack);
+    await this.persist();
+    return contentPack;
+  }
+
+  listContentPacks(campaignId) {
+    if (!campaignId) {
+      return [...this.state.contentPacks];
+    }
+    return this.state.contentPacks.filter(pack => pack.campaignId === campaignId);
+  }
+
+  getLatestContentPack(campaignId) {
+    return this.listContentPacks(campaignId).at(-1) || null;
+  }
+
+  async addAutomationRun(run) {
+    this.state.automationRuns.push(run);
+    await this.persist();
+    return run;
+  }
+
+  listAutomationRuns(campaignId) {
+    if (!campaignId) {
+      return [...this.state.automationRuns];
+    }
+    return this.state.automationRuns.filter(run => run.campaignId === campaignId);
+  }
+
+  snapshot() {
+    return structuredClone(this.state);
+  }
+}

@@ -1,0 +1,133 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { normalizeOutreachEvent, normalizeResearchRecord, TargetingEngine } from "../src/lib/targeting-engine.mjs";
+
+function createStore(records = [], outreachEvents = []) {
+  return {
+    listResearchRecords(campaignId) {
+      return records.filter(record => !campaignId || record.campaignId === campaignId);
+    },
+    listOutreachEvents(campaignId, targetId) {
+      return outreachEvents.filter(event => {
+        if (campaignId && event.campaignId !== campaignId) {
+          return false;
+        }
+        if (targetId && event.targetId !== targetId) {
+          return false;
+        }
+        return true;
+      });
+    },
+    listPlaybooks(campaignId) {
+      return [];
+    },
+  };
+}
+
+test("TargetingEngine ranks fresh high-intent targets above suppressed ones", () => {
+  const records = [
+    normalizeResearchRecord({
+      campaignId: "c1",
+      targetId: "t1",
+      company: "Alpha",
+      fitScore: 0.92,
+      intentScore: 0.88,
+      recencyScore: 0.81,
+      capturedAt: "2026-05-07T12:00:00.000Z",
+    }),
+    normalizeResearchRecord({
+      campaignId: "c1",
+      targetId: "t2",
+      company: "Beta",
+      fitScore: 0.9,
+      intentScore: 0.85,
+      recencyScore: 0.8,
+      capturedAt: "2026-05-07T12:00:00.000Z",
+    }),
+  ];
+  const outreachEvents = [
+    normalizeOutreachEvent({
+      campaignId: "c1",
+      targetId: "t2",
+      type: "unsubscribe",
+      timestamp: "2026-05-07T13:00:00.000Z",
+    }),
+  ];
+
+  const engine = new TargetingEngine({ store: createStore(records, outreachEvents) });
+  const rankings = engine.rankTargets("c1");
+
+  assert.equal(rankings[0].targetId, "t1");
+  assert.equal(rankings[1].recommendation, "suppress");
+  assert.equal(rankings[1].score, 0);
+});
+
+test("TargetingEngine builds a reengagement queue from real outreach timing", () => {
+  const records = [
+    normalizeResearchRecord({
+      campaignId: "c1",
+      targetId: "t3",
+      company: "Gamma",
+      fitScore: 0.8,
+      intentScore: 0.76,
+      recencyScore: 0.72,
+      capturedAt: "2026-05-01T12:00:00.000Z",
+    }),
+  ];
+  const outreachEvents = [
+    normalizeOutreachEvent({
+      campaignId: "c1",
+      targetId: "t3",
+      type: "open",
+      timestamp: "2026-05-03T12:00:00.000Z",
+    }),
+  ];
+
+  const engine = new TargetingEngine({ store: createStore(records, outreachEvents) });
+  const decision = engine.buildDecision("c1");
+
+  assert.equal(decision.reengagementQueue.length, 1);
+  assert.equal(decision.reengagementQueue[0].targetId, "t3");
+  assert.equal(decision.reengagementQueue[0].recommendation, "reengage");
+});
+
+test("TargetingEngine uses learned cadence days for sent-only outreach", () => {
+  const records = [
+    normalizeResearchRecord({
+      campaignId: "c1",
+      targetId: "t4",
+      company: "Delta",
+      fitScore: 0.84,
+      intentScore: 0.79,
+      recencyScore: 0.74,
+      preferredChannel: "linkedin",
+      segment: "b2b-tech-saas",
+      region: "global",
+      capturedAt: "2026-05-07T12:00:00.000Z",
+    }),
+  ];
+  const outreachEvents = [
+    normalizeOutreachEvent({
+      campaignId: "c1",
+      targetId: "t4",
+      type: "sent",
+      channel: "linkedin",
+      timestamp: "2026-05-06T12:00:00.000Z",
+    }),
+  ];
+  const store = createStore(records, outreachEvents);
+  store.listPlaybooks = () => [{
+    id: "pb-1",
+    segment: "b2b-tech-saas",
+    region: "global",
+    recommendedChannel: "linkedin",
+    cadenceDays: 5,
+    confidence: 0.8,
+  }];
+
+  const engine = new TargetingEngine({ store });
+  const rankings = engine.rankTargets("c1");
+
+  assert.match(rankings[0].nextEligibleAt, /^2026-05-11T12:00:00.000Z$/);
+  assert.equal(rankings[0].recommendation, "wait");
+});
