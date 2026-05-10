@@ -135,6 +135,20 @@ export interface ConnectorStatus {
   error: string | null;
   tokenLikelyRotated?: boolean;
   lastAuthErrorAt?: string | null;
+  diagnosis?: OpenClawDiagnostic;
+}
+
+export interface OpenClawDiagnostic {
+  connector: string;
+  configured: boolean;
+  baseUrl: string | null;
+  gatewayReachable: boolean;
+  authAccepted: boolean;
+  openAiHttpSurfaceReachable: boolean;
+  requiresOpenAiHttpSurface: boolean;
+  ready: boolean;
+  summary: string;
+  recommendations: string[];
 }
 
 export interface ConnectorConfig {
@@ -160,6 +174,11 @@ export interface SetupRequirements {
     outreach: string[];
     analytics: string[];
   };
+}
+
+export interface OpenClawDiagnosticResponse {
+  generatedAt: string;
+  diagnostics: OpenClawDiagnostic[];
 }
 
 export interface ResearchRecord {
@@ -333,6 +352,10 @@ export const dataService = {
 
   async getSetupRequirements() {
     return api<SetupRequirements>('/setup/requirements');
+  },
+
+  async getOpenClawDiagnostics() {
+    return api<OpenClawDiagnosticResponse>('/diagnostics/openclaw');
   },
 
   async getConnectorConfig(connector: string) {

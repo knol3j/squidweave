@@ -1,7 +1,8 @@
-import { BaseConnector } from "./base.mjs";
+import { OpenclawConnector } from "./openclaw.mjs";
 
-export class ClawdbotConnector extends BaseConnector {
+export class ClawdbotConnector extends OpenclawConnector {
   constructor(options) {
-    super("clawdbot", options);
+    super(options);
+    this.name = "clawdbot";
   }
 }

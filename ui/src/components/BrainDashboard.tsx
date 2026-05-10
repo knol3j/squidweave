@@ -27,7 +27,7 @@ import {
   Workflow,
 } from 'lucide-react';
 import { useCollaboration } from './CollaborationProvider';
-import { ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
+import { ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, OpenClawDiagnostic, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
 
 type BrainState = {
   campaigns?: Record<string, any>;
@@ -160,12 +160,13 @@ export default function BrainDashboard() {
   const [analyticsEvents, setAnalyticsEvents] = useState<any[]>([]);
   const [outreachEvents, setOutreachEvents] = useState<any[]>([]);
   const [setupRequirements, setSetupRequirements] = useState<SetupRequirements | null>(null);
+  const [openClawDiagnostics, setOpenClawDiagnostics] = useState<OpenClawDiagnostic[]>([]);
 
   useEffect(() => {
     let active = true;
     const run = async () => {
       try {
-        const [nextState, nextRecall, nextReengagement, nextResearch, nextDecision, nextConnectors, nextAnalytics, nextOutreach, nextRequirements] = await Promise.all([
+        const [nextState, nextRecall, nextReengagement, nextResearch, nextDecision, nextConnectors, nextAnalytics, nextOutreach, nextRequirements, nextDiagnostics] = await Promise.all([
           dataService.getState(),
           dataService.getMemoryRecall(campaignState.id || 'main-campaign'),
           dataService.getReengagementQueue(campaignState.id || 'main-campaign'),
@@ -175,6 +176,7 @@ export default function BrainDashboard() {
           dataService.getAnalyticsEvents(campaignState.id || 'main-campaign'),
           dataService.getOutreachEvents(campaignState.id || 'main-campaign'),
           dataService.getSetupRequirements(),
+          dataService.getOpenClawDiagnostics(),
         ]);
         if (active) {
           setState(nextState);
@@ -203,6 +205,7 @@ export default function BrainDashboard() {
           setAnalyticsEvents(nextAnalytics);
           setOutreachEvents(nextOutreach);
           setSetupRequirements(nextRequirements);
+          setOpenClawDiagnostics(nextDiagnostics.diagnostics || []);
         }
       } catch (error) {
         console.error(error);
@@ -607,6 +610,11 @@ export default function BrainDashboard() {
                         <div className="mt-1 text-[11px] text-rose-500">Token rejected by connector. Replace it below.</div>
                       )}
                       {status.error && <div className="mt-1 text-[11px] text-rose-500">{status.error}</div>}
+                      {status.diagnosis?.recommendations?.length ? (
+                        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-700">
+                          {status.diagnosis.recommendations[0]}
+                        </div>
+                      ) : null}
                       <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                         <input
                           value={connectorDrafts[status.connector]?.baseUrl || ''}
@@ -645,6 +653,16 @@ export default function BrainDashboard() {
                   ))}
                   {connectorStatuses.length === 0 && (
                     <div className="text-xs text-slate-400">No connector rails discovered.</div>
+                  )}
+                  {openClawDiagnostics.some(item => !item.ready) && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-800">
+                      {openClawDiagnostics.filter(item => !item.ready).map(item => (
+                        <div key={`diagnostic-${item.connector}`} className="mb-2 last:mb-0">
+                          <div className="font-semibold">{item.connector}: {item.summary}</div>
+                          {item.recommendations[0] ? <div className="mt-1">{item.recommendations[0]}</div> : null}
+                        </div>
+                      ))}
+                    </div>
                   )}
                   {connectorMessage && (
                     <div className="text-xs text-slate-500">{connectorMessage}</div>

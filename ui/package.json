@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "vite --configLoader runner --port=3000 --host=0.0.0.0",
+    "build": "vite --configLoader runner build",
+    "preview": "vite --configLoader runner preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },

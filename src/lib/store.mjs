@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { EventEmitter } from "node:events";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,6 +22,8 @@ export class Store {
   constructor(fileUrl) {
     this.fileUrl = fileUrl;
     this.state = defaultState();
+    this.events = new EventEmitter();
+    this.sequence = 0;
   }
 
   async init() {
@@ -41,6 +44,34 @@ export class Store {
     await writeFile(this.fileUrl, JSON.stringify(this.state, null, 2));
   }
 
+  emitChange(collection, operation, payload = {}) {
+    const event = {
+      id: ++this.sequence,
+      collection,
+      operation,
+      timestamp: new Date().toISOString(),
+      ...payload,
+    };
+    this.events.emit("change", event);
+    return event;
+  }
+
+  subscribe(listener) {
+    this.events.on("change", listener);
+    return () => this.events.off("change", listener);
+  }
+
+  getCollection(name) {
+    const value = this.state[name];
+    if (Array.isArray(value)) {
+      return [...value];
+    }
+    if (value && typeof value === "object") {
+      return Object.values(value);
+    }
+    return [];
+  }
+
   listCampaigns() {
     return Object.values(this.state.campaigns);
   }
@@ -57,6 +88,10 @@ export class Store {
       lastUpdatedAt: new Date().toISOString(),
     };
     await this.persist();
+    this.emitChange("campaigns", current ? "update" : "insert", {
+      item: this.state.campaigns[campaign.id],
+      key: campaign.id,
+    });
     return this.state.campaigns[campaign.id];
   }
 
@@ -76,6 +111,10 @@ export class Store {
       updatedAt: new Date().toISOString(),
     };
     await this.persist();
+    this.emitChange("connectorConfigs", "upsert", {
+      item: this.state.connectorConfigs[connectorName],
+      key: connectorName,
+    });
     return this.state.connectorConfigs[connectorName];
   }
 
@@ -89,6 +128,7 @@ export class Store {
   async addEvent(event) {
     this.state.analyticsEvents.push(event);
     await this.persist();
+    this.emitChange("analyticsEvents", "insert", { item: event });
     return event;
   }
 
@@ -102,6 +142,7 @@ export class Store {
   async addResearchRecord(record) {
     this.state.researchRecords.push(record);
     await this.persist();
+    this.emitChange("researchRecords", "insert", { item: record });
     return record;
   }
 
@@ -120,6 +161,7 @@ export class Store {
   async addOutreachEvent(event) {
     this.state.outreachEvents.push(event);
     await this.persist();
+    this.emitChange("outreachEvents", "insert", { item: event });
     return event;
   }
 
@@ -134,6 +176,7 @@ export class Store {
     this.state.targetProfiles = this.state.targetProfiles.filter(profile => profile.campaignId !== campaignId);
     this.state.targetProfiles.push(...profiles);
     await this.persist();
+    this.emitChange("targetProfiles", "replace", { campaignId, count: profiles.length });
     return profiles;
   }
 
@@ -148,6 +191,7 @@ export class Store {
     this.state.tacticObservations = this.state.tacticObservations.filter(observation => observation.campaignId !== campaignId);
     this.state.tacticObservations.push(...observations);
     await this.persist();
+    this.emitChange("tacticObservations", "replace", { campaignId, count: observations.length });
     return observations;
   }
 
@@ -162,6 +206,7 @@ export class Store {
     this.state.playbooks = this.state.playbooks.filter(playbook => playbook.campaignId !== campaignId);
     this.state.playbooks.push(...playbooks);
     await this.persist();
+    this.emitChange("playbooks", "replace", { campaignId, count: playbooks.length });
     return playbooks;
   }
 
@@ -175,12 +220,14 @@ export class Store {
   async addMemoryConsolidation(snapshot) {
     this.state.memoryConsolidations.push(snapshot);
     await this.persist();
+    this.emitChange("memoryConsolidations", "insert", { item: snapshot });
     return snapshot;
   }
 
   async addDecision(decision) {
     this.state.decisions.push(decision);
     await this.persist();
+    this.emitChange("decisions", "insert", { item: decision });
     return decision;
   }
 
@@ -194,6 +241,7 @@ export class Store {
   async addContentPack(contentPack) {
     this.state.contentPacks.push(contentPack);
     await this.persist();
+    this.emitChange("contentPacks", "insert", { item: contentPack });
     return contentPack;
   }
 
@@ -211,6 +259,7 @@ export class Store {
   async addAutomationRun(run) {
     this.state.automationRuns.push(run);
     await this.persist();
+    this.emitChange("automationRuns", "insert", { item: run });
     return run;
   }
 

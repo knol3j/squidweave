@@ -15,6 +15,7 @@
 - `ui/src/components/AudienceInsight.tsx`: persona view derived from backend target profiles
 - `ui/src/components/ABTestingPanel.tsx`: variation lab derived from generated content packs and telemetry
 - `ui/src/components/Performance.tsx`: analytics and decision summary view derived from persisted metrics
+- `ui/src/lib/squid.tsx`: Squid-style compatibility layer for provider, live query hooks, AI hook shape, and GraphQL access against the local backend
 
 ## Automation Flow
 
