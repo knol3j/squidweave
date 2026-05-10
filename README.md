@@ -30,6 +30,8 @@ npm start
 
 Backend default: `http://127.0.0.1:4010`
 
+The backend now loads `.env` and `.env.local` automatically from the repo root before reading connector or runtime settings.
+
 Useful endpoints:
 
 - `GET /health`
@@ -79,9 +81,29 @@ Optional env:
 VITE_BRAIN_API_BASE=http://127.0.0.1:4010
 ```
 
+## Full Local Launch
+
+Run both the backend and the Vite UI together from the repo root:
+
+```bash
+npm run dev
+```
+
+Expected local URLs:
+
+- backend: `http://127.0.0.1:4010`
+- ui: `http://127.0.0.1:3000`
+
+Before switching connectors out of safe mode:
+
+1. Populate `.env` or `.env.local` with `OPENCLAW_*` and `CLAWDBOT_*`.
+2. Set `DRY_RUN=false` only after `GET /connectors/status?probe=true` returns healthy live connector status.
+3. If you want runtime overrides without editing files, use `POST /connectors/:name/config`.
+
 ## Root Scripts
 
 ```bash
+npm run dev
 npm start
 npm test
 npm run ui:dev

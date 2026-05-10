@@ -10,6 +10,9 @@ import { MemoryEngine } from "./lib/memory-engine.mjs";
 import { AutomationScheduler } from "./lib/scheduler.mjs";
 import { Store } from "./lib/store.mjs";
 import { normalizeOutreachEvent, normalizeResearchRecord, TargetingEngine } from "./lib/targeting-engine.mjs";
+import { QueryEngine } from "./lib/query-engine.mjs";
+import { JobManager } from "./lib/job-manager.mjs";
+import { SchemaRegistry } from "./lib/schema-registry.mjs";
 
 const store = await new Store(config.dataFile).init();
 const planner = new LocalPlanner(config.localizationModel, {
@@ -38,6 +41,9 @@ for (const [name, runtimeConfig] of Object.entries(store.listConnectorConfigs())
 }
 const memoryEngine = new MemoryEngine({ store });
 const targetingEngine = new TargetingEngine({ store });
+const schemaRegistry = new SchemaRegistry();
+const queryEngine = new QueryEngine({ store, schemaRegistry, connectors });
+const jobManager = new JobManager();
 const decisionEngine = new DecisionEngine({ store, planner, connectors, config, targetingEngine, memoryEngine });
 const automationEngine = new AutomationEngine({ store, decisionEngine, planner, memoryEngine });
 const scheduler = new AutomationScheduler({
@@ -72,6 +78,20 @@ function sendJson(request, response, statusCode, payload) {
   response.end(JSON.stringify(payload, null, 2));
 }
 
+function sendEventStreamHeaders(request, response) {
+  response.writeHead(200, {
+    "content-type": "text/event-stream; charset=utf-8",
+    "cache-control": "no-cache, no-transform",
+    connection: "keep-alive",
+    ...buildCorsHeaders(request),
+  });
+}
+
+function writeSse(response, event, data) {
+  response.write(`event: ${event}\n`);
+  response.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 async function readBody(request) {
   const chunks = [];
   for await (const chunk of request) {
@@ -83,6 +103,17 @@ async function readBody(request) {
 
 function splitPath(pathname) {
   return pathname.split("/").filter(Boolean);
+}
+
+function parseJsonParam(value, fallback = null) {
+  if (!value) {
+    return fallback;
+  }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
 }
 
 function normalizeLocales(input, fallbackLocale) {
@@ -177,6 +208,27 @@ function buildSetupRequirements() {
   };
 }
 
+async function buildOpenClawDiagnostics(connectorsMap, timeoutMs = 4000) {
+  const diagnostics = [];
+  for (const connector of Object.values(connectorsMap)) {
+    if (typeof connector.diagnose === "function") {
+      diagnostics.push(await connector.diagnose(timeoutMs));
+    } else {
+      diagnostics.push({
+        connector: connector.name,
+        configured: connector.isConfigured?.() || false,
+        ready: false,
+        summary: "Connector does not expose a diagnostic contract.",
+        recommendations: [],
+      });
+    }
+  }
+  return {
+    generatedAt: new Date().toISOString(),
+    diagnostics,
+  };
+}
+
 function sanitizeConnectorConfig(configRecord) {
   if (!configRecord) {
     return null;
@@ -238,6 +290,60 @@ const server = createServer(async (request, response) => {
         model: config.lmStudioModel,
         localizationModel: config.localizationModel,
         scheduler: scheduler.getStatus(),
+      });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/collections") {
+      sendJson(request, response, 200, queryEngine.listCollections());
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/schema") {
+      sendJson(request, response, 200, schemaRegistry.list());
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "schema" && parts[1]) {
+      sendJson(request, response, 200, schemaRegistry.get(parts[1]) || null);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/query") {
+      const body = await readBody(request);
+      sendJson(request, response, 200, await queryEngine.execute(body));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/stream") {
+      const query = parseJsonParam(url.searchParams.get("query"), {});
+      const initial = await queryEngine.execute(query);
+
+      sendEventStreamHeaders(request, response);
+      writeSse(response, "ready", {
+        query,
+        connectedAt: new Date().toISOString(),
+      });
+      writeSse(response, "snapshot", initial);
+
+      const unsubscribe = store.subscribe(change => {
+        if (!queryEngine.matchesChange(query, change)) {
+          return;
+        }
+        writeSse(response, "change", change);
+        queryEngine.execute(query)
+          .then(nextSnapshot => writeSse(response, "snapshot", nextSnapshot))
+          .catch(error => writeSse(response, "error", { message: error.message }));
+      });
+
+      const heartbeat = setInterval(() => {
+        response.write(": heartbeat\n\n");
+      }, 15000);
+
+      request.on("close", () => {
+        clearInterval(heartbeat);
+        unsubscribe();
+        response.end();
       });
       return;
     }
@@ -462,6 +568,12 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/diagnostics/openclaw") {
+      const timeoutMs = Number(url.searchParams.get("timeoutMs")) || 4000;
+      sendJson(request, response, 200, await buildOpenClawDiagnostics(connectors, timeoutMs));
+      return;
+    }
+
     if (request.method === "GET" && parts[0] === "connectors" && parts[1] && parts[2] === "config") {
       const connectorName = resolveConnectorName(parts[1]);
       const connector = connectors[connectorName];
@@ -531,8 +643,19 @@ const server = createServer(async (request, response) => {
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      const decision = await decisionEngine.run(body.campaignId);
-      sendJson(request, response, 200, decision);
+      const job = jobManager.createJob("decision", { campaignId: body.campaignId });
+      try {
+        jobManager.push(job.id, "running", "Decision engine started.");
+        const decision = await decisionEngine.run(body.campaignId);
+        jobManager.complete(job.id, decision);
+        sendJson(request, response, 200, {
+          job: jobManager.getJob(job.id),
+          decision,
+        });
+      } catch (error) {
+        jobManager.fail(job.id, error);
+        throw error;
+      }
       return;
     }
 
@@ -547,11 +670,22 @@ const server = createServer(async (request, response) => {
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      const pack = await automationEngine.generateContentPack(body.campaignId, {
-        locales: normalizeLocales(body.locales, config.defaultLocale),
-        reason: body.reason || "manual",
-      });
-      sendJson(request, response, 201, pack);
+      const job = jobManager.createJob("content", { campaignId: body.campaignId });
+      try {
+        jobManager.push(job.id, "running", "Content generation started.");
+        const pack = await automationEngine.generateContentPack(body.campaignId, {
+          locales: normalizeLocales(body.locales, config.defaultLocale),
+          reason: body.reason || "manual",
+        });
+        jobManager.complete(job.id, pack);
+        sendJson(request, response, 201, {
+          job: jobManager.getJob(job.id),
+          contentPack: pack,
+        });
+      } catch (error) {
+        jobManager.fail(job.id, error);
+        throw error;
+      }
       return;
     }
 
@@ -566,16 +700,68 @@ const server = createServer(async (request, response) => {
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      const result = await automationEngine.runCampaign(body.campaignId, {
-        locales: body.locales,
-        reason: body.reason || "manual",
-      });
-      sendJson(request, response, 200, result);
+      const job = jobManager.createJob("automation", { campaignId: body.campaignId, reason: body.reason || "manual" });
+      try {
+        jobManager.push(job.id, "running", "Automation run started.");
+        const result = await automationEngine.runCampaign(body.campaignId, {
+          locales: body.locales,
+          reason: body.reason || "manual",
+        });
+        jobManager.complete(job.id, result);
+        sendJson(request, response, 200, {
+          job: jobManager.getJob(job.id),
+          ...result,
+        });
+      } catch (error) {
+        jobManager.fail(job.id, error);
+        throw error;
+      }
       return;
     }
 
     if (request.method === "GET" && url.pathname === "/automation/runs") {
       sendJson(request, response, 200, store.listAutomationRuns(url.searchParams.get("campaignId")));
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "jobs" && parts[1] && parts[2] === "status") {
+      const job = jobManager.getJob(parts[1]);
+      if (!job) {
+        sendJson(request, response, 404, { error: "Job not found." });
+        return;
+      }
+      sendJson(request, response, 200, job);
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "jobs" && parts[1] && parts[2] === "stream") {
+      const job = jobManager.getJob(parts[1]);
+      if (!job) {
+        sendJson(request, response, 404, { error: "Job not found." });
+        return;
+      }
+
+      sendEventStreamHeaders(request, response);
+      writeSse(response, "ready", {
+        jobId: job.id,
+        connectedAt: new Date().toISOString(),
+      });
+      for (const event of job.events) {
+        writeSse(response, "status", event);
+      }
+
+      const unsubscribe = jobManager.subscribe(job.id, event => {
+        writeSse(response, "status", event);
+      });
+      const heartbeat = setInterval(() => {
+        response.write(": heartbeat\n\n");
+      }, 15000);
+
+      request.on("close", () => {
+        clearInterval(heartbeat);
+        unsubscribe();
+        response.end();
+      });
       return;
     }
 
@@ -607,6 +793,9 @@ const server = createServer(async (request, response) => {
         },
         connectors: await pickConnectors(connectors),
         scheduler: scheduler.getStatus(),
+        jobs: {
+          note: "Use /jobs/:id/status or /jobs/:id/stream for runtime job state.",
+        },
       });
       return;
     }

@@ -19,6 +19,7 @@ import { CollaborationProvider, useCollaboration } from './components/Collaborat
 import { jsPDF } from 'jspdf';
 import BrainDashboard from './components/BrainDashboard';
 import { dataService } from './services/dataService';
+import { SquidCompatProvider } from './lib/squid';
 
 function AppContent() {
   const { user, loading: authLoading, campaignState, updateCampaignState, sendMessage, messages } = useCollaboration();
@@ -425,8 +426,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <CollaborationProvider>
-      <AppContent />
-    </CollaborationProvider>
+    <SquidCompatProvider>
+      <CollaborationProvider>
+        <AppContent />
+      </CollaborationProvider>
+    </SquidCompatProvider>
   );
 }

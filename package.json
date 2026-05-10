@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.mjs",
+    "dev": "powershell -ExecutionPolicy Bypass -File scripts/dev.ps1",
     "test": "node --test",
     "ui:dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",

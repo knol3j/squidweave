@@ -1,6 +1,10 @@
 import { summarizeCampaign } from "./analytics.mjs";
 import { evaluatePolicy } from "./policy.mjs";
 
+function resolveConnectorName(name) {
+  return name === "moltbot" ? "openclaw" : name;
+}
+
 export class DecisionEngine {
   constructor({ store, planner, connectors, config, targetingEngine, memoryEngine }) {
     this.store = store;
@@ -34,7 +38,7 @@ export class DecisionEngine {
 
       executions = [];
       for (const connectorName of connectorNames) {
-        const connector = this.connectors[connectorName];
+        const connector = this.connectors[resolveConnectorName(connectorName)];
         if (!connector) {
           throw new Error(`Unknown connector: ${connectorName}`);
         }

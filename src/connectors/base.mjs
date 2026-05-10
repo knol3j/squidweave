@@ -4,6 +4,10 @@ export class BaseConnector {
     this.baseUrl = options.baseUrl;
     this.token = options.token;
     this.dryRun = options.dryRun;
+    this.healthPath = options.healthPath || "/health";
+    this.executePath = options.executePath || "/execute";
+    this.queryPath = options.queryPath || "/query";
+    this.supportedActions = Array.isArray(options.supportedActions) ? options.supportedActions : ["*"];
     this.lastAuthErrorAt = null;
     this.lastAuthError = null;
   }
@@ -46,6 +50,77 @@ export class BaseConnector {
     this.lastAuthError = null;
   }
 
+  buildEndpoint(pathname = "") {
+    if (!this.baseUrl) {
+      return "";
+    }
+    const base = this.baseUrl.endsWith("/") ? this.baseUrl.slice(0, -1) : this.baseUrl;
+    const path = pathname ? (pathname.startsWith("/") ? pathname : `/${pathname}`) : "";
+    return `${base}${path}`;
+  }
+
+  supports(actionType) {
+    return this.supportedActions.includes("*") || this.supportedActions.includes(actionType);
+  }
+
+  getCapabilities() {
+    return {
+      connector: this.name,
+      supportedActions: this.supportedActions,
+      executePath: this.executePath,
+      queryPath: this.queryPath,
+      healthPath: this.healthPath,
+      dryRun: this.dryRun,
+      supportsQuery: true,
+    };
+  }
+
+  async query(spec = {}) {
+    if (this.dryRun || !this.isConfigured()) {
+      return {
+        connector: this.name,
+        mode: this.dryRun ? "dry-run-disabled" : "not-configured",
+        accepted: false,
+        items: [],
+        totalCount: 0,
+        source: "connector",
+      };
+    }
+
+    const response = await fetch(this.buildEndpoint(this.queryPath), {
+      method: "POST",
+      headers: this.buildAuthHeaders({
+        "content-type": "application/json",
+      }),
+      body: JSON.stringify(spec),
+    });
+
+    const body = await response.text();
+    if ([401, 403].includes(response.status)) {
+      this.markAuthError(response.status, body || "Authentication rejected by connector.");
+    } else if (response.ok) {
+      this.clearAuthError();
+    }
+
+    let parsedBody = null;
+    try {
+      parsedBody = body ? JSON.parse(body) : null;
+    } catch {
+      parsedBody = { items: [], raw: body };
+    }
+
+    if (!response.ok) {
+      throw new Error(parsedBody?.error || body || `Connector query failed with ${response.status}`);
+    }
+
+    return {
+      connector: this.name,
+      mode: "live",
+      accepted: true,
+      ...parsedBody,
+    };
+  }
+
   async getStatus(options = {}) {
     const status = {
       connector: this.name,
@@ -59,6 +134,7 @@ export class BaseConnector {
       error: null,
       tokenLikelyRotated: Boolean(this.lastAuthError && [401, 403].includes(this.lastAuthError.status)),
       lastAuthErrorAt: this.lastAuthErrorAt,
+      capabilities: this.getCapabilities(),
     };
 
     if (!options.probe || this.dryRun || !this.isConfigured()) {
@@ -77,6 +153,12 @@ export class BaseConnector {
         method: "GET",
         headers: this.buildAuthHeaders(),
         signal: controller.signal,
+      }).catch(async () => {
+        return fetch(this.buildEndpoint(this.healthPath), {
+          method: "GET",
+          headers: this.buildAuthHeaders(),
+          signal: controller.signal,
+        });
       });
       const bodyText = response.ok ? "" : await response.text();
       if ([401, 403].includes(response.status)) {
@@ -101,7 +183,12 @@ export class BaseConnector {
   }
 
   async execute(action, context) {
+    if (!action?.type) {
+      throw new Error("Connector action requires a type.");
+    }
+
     const payload = {
+      executionId: crypto.randomUUID(),
       action,
       context,
       metadata: {
@@ -110,19 +197,33 @@ export class BaseConnector {
       },
     };
 
+    if (!this.supports(action.type)) {
+      return {
+        connector: this.name,
+        mode: "unsupported-action",
+        accepted: false,
+        executionId: payload.executionId,
+        actionType: action.type,
+        payload,
+      };
+    }
+
     if (this.dryRun || !this.isConfigured()) {
       return {
         connector: this.name,
         mode: this.dryRun ? "dry-run-disabled" : "not-configured",
         accepted: false,
+        executionId: payload.executionId,
+        actionType: action.type,
         payload,
       };
     }
 
-    const response = await fetch(this.baseUrl, {
+    const response = await fetch(this.buildEndpoint(this.executePath), {
       method: "POST",
       headers: this.buildAuthHeaders({
         "content-type": "application/json",
+        "x-execution-id": payload.executionId,
       }),
       body: JSON.stringify(payload),
     });
@@ -133,12 +234,23 @@ export class BaseConnector {
     } else if (response.ok) {
       this.clearAuthError();
     }
+
+    let parsedBody = null;
+    try {
+      parsedBody = body ? JSON.parse(body) : null;
+    } catch {
+      parsedBody = body || null;
+    }
+
     return {
       connector: this.name,
-      mode: "live",
+      mode: response.ok ? "live" : "error",
       accepted: response.ok,
       status: response.status,
-      payload: body,
+      executionId: payload.executionId,
+      actionType: action.type,
+      payload: parsedBody,
+      delivery: response.status === 202 ? "accepted" : response.ok ? "completed" : "rejected",
       tokenLikelyRotated: [401, 403].includes(response.status),
     };
   }
