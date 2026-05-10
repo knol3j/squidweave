@@ -1,0 +1,13 @@
+{
+  "name": "localeweave",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test",
+    "ui:dev": "npm --prefix ui run dev",
+    "ui:build": "npm --prefix ui run build",
+    "ui:lint": "npm --prefix ui run lint"
+  }
+}

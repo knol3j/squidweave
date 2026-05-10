@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "Campaign": {
+      "title": "Ad Campaign",
+      "description": "State of the current marketing campaign",
+      "type": "object",
+      "properties": {
+        "activePrompt": { "type": "string" },
+        "activeTab": { "type": "string" },
+        "enabledModules": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "Active MCP automation servers"
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "A message in the collaboration chat",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "image": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "authorId": { "type": "string" }
+      },
+      "required": ["role", "content", "createdAt"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "User profile and presence data",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "lastSeen": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Variation": {
+      "title": "Ad Variation",
+      "description": "A specific creative variation for A/B testing",
+      "type": "object",
+      "properties": {
+        "label": { "type": "string" },
+        "copy": { "type": "string" },
+        "ctr": { "type": "number" },
+        "conv": { "type": "number" },
+        "image": { "type": "string" },
+        "status": { "type": "string", "enum": ["winner", "contender"] },
+        "platform": { "type": "string" },
+        "audience": { "type": "string" },
+        "trend": { "type": "string", "enum": ["up", "down", "stable"] }
+      }
+    },
+    "AudiencePersona": {
+      "title": "Audience Persona",
+      "description": "Research-backed target audience segment",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "demographics": { "type": "string" },
+        "pains": { "type": "array", "items": { "type": "string" } },
+        "gains": { "type": "array", "items": { "type": "string" } },
+        "engagementScore": { "type": "number" }
+      }
+    },
+    "Metric": {
+      "title": "Campaign Metric",
+      "description": "Historical performance data point",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "ctr": { "type": "number" },
+        "conv": { "type": "number" },
+        "spend": { "type": "number" }
+      }
+    },
+    "Keyword": {
+      "title": "SEO Keyword",
+      "description": "Recommended SEO keyword for the campaign",
+      "type": "object",
+      "properties": {
+        "term": { "type": "string" },
+        "volume": { "type": "string" },
+        "difficulty": { "type": "string" },
+        "intent": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/campaigns/{campaignId}": {
+      "schema": "Campaign",
+      "description": "Root campaign document"
+    },
+    "/campaigns/{campaignId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages for a specific campaign"
+    },
+    "/campaigns/{campaignId}/variations/{variationId}": {
+      "schema": "Variation",
+      "description": "Variations belonging to the campaign"
+    },
+    "/campaigns/{campaignId}/personas/{personaId}": {
+      "schema": "AudiencePersona",
+      "description": "Personas identified for the campaign"
+    },
+    "/campaigns/{campaignId}/metrics/{metricId}": {
+      "schema": "Metric",
+      "description": "Performance time-series data"
+    },
+    "/campaigns/{campaignId}/keywords/{keywordId}": {
+      "schema": "Keyword",
+      "description": "SEO keywords for the campaign"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "LocaleWeave",
+  "description": "Local-first agent platform for localized campaigns, automation, and operator-guided marketing execution.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["AI Content Generation", "Multimodal Image Analysis", "Marketing Strategy Planning"]
+}
