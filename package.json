@@ -3,12 +3,42 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "electron/main.mjs",
   "scripts": {
     "start": "node src/server.mjs",
     "dev": "powershell -ExecutionPolicy Bypass -File scripts/dev.ps1",
     "test": "node --test",
     "ui:dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",
-    "ui:lint": "npm --prefix ui run lint"
+    "ui:lint": "npm --prefix ui run lint",
+    "desktop:dev": "electron .",
+    "build:exe": "npm run ui:build && electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^37.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.localeweave.desktop",
+    "productName": "LocaleWeave",
+    "artifactName": "LocaleWeave-${version}-portable.${ext}",
+    "asar": true,
+    "files": [
+      "electron/**/*",
+      "src/**/*",
+      "ui/dist/**/*",
+      "data/state.json",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
   }
 }
