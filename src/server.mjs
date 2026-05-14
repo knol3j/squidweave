@@ -1,4 +1,7 @@
 import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import { extname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { config } from "./config.mjs";
 import { normalizeEvent } from "./lib/analytics.mjs";
 import { AutomationEngine } from "./lib/automation-engine.mjs";
@@ -14,43 +17,16 @@ import { QueryEngine } from "./lib/query-engine.mjs";
 import { JobManager } from "./lib/job-manager.mjs";
 import { SchemaRegistry } from "./lib/schema-registry.mjs";
 
-const store = await new Store(config.dataFile).init();
-const planner = new LocalPlanner(config.localizationModel, {
-  defaultLocale: config.defaultLocale,
-  defaultBrandVoice: config.defaultBrandVoice,
-  defaultOffer: config.defaultOffer,
-});
-const connectorAliases = {
-  moltbot: "openclaw",
+const mimeTypes = {
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
 };
-const resolveConnectorName = value => connectorAliases[value] || value;
-const connectors = {
-  openclaw: new OpenclawConnector({ ...config.connectors.openclaw, dryRun: config.dryRun }),
-  clawdbot: new ClawdbotConnector({ ...config.connectors.clawdbot, dryRun: config.dryRun }),
-};
-
-for (const [name, runtimeConfig] of Object.entries(store.listConnectorConfigs())) {
-  const resolvedName = resolveConnectorName(name);
-  if (connectors[resolvedName]) {
-    connectors[resolvedName].setCredentials({
-      baseUrl: runtimeConfig.baseUrl,
-      token: runtimeConfig.token,
-      dryRun: runtimeConfig.dryRun,
-    });
-  }
-}
-const memoryEngine = new MemoryEngine({ store });
-const targetingEngine = new TargetingEngine({ store });
-const schemaRegistry = new SchemaRegistry();
-const queryEngine = new QueryEngine({ store, schemaRegistry, connectors });
-const jobManager = new JobManager();
-const decisionEngine = new DecisionEngine({ store, planner, connectors, config, targetingEngine, memoryEngine });
-const automationEngine = new AutomationEngine({ store, decisionEngine, planner, memoryEngine });
-const scheduler = new AutomationScheduler({
-  store,
-  automationEngine,
-  intervalSeconds: config.schedulerIntervalSeconds,
-});
 
 function buildCorsHeaders(request) {
   const origin = request.headers.origin;
@@ -208,6 +184,51 @@ function buildSetupRequirements() {
   };
 }
 
+async function serveStaticAsset(request, response, pathname, staticDir) {
+  if (!staticDir) {
+    return false;
+  }
+
+  const rootHref = staticDir.href.endsWith("/") ? staticDir.href : `${staticDir.href}/`;
+  const requestedPath = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+  const rootPath = fileURLToPath(staticDir);
+
+  try {
+    const assetUrl = new URL(requestedPath, rootHref);
+    const assetPath = fileURLToPath(assetUrl);
+    if (!assetPath.startsWith(rootPath)) {
+      return false;
+    }
+
+    const contents = await readFile(assetPath);
+    response.writeHead(200, {
+      "content-type": mimeTypes[extname(assetPath)] || "application/octet-stream",
+      ...buildCorsHeaders(request),
+    });
+    response.end(contents);
+    return true;
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  try {
+    const contents = await readFile(new URL("index.html", rootHref));
+    response.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      ...buildCorsHeaders(request),
+    });
+    response.end(contents);
+    return true;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}
+
 async function buildOpenClawDiagnostics(connectorsMap, timeoutMs = 4000) {
   const diagnostics = [];
   for (const connector of Object.values(connectorsMap)) {
@@ -271,7 +292,46 @@ function buildCampaignInput(body) {
   };
 }
 
-const server = createServer(async (request, response) => {
+async function createApp() {
+  const store = await new Store(config.dataFile, { seedFileUrl: config.seedDataFile }).init();
+  const planner = new LocalPlanner(config.localizationModel, {
+    defaultLocale: config.defaultLocale,
+    defaultBrandVoice: config.defaultBrandVoice,
+    defaultOffer: config.defaultOffer,
+  });
+  const connectorAliases = {
+    moltbot: "openclaw",
+  };
+  const resolveConnectorName = value => connectorAliases[value] || value;
+  const connectors = {
+    openclaw: new OpenclawConnector({ ...config.connectors.openclaw, dryRun: config.dryRun }),
+    clawdbot: new ClawdbotConnector({ ...config.connectors.clawdbot, dryRun: config.dryRun }),
+  };
+
+  for (const [name, runtimeConfig] of Object.entries(store.listConnectorConfigs())) {
+    const resolvedName = resolveConnectorName(name);
+    if (connectors[resolvedName]) {
+      connectors[resolvedName].setCredentials({
+        baseUrl: runtimeConfig.baseUrl,
+        token: runtimeConfig.token,
+        dryRun: runtimeConfig.dryRun,
+      });
+    }
+  }
+  const memoryEngine = new MemoryEngine({ store });
+  const targetingEngine = new TargetingEngine({ store });
+  const schemaRegistry = new SchemaRegistry();
+  const queryEngine = new QueryEngine({ store, schemaRegistry, connectors });
+  const jobManager = new JobManager();
+  const decisionEngine = new DecisionEngine({ store, planner, connectors, config, targetingEngine, memoryEngine });
+  const automationEngine = new AutomationEngine({ store, decisionEngine, planner, memoryEngine });
+  const scheduler = new AutomationScheduler({
+    store,
+    automationEngine,
+    intervalSeconds: config.schedulerIntervalSeconds,
+  });
+
+  const server = createServer(async (request, response) => {
   try {
     if (request.method === "OPTIONS") {
       response.writeHead(204, buildCorsHeaders(request));
@@ -800,6 +860,10 @@ const server = createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && await serveStaticAsset(request, response, url.pathname, config.staticDir)) {
+      return;
+    }
+
     sendJson(request, response, 404, { error: "Not found" });
   } catch (error) {
     sendJson(request, response, 500, {
@@ -807,8 +871,21 @@ const server = createServer(async (request, response) => {
       stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
-});
+  });
 
-server.listen(config.port, "127.0.0.1", () => {
-  console.log(`LocaleWeave listening on http://127.0.0.1:${config.port}`);
-});
+  return { server, scheduler };
+}
+
+export async function startServer({ port = config.port, host = "127.0.0.1" } = {}) {
+  const { server } = await createApp();
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, host, resolve);
+  });
+  console.log(`LocaleWeave listening on http://${host}:${port}`);
+  return server;
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  await startServer();
+}

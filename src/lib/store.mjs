@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { EventEmitter } from "node:events";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,8 +19,9 @@ const defaultState = () => ({
 });
 
 export class Store {
-  constructor(fileUrl) {
+  constructor(fileUrl, options = {}) {
     this.fileUrl = fileUrl;
+    this.seedFileUrl = options.seedFileUrl || null;
     this.state = defaultState();
     this.events = new EventEmitter();
     this.sequence = 0;
@@ -34,6 +35,12 @@ export class Store {
     } catch (error) {
       if (error.code !== "ENOENT") {
         throw error;
+      }
+      if (this.seedFileUrl) {
+        await copyFile(this.seedFileUrl, this.fileUrl);
+        const raw = await readFile(this.fileUrl, "utf8");
+        this.state = { ...defaultState(), ...JSON.parse(raw) };
+        return this;
       }
       await this.persist();
     }

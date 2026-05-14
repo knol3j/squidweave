@@ -38,9 +38,12 @@ function parseEnvFile(raw) {
 }
 
 export function loadEnvFiles(cwd = process.cwd()) {
+  const envDir = process.env.LOCALEWEAVE_ENV_DIR
+    ? resolve(process.env.LOCALEWEAVE_ENV_DIR)
+    : cwd;
   const candidates = [
-    resolve(cwd, ".env"),
-    resolve(cwd, ".env.local"),
+    resolve(envDir, ".env"),
+    resolve(envDir, ".env.local"),
   ];
 
   for (const filePath of candidates) {

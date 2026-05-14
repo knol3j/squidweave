@@ -1,4 +1,5 @@
 import { loadEnvFiles } from "./load-env.mjs";
+import { pathToFileURL } from "node:url";
 
 loadEnvFiles();
 
@@ -29,7 +30,15 @@ export const config = {
   decisionCooldownMinutes: toNumber(process.env.DECISION_COOLDOWN_MINUTES, 30),
   defaultBrandVoice: process.env.DEFAULT_BRAND_VOICE || "direct, credible, concise, and conversion-focused",
   defaultOffer: process.env.DEFAULT_OFFER || "",
-  dataFile: new URL("../data/state.json", import.meta.url),
+  dataFile: process.env.DATA_FILE
+    ? pathToFileURL(process.env.DATA_FILE)
+    : new URL("../data/state.json", import.meta.url),
+  seedDataFile: process.env.SEED_DATA_FILE
+    ? pathToFileURL(process.env.SEED_DATA_FILE)
+    : new URL("../data/state.json", import.meta.url),
+  staticDir: process.env.STATIC_DIR
+    ? pathToFileURL(process.env.STATIC_DIR)
+    : null,
   connectors: {
     openclaw: {
       baseUrl: process.env.OPENCLAW_BASE_URL || process.env.MOLTBOT_BASE_URL || "",
