@@ -15,7 +15,7 @@
     "build:exe": "npm run ui:build && electron-builder --win portable"
   },
   "devDependencies": {
-    "electron": "^37.0.0",
+    "electron": "^39.8.5",
     "electron-builder": "^26.0.12"
   },
   "build": {
