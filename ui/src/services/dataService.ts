@@ -27,6 +27,10 @@ export interface Campaign {
   markets?: string[];
   researchObjectives?: string[];
   successMetrics?: string[];
+  designTheme?: string;
+  designPalette?: string[];
+  designGuidelines?: string[];
+  contentAngles?: string[];
   baseBody?: string;
   baseHeadline?: string;
   baseSubject?: string;
@@ -268,6 +272,16 @@ export interface SourcedContact {
   searchQuery?: string;
   contactStatus: string;
   complianceStatus: string;
+  enrichmentStatus?: string;
+  verificationStatus?: string;
+  sequenceStatus?: string;
+  sequencePlan?: {
+    channel: string;
+    offer: string;
+    steps: string[];
+    personalizationAngles: string[];
+    createdAt: string;
+  };
   source?: string;
   score?: number;
   evidence?: string[];
@@ -282,6 +296,33 @@ export interface ProspectingRun {
   reason: string;
   generatedCandidates: number;
   plan: ProspectingPlan;
+}
+
+export interface ProspectPipeline {
+  campaignId: string;
+  generatedAt: string;
+  counts: {
+    total: number;
+    readyForEnrichment: number;
+    readyForSequencing: number;
+    sequenced: number;
+    suppressed: number;
+    byStatus: Record<string, number>;
+    byCompliance: Record<string, number>;
+    bySequence: Record<string, number>;
+  };
+  recentRuns: ActivationRun[];
+}
+
+export interface ActivationRun {
+  id: string;
+  campaignId: string;
+  action: string;
+  status: string;
+  provider?: string;
+  processedContacts: number;
+  createdAt: string;
+  connectorResults?: any[];
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -434,6 +475,34 @@ export const dataService = {
 
   async getProspectingRuns(campaignId: string) {
     return api<ProspectingRun[]>(`/prospecting/runs?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async getProspectPipeline(campaignId: string) {
+    return api<ProspectPipeline>(`/prospects/pipeline?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async enrichProspects(campaignId: string, payload?: { provider?: string; limit?: number; dispatch?: boolean; connectors?: string[] }) {
+    return api<{ run: ActivationRun; contacts: SourcedContact[]; pipeline: ProspectPipeline }>('/prospects/enrich', {
+      method: 'POST',
+      body: JSON.stringify({
+        campaignId,
+        ...payload,
+      }),
+    });
+  },
+
+  async sequenceProspects(campaignId: string, payload?: { limit?: number; dispatch?: boolean; connectors?: string[] }) {
+    return api<{ run: ActivationRun; contacts: SourcedContact[]; pipeline: ProspectPipeline }>('/prospects/sequence', {
+      method: 'POST',
+      body: JSON.stringify({
+        campaignId,
+        ...payload,
+      }),
+    });
+  },
+
+  async getActivationRuns(campaignId: string) {
+    return api<ActivationRun[]>(`/prospects/activation-runs?campaignId=${encodeURIComponent(campaignId)}`);
   },
 
   async addResearchRecord(record: Partial<ResearchRecord> & { campaignId: string; targetId: string }) {

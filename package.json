@@ -12,7 +12,8 @@
     "ui:build": "npm --prefix ui run build",
     "ui:lint": "npm --prefix ui run lint",
     "desktop:dev": "electron .",
-    "build:exe": "npm run ui:build && electron-builder --win portable"
+    "build:exe": "npm run ui:build && electron-builder --win portable",
+    "automation:bootstrap": "node scripts/bootstrap-automation.mjs"
   },
   "devDependencies": {
     "electron": "^41.7.0",
