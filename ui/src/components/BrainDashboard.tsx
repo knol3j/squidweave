@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import {
   Activity,
+  Bot,
   BrainCircuit,
   Cable,
   ClipboardList,
