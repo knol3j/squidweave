@@ -16,6 +16,8 @@ import { normalizeOutreachEvent, normalizeResearchRecord, TargetingEngine } from
 import { QueryEngine } from "./lib/query-engine.mjs";
 import { JobManager } from "./lib/job-manager.mjs";
 import { SchemaRegistry } from "./lib/schema-registry.mjs";
+import { AgentOrchestrator } from "./lib/agent-orchestrator.mjs";
+import { HermesMemoryClient } from "./lib/hermes-memory.mjs";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -289,6 +291,16 @@ function buildCampaignInput(body) {
     activePrompt: body.activePrompt || "",
     activeTab: body.activeTab || "engine",
     enabledModules: Array.isArray(body.enabledModules) ? body.enabledModules : [],
+    clientName: body.clientName || "",
+    clientNeed: body.clientNeed || "",
+    intakeStatus: body.intakeStatus || "draft",
+    successDefinition: body.successDefinition || "",
+    constraints: body.constraints || "",
+    differentiators: body.differentiators || "",
+    researchNotes: body.researchNotes || "",
+    markets: Array.isArray(body.markets) ? body.markets.map(value => String(value).trim()).filter(Boolean) : [],
+    researchObjectives: Array.isArray(body.researchObjectives) ? body.researchObjectives.map(value => String(value).trim()).filter(Boolean) : [],
+    successMetrics: Array.isArray(body.successMetrics) ? body.successMetrics.map(value => String(value).trim()).filter(Boolean) : [],
   };
 }
 
@@ -318,13 +330,15 @@ async function createApp() {
       });
     }
   }
-  const memoryEngine = new MemoryEngine({ store });
+  const hermesClient = new HermesMemoryClient(config.hermes);
+  const memoryEngine = new MemoryEngine({ store, hermesClient });
   const targetingEngine = new TargetingEngine({ store });
   const schemaRegistry = new SchemaRegistry();
   const queryEngine = new QueryEngine({ store, schemaRegistry, connectors });
   const jobManager = new JobManager();
+  const agentOrchestrator = new AgentOrchestrator({ store });
   const decisionEngine = new DecisionEngine({ store, planner, connectors, config, targetingEngine, memoryEngine });
-  const automationEngine = new AutomationEngine({ store, decisionEngine, planner, memoryEngine });
+  const automationEngine = new AutomationEngine({ store, decisionEngine, planner, memoryEngine, agentOrchestrator });
   const scheduler = new AutomationScheduler({
     store,
     automationEngine,
@@ -564,9 +578,14 @@ async function createApp() {
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      sendJson(request, response, 200, memoryEngine.recall(campaignId, {
+      sendJson(request, response, 200, await memoryEngine.recall(campaignId, {
         targetId: url.searchParams.get("targetId"),
       }));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/memory/hermes/status") {
+      sendJson(request, response, 200, await hermesClient.getStatus());
       return;
     }
 
@@ -784,6 +803,16 @@ async function createApp() {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/agents/system") {
+      sendJson(request, response, 200, agentOrchestrator.listAgents());
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/agents/runs") {
+      sendJson(request, response, 200, store.listAgentRuns(url.searchParams.get("campaignId")));
+      return;
+    }
+
     if (request.method === "GET" && parts[0] === "jobs" && parts[1] && parts[2] === "status") {
       const job = jobManager.getJob(parts[1]);
       if (!job) {
@@ -876,7 +905,7 @@ async function createApp() {
   return { server, scheduler };
 }
 
-export async function startServer({ port = config.port, host = "127.0.0.1" } = {}) {
+export async function startServer({ port = config.port, host = process.env.HOST || "127.0.0.1" } = {}) {
   const { server } = await createApp();
   await new Promise((resolve, reject) => {
     server.once("error", reject);
