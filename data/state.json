@@ -53,7 +53,7 @@
       "baseHeadline": "",
       "baseBody": "give me a new landing page design for techworks.ca as well as a new plan or outreach along with automated  advertising",
       "baseCta": "",
-      "lastUpdatedAt": "2026-05-24T04:26:37.254Z",
+      "lastUpdatedAt": "2026-05-24T04:42:32.828Z",
       "connectors": [
         "openclaw",
         "clawdbot"
@@ -132,7 +132,7 @@
         "clawdbot"
       ],
       "objective": "60 qualified meetings in Q3 from mid-market and enterprise security teams",
-      "dailyBudget": null,
+      "dailyBudget": 0,
       "targeting": {},
       "locales": [
         "en-US",
@@ -176,7 +176,7 @@
         "pipeline_created",
         "sql_conversion_rate"
       ],
-      "lastUpdatedAt": "2026-05-24T04:26:36.902Z"
+      "lastUpdatedAt": "2026-05-24T04:42:32.500Z"
     },
     "ecom-scaling-playbook": {
       "id": "ecom-scaling-playbook",
@@ -188,7 +188,7 @@
         "clawdbot"
       ],
       "objective": "Increase repeat purchase rate and reactivate lapsed buyers",
-      "dailyBudget": null,
+      "dailyBudget": 0,
       "targeting": {},
       "locales": [
         "en-US",
@@ -230,7 +230,7 @@
         "reactivation_rate",
         "ltv_cohort_shift"
       ],
-      "lastUpdatedAt": "2026-05-24T04:26:37.075Z"
+      "lastUpdatedAt": "2026-05-24T04:42:32.665Z"
     },
     "healthcare-lead-gen": {
       "id": "healthcare-lead-gen",
@@ -242,7 +242,7 @@
         "clawdbot"
       ],
       "objective": "Book 15 discovery calls per month with Director+ titles at 200+ bed hospitals",
-      "dailyBudget": null,
+      "dailyBudget": 0,
       "targeting": {},
       "locales": [
         "en-US"
@@ -282,7 +282,7 @@
         "pipeline_value",
         "avg_deal_size"
       ],
-      "lastUpdatedAt": "2026-05-24T04:26:37.418Z"
+      "lastUpdatedAt": "2026-05-24T04:42:33.184Z"
     },
     "saas-expansion-apac": {
       "id": "saas-expansion-apac",
@@ -294,7 +294,7 @@
         "clawdbot"
       ],
       "objective": "Generate 10 qualified opportunities per month across Japan, Australia, and Singapore",
-      "dailyBudget": null,
+      "dailyBudget": 0,
       "targeting": {},
       "locales": [
         "en-AU",
@@ -338,7 +338,71 @@
         "localized_reply_rate",
         "pipeline_weighted"
       ],
-      "lastUpdatedAt": "2026-05-24T04:26:37.576Z"
+      "lastUpdatedAt": "2026-05-24T04:42:33.351Z"
+    },
+    "hashnhedge-launch": {
+      "id": "hashnhedge-launch",
+      "name": "HashNHedge Compute Launch Campaign",
+      "channel": "linkedin",
+      "connector": "openclaw",
+      "connectors": [
+        "openclaw",
+        "clawdbot"
+      ],
+      "objective": "Onboard 500 active mining nodes in first 90 days across XMR, RVN, ETC, ERG, and KAS pools",
+      "dailyBudget": null,
+      "targeting": {},
+      "locales": [
+        "en-US",
+        "en-GB",
+        "es-ES",
+        "pt-BR",
+        "zh-CN",
+        "ru-RU"
+      ],
+      "sourceLocale": "en-US",
+      "automationEnabled": false,
+      "audience": "Crypto miners, PC gamers with idle GPUs, datacenter operators, AI researchers, passive-income seekers",
+      "offer": "First month at 0% platform fee + exclusive early-adopter NFT badge",
+      "brandVoice": "Technical, transparent, community-first, no overpromise",
+      "landingUrl": "",
+      "baseSubject": "",
+      "basePreheader": "",
+      "baseHeadline": "",
+      "baseBody": "",
+      "baseCta": "",
+      "activePrompt": "",
+      "activeTab": "engine",
+      "enabledModules": [],
+      "clientName": "HashNHedge",
+      "clientNeed": "Acquire miners and compute providers to bootstrap the decentralized compute marketplace at launch",
+      "intakeStatus": "draft",
+      "successDefinition": "500 active nodes with 10 TH/s combined hashrate and <2% churn per month",
+      "constraints": "",
+      "differentiators": "",
+      "researchNotes": "",
+      "markets": [
+        "US",
+        "United Kingdom",
+        "Spain",
+        "Brazil",
+        "China",
+        "Russia"
+      ],
+      "researchObjectives": [
+        "Identify solo miners and small mining ops dissatisfied with pool fee structures and opaque reward systems",
+        "Map PC gaming communities with high-end GPU ownership who could offset hardware costs through idle mining",
+        "Surface AI researchers and ML engineers actively seeking affordable decentralized compute alternatives to AWS/GCP",
+        "Collect evidence on competitor fee structures and payout models to position HashNHedge's advantage"
+      ],
+      "successMetrics": [
+        "active_nodes",
+        "combined_hashrate",
+        "miner_churn_rate",
+        "coin_diversity_score",
+        "referral_conversion_rate"
+      ],
+      "lastUpdatedAt": "2026-05-24T04:42:32.984Z"
     }
   },
   "connectorConfigs": {},
@@ -1017,6 +1081,440 @@
         ]
       },
       "capturedAt": "2026-05-24T04:26:37.645Z"
+    },
+    {
+      "id": "2426c87d-8e23-4bac-a958-8bd18434f51f",
+      "campaignId": "cybersec-q3-pipeline",
+      "targetId": "acct-401",
+      "source": "manual-ingest",
+      "company": "Meridian Defense",
+      "contactName": "Raj Patel",
+      "title": "CISO",
+      "segment": "Enterprise (5000+ employees)",
+      "region": "US-East",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "linkedin",
+        "email"
+      ],
+      "fitScore": 0.95,
+      "intentScore": 0.93,
+      "recencyScore": 0.9,
+      "estimatedReach": 300000,
+      "notes": "New CISO hired after Q1 breach disclosure.",
+      "metadata": {
+        "sourceUrl": "https://example.com/meridian-defense",
+        "evidence": [
+          "Public breach disclosure filed with SEC March 2026",
+          "Zero-trust migration RFP published on procurement portal"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:32.575Z"
+    },
+    {
+      "id": "07399872-bcbf-4d9a-8eb7-cb06deac9f16",
+      "campaignId": "cybersec-q3-pipeline",
+      "targetId": "acct-402",
+      "source": "manual-ingest",
+      "company": "Thames Security Group",
+      "contactName": "Claire Bennett",
+      "title": "VP Security Engineering",
+      "segment": "Mid-Market (1000-5000 employees)",
+      "region": "United Kingdom",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "email",
+        "linkedin"
+      ],
+      "fitScore": 0.9,
+      "intentScore": 0.88,
+      "recencyScore": 0.85,
+      "estimatedReach": 175000,
+      "notes": "Scaling SecOps team, evaluating network segmentation vendors.",
+      "metadata": {
+        "sourceUrl": "https://example.com/thames-sec",
+        "evidence": [
+          "6 new security headcount approved",
+          "Attending RSA and Infosecurity Europe 2026"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:32.575Z"
+    },
+    {
+      "id": "f3e6b28c-1682-4ba3-917f-e06ced4edcdb",
+      "campaignId": "ecom-scaling-playbook",
+      "targetId": "acct-101",
+      "source": "manual-ingest",
+      "company": "Pura Vida Goods",
+      "contactName": "Samira Chen",
+      "title": "Head of Ecommerce",
+      "segment": "DTC Apparel",
+      "region": "US",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "sms"
+      ],
+      "fitScore": 0.9,
+      "intentScore": 0.85,
+      "recencyScore": 0.81,
+      "estimatedReach": 95000,
+      "notes": "Recently raised Series A for US market expansion.",
+      "metadata": {
+        "sourceUrl": "https://example.com/puravida",
+        "evidence": [
+          "Hiring for retention marketing role",
+          "Testing SMS channel in 3 states"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:32.736Z"
+    },
+    {
+      "id": "672c4e11-3245-466f-b539-6eaefae78b62",
+      "campaignId": "ecom-scaling-playbook",
+      "targetId": "acct-102",
+      "source": "manual-ingest",
+      "company": "Thames & Tide",
+      "contactName": "Oliver Grant",
+      "title": "Growth Marketing Manager",
+      "segment": "DTC Home Goods",
+      "region": "United Kingdom",
+      "preferredChannel": "email",
+      "channels": [
+        "email"
+      ],
+      "fitScore": 0.87,
+      "intentScore": 0.82,
+      "recencyScore": 0.78,
+      "estimatedReach": 72000,
+      "notes": "Expanding into EU market by Q3.",
+      "metadata": {
+        "sourceUrl": "https://example.com/thames-tide",
+        "evidence": [
+          "Open role for CRM marketing specialist",
+          "Launched loyalty program in beta"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:32.736Z"
+    },
+    {
+      "id": "5a9856e8-ae93-4dc5-8a0d-2399b7fb8997",
+      "campaignId": "main-campaign",
+      "targetId": "acct-001",
+      "source": "manual-ingest",
+      "company": "Acme Cloud",
+      "contactName": "Jordan Patel",
+      "title": "VP Marketing",
+      "segment": "B2B SaaS",
+      "region": "US",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "linkedin",
+        "email"
+      ],
+      "fitScore": 0.92,
+      "intentScore": 0.86,
+      "recencyScore": 0.82,
+      "estimatedReach": 120000,
+      "notes": "Recent hiring surge in demand gen and lifecycle.",
+      "metadata": {
+        "sourceUrl": "https://example.com/acme-cloud",
+        "evidence": [
+          "3 senior growth hires in last 45 days",
+          "Active paid social expansion to EMEA"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:32.895Z"
+    },
+    {
+      "id": "56fce6ac-c01c-4395-85da-492d67081a73",
+      "campaignId": "main-campaign",
+      "targetId": "acct-002",
+      "source": "manual-ingest",
+      "company": "Nordic Ledger",
+      "contactName": "Mina Vogt",
+      "title": "Head of Growth",
+      "segment": "Fintech",
+      "region": "DACH",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "linkedin"
+      ],
+      "fitScore": 0.88,
+      "intentScore": 0.84,
+      "recencyScore": 0.79,
+      "estimatedReach": 85000,
+      "notes": "Scaling outbound motion for enterprise demos.",
+      "metadata": {
+        "sourceUrl": "https://example.com/nordic-ledger",
+        "evidence": [
+          "Publicly stated expansion target in Germany",
+          "New RevOps tooling rollout"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:32.895Z"
+    },
+    {
+      "id": "69308435-fc70-4c7f-b280-51024fb9bf7b",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-501",
+      "source": "manual-ingest",
+      "company": "CryptoMiner Collective",
+      "contactName": "Alex Voronkov",
+      "title": "Founder & Mining Pool Operator",
+      "segment": "Solo Mining Ops",
+      "region": "Russia",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "linkedin",
+        "telegram"
+      ],
+      "fitScore": 0.96,
+      "intentScore": 0.94,
+      "recencyScore": 0.91,
+      "estimatedReach": 45000,
+      "notes": "Operates 200+ GPU mining rigs across 3 regions. Actively testing new pools.",
+      "metadata": {
+        "sourceUrl": "https://example.com/cryptominer-collective",
+        "evidence": [
+          "Published YouTube breakdown comparing 2026 pool fee structures",
+          "Recently shut down own pool due to maintenance overhead"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:33.050Z"
+    },
+    {
+      "id": "a3601864-e741-4563-866a-e337dbea5633",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-502",
+      "source": "manual-ingest",
+      "company": "PCMasterRace Builds",
+      "contactName": "Jake Torres",
+      "title": "Content Creator & PC Hardware Reviewer",
+      "segment": "PC Gaming Community",
+      "region": "US",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "linkedin",
+        "discord",
+        "youtube"
+      ],
+      "fitScore": 0.91,
+      "intentScore": 0.87,
+      "recencyScore": 0.85,
+      "estimatedReach": 280000,
+      "notes": "RTX 5090 early adopter. Audience of 120K+ gamers with high-end builds.",
+      "metadata": {
+        "sourceUrl": "https://example.com/pcmasterrace",
+        "evidence": [
+          "Video on 'offsetting GPU cost with mining' has 340K views",
+          "Active r/pcmasterrace and r/gpumining community member"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:33.050Z"
+    },
+    {
+      "id": "f73b98bb-c177-42c7-b8a8-6b2fb16524cf",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-503",
+      "source": "manual-ingest",
+      "company": "Nova AI Labs",
+      "contactName": "Dr. Mei Lin",
+      "title": "Head of Compute Infrastructure",
+      "segment": "AI Research",
+      "region": "US",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "linkedin"
+      ],
+      "fitScore": 0.88,
+      "intentScore": 0.85,
+      "recencyScore": 0.82,
+      "estimatedReach": 190000,
+      "notes": "Small AI lab spending $45K/mo on AWS GPU instances. Exploring decentralized alternatives.",
+      "metadata": {
+        "sourceUrl": "https://example.com/nova-ai",
+        "evidence": [
+          "Published blog post: 'The case for decentralized AI compute'",
+          "Attending NeurIPS 2026 with distributed computing talk"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:33.050Z"
+    },
+    {
+      "id": "dcdc7c5c-f065-47db-8c2e-be075c116b3e",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-504",
+      "source": "manual-ingest",
+      "company": "MineBridge Consulting",
+      "contactName": "Carlos Silva",
+      "title": "Operations Director",
+      "segment": "Mid-Size Mining Farm",
+      "region": "Brazil",
+      "preferredChannel": "telegram",
+      "channels": [
+        "telegram",
+        "email"
+      ],
+      "fitScore": 0.93,
+      "intentScore": 0.89,
+      "recencyScore": 0.86,
+      "estimatedReach": 120000,
+      "notes": "Manages 500+ ASIC and GPU units in São Paulo. Low-cost hydro power.",
+      "metadata": {
+        "sourceUrl": "https://example.com/minebridge",
+        "evidence": [
+          "Expanding farm capacity by 40% with new GPU shipments",
+          "Complained publicly about pool fee opacity on Bitcointalk"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:33.050Z"
+    },
+    {
+      "id": "f16209c5-9ff1-48e2-aa25-2c4c96eac6e2",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-505",
+      "source": "manual-ingest",
+      "company": "BlockHeight Ventures",
+      "contactName": "Priya Nair",
+      "title": "Crypto Fund Manager & Angel Investor",
+      "segment": "Crypto Investment",
+      "region": "United Kingdom",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "linkedin",
+        "twitter"
+      ],
+      "fitScore": 0.85,
+      "intentScore": 0.82,
+      "recencyScore": 0.8,
+      "estimatedReach": 350000,
+      "notes": "Actively seeking early-stage compute protocols for fund allocation.",
+      "metadata": {
+        "sourceUrl": "https://example.com/blockheight",
+        "evidence": [
+          "Recent podcast: 'Mining protocols are this cycle's dark horse'",
+          "Made 3 compute-protocol angel investments in the last 6 months"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:33.050Z"
+    },
+    {
+      "id": "9da188ac-d337-4434-b59c-c65dd2495368",
+      "campaignId": "healthcare-lead-gen",
+      "targetId": "acct-201",
+      "source": "manual-ingest",
+      "company": "Great Lakes Health System",
+      "contactName": "Dr. Karen Wu",
+      "title": "VP Clinical Informatics",
+      "segment": "Hospital System (500+ beds)",
+      "region": "US-Midwest",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "linkedin",
+        "email"
+      ],
+      "fitScore": 0.94,
+      "intentScore": 0.91,
+      "recencyScore": 0.88,
+      "estimatedReach": 200000,
+      "notes": "Posted RFP for enterprise interoperability platform in Q1.",
+      "metadata": {
+        "sourceUrl": "https://example.com/glakes",
+        "evidence": [
+          "Published RFP for FHIR-native integration layer",
+          "Recently ended legacy EHR support contract"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:33.249Z"
+    },
+    {
+      "id": "32b51a28-183f-4671-892b-b9db4f91fe1b",
+      "campaignId": "healthcare-lead-gen",
+      "targetId": "acct-202",
+      "source": "manual-ingest",
+      "company": "Southwest Regional Medical",
+      "contactName": "Marcus Reeves",
+      "title": "Director of Health IT",
+      "segment": "Hospital System (200-400 beds)",
+      "region": "US-Southwest",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "email",
+        "linkedin"
+      ],
+      "fitScore": 0.89,
+      "intentScore": 0.86,
+      "recencyScore": 0.83,
+      "estimatedReach": 150000,
+      "notes": "Expanding telemedicine infrastructure, needs integration.",
+      "metadata": {
+        "sourceUrl": "https://example.com/swregional",
+        "evidence": [
+          "$4M telemedicine grant awarded",
+          "New CIO started 60 days ago"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:33.249Z"
+    },
+    {
+      "id": "d057b154-1725-49b7-966e-54edf2fab89b",
+      "campaignId": "saas-expansion-apac",
+      "targetId": "acct-301",
+      "source": "manual-ingest",
+      "company": "Tokyo FinServe",
+      "contactName": "Yuki Tanaka",
+      "title": "VP Sales APAC",
+      "segment": "Financial Services",
+      "region": "Japan",
+      "preferredChannel": "email",
+      "channels": [
+        "email"
+      ],
+      "fitScore": 0.91,
+      "intentScore": 0.87,
+      "recencyScore": 0.84,
+      "estimatedReach": 180000,
+      "notes": "Currently evaluating replacement for legacy CRM platform.",
+      "metadata": {
+        "sourceUrl": "https://example.com/tokyo-finserve",
+        "evidence": [
+          "RFP distributed to 3 vendors in Q2",
+          "Hiring for digital transformation lead role"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:33.435Z"
+    },
+    {
+      "id": "ee2a30ac-46e1-49dc-9b2e-2bab5639500e",
+      "campaignId": "saas-expansion-apac",
+      "targetId": "acct-302",
+      "source": "manual-ingest",
+      "company": "Outback Digital",
+      "contactName": "Sarah Mitchell",
+      "title": "Regional Marketing Director",
+      "segment": "Technology Consulting",
+      "region": "Australia",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "linkedin"
+      ],
+      "fitScore": 0.88,
+      "intentScore": 0.83,
+      "recencyScore": 0.8,
+      "estimatedReach": 110000,
+      "notes": "Growing APAC team, experimenting with ABM programs.",
+      "metadata": {
+        "sourceUrl": "https://example.com/outback-digital",
+        "evidence": [
+          "Hiring 3 SDRs for APAC outbound",
+          "Testing personalized video in sequences"
+        ]
+      },
+      "capturedAt": "2026-05-24T04:42:33.435Z"
     }
   ],
   "outreachEvents": [
@@ -1138,11 +1636,11 @@
       "recencyScore": 0.9,
       "memoryScore": 0.9266666666666666,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:36.981Z",
+      "latestResearchAt": "2026-05-24T04:42:32.575Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.002Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.598Z",
       "estimatedReach": 300000,
       "notes": [
         "New CISO hired after Q1 breach disclosure."
@@ -1168,11 +1666,11 @@
       "recencyScore": 0.85,
       "memoryScore": 0.8766666666666666,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:36.981Z",
+      "latestResearchAt": "2026-05-24T04:42:32.575Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.002Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.598Z",
       "estimatedReach": 175000,
       "notes": [
         "Scaling SecOps team, evaluating network segmentation vendors."
@@ -1198,11 +1696,11 @@
       "recencyScore": 0.81,
       "memoryScore": 0.8533333333333334,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:37.151Z",
+      "latestResearchAt": "2026-05-24T04:42:32.736Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.175Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.761Z",
       "estimatedReach": 95000,
       "notes": [
         "Recently raised Series A for US market expansion."
@@ -1227,11 +1725,11 @@
       "recencyScore": 0.78,
       "memoryScore": 0.8233333333333333,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:37.151Z",
+      "latestResearchAt": "2026-05-24T04:42:32.736Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.175Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.761Z",
       "estimatedReach": 72000,
       "notes": [
         "Expanding into EU market by Q3."
@@ -1262,7 +1760,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.347Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.917Z",
       "estimatedReach": null,
       "notes": [
         "LinkedIn and creator-led video are high-signal trust channels for B2B decision-makers in markets that include Germany."
@@ -1293,7 +1791,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.347Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.917Z",
       "estimatedReach": null,
       "notes": [
         "The same LinkedIn benchmark included Brazil, making trust-first creator and video outreach relevant for localized PT-BR campaigns."
@@ -1325,7 +1823,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.347Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.917Z",
       "estimatedReach": null,
       "notes": [
         "High-intent buyers cluster around reviews, pricing, and comparison content; follow-up should route to proof-heavy assets rather than generic awareness copy."
@@ -1357,7 +1855,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.347Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.917Z",
       "estimatedReach": null,
       "notes": [
         "Enterprise buyers need brand recall and self-serve proof before outreach; if you are not already known pre-research, shortlist odds are poor."
@@ -1388,7 +1886,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.347Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.917Z",
       "estimatedReach": null,
       "notes": [
         "Teams already using AI and under pressure to personalize are strong targets for localization and orchestration messaging, especially where audience-data quality is a known bottleneck."
@@ -1419,7 +1917,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.347Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.917Z",
       "estimatedReach": null,
       "notes": [
         "CSA indicates digital opportunity is concentrated; language expansion should prioritize the limited set of languages controlling material shares of online GDP."
@@ -1445,11 +1943,11 @@
       "recencyScore": 0.82,
       "memoryScore": 0.8666666666666667,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:37.320Z",
+      "latestResearchAt": "2026-05-24T04:42:32.895Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.347Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.917Z",
       "estimatedReach": 120000,
       "notes": [
         "Recent hiring surge in demand gen and lifecycle."
@@ -1475,14 +1973,165 @@
       "recencyScore": 0.79,
       "memoryScore": 0.8366666666666666,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:37.320Z",
+      "latestResearchAt": "2026-05-24T04:42:32.895Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.347Z",
+      "nextEligibleAt": "2026-05-24T04:42:32.917Z",
       "estimatedReach": 85000,
       "notes": [
         "Scaling outbound motion for enterprise demos."
+      ],
+      "source": "manual-ingest"
+    },
+    {
+      "id": "hashnhedge-launch:acct-501",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-501",
+      "company": "CryptoMiner Collective",
+      "contactName": "Alex Voronkov",
+      "title": "Founder & Mining Pool Operator",
+      "segment": "Solo Mining Ops",
+      "region": "Russia",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "linkedin",
+        "telegram"
+      ],
+      "fitScore": 0.96,
+      "intentScore": 0.94,
+      "recencyScore": 0.91,
+      "memoryScore": 0.9366666666666666,
+      "status": "uncontacted",
+      "latestResearchAt": "2026-05-24T04:42:33.050Z",
+      "lastEngagementAt": null,
+      "lastPositiveAt": null,
+      "lastNegativeAt": null,
+      "nextEligibleAt": "2026-05-24T04:42:33.118Z",
+      "estimatedReach": 45000,
+      "notes": [
+        "Operates 200+ GPU mining rigs across 3 regions. Actively testing new pools."
+      ],
+      "source": "manual-ingest"
+    },
+    {
+      "id": "hashnhedge-launch:acct-502",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-502",
+      "company": "PCMasterRace Builds",
+      "contactName": "Jake Torres",
+      "title": "Content Creator & PC Hardware Reviewer",
+      "segment": "PC Gaming Community",
+      "region": "US",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "linkedin",
+        "discord",
+        "youtube"
+      ],
+      "fitScore": 0.91,
+      "intentScore": 0.87,
+      "recencyScore": 0.85,
+      "memoryScore": 0.8766666666666666,
+      "status": "uncontacted",
+      "latestResearchAt": "2026-05-24T04:42:33.050Z",
+      "lastEngagementAt": null,
+      "lastPositiveAt": null,
+      "lastNegativeAt": null,
+      "nextEligibleAt": "2026-05-24T04:42:33.118Z",
+      "estimatedReach": 280000,
+      "notes": [
+        "RTX 5090 early adopter. Audience of 120K+ gamers with high-end builds."
+      ],
+      "source": "manual-ingest"
+    },
+    {
+      "id": "hashnhedge-launch:acct-503",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-503",
+      "company": "Nova AI Labs",
+      "contactName": "Dr. Mei Lin",
+      "title": "Head of Compute Infrastructure",
+      "segment": "AI Research",
+      "region": "US",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "linkedin"
+      ],
+      "fitScore": 0.88,
+      "intentScore": 0.85,
+      "recencyScore": 0.82,
+      "memoryScore": 0.85,
+      "status": "uncontacted",
+      "latestResearchAt": "2026-05-24T04:42:33.050Z",
+      "lastEngagementAt": null,
+      "lastPositiveAt": null,
+      "lastNegativeAt": null,
+      "nextEligibleAt": "2026-05-24T04:42:33.118Z",
+      "estimatedReach": 190000,
+      "notes": [
+        "Small AI lab spending $45K/mo on AWS GPU instances. Exploring decentralized alternatives."
+      ],
+      "source": "manual-ingest"
+    },
+    {
+      "id": "hashnhedge-launch:acct-504",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-504",
+      "company": "MineBridge Consulting",
+      "contactName": "Carlos Silva",
+      "title": "Operations Director",
+      "segment": "Mid-Size Mining Farm",
+      "region": "Brazil",
+      "preferredChannel": "telegram",
+      "channels": [
+        "telegram",
+        "email"
+      ],
+      "fitScore": 0.93,
+      "intentScore": 0.89,
+      "recencyScore": 0.86,
+      "memoryScore": 0.8933333333333334,
+      "status": "uncontacted",
+      "latestResearchAt": "2026-05-24T04:42:33.050Z",
+      "lastEngagementAt": null,
+      "lastPositiveAt": null,
+      "lastNegativeAt": null,
+      "nextEligibleAt": "2026-05-24T04:42:33.118Z",
+      "estimatedReach": 120000,
+      "notes": [
+        "Manages 500+ ASIC and GPU units in São Paulo. Low-cost hydro power."
+      ],
+      "source": "manual-ingest"
+    },
+    {
+      "id": "hashnhedge-launch:acct-505",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-505",
+      "company": "BlockHeight Ventures",
+      "contactName": "Priya Nair",
+      "title": "Crypto Fund Manager & Angel Investor",
+      "segment": "Crypto Investment",
+      "region": "United Kingdom",
+      "preferredChannel": "linkedin",
+      "channels": [
+        "linkedin",
+        "twitter"
+      ],
+      "fitScore": 0.85,
+      "intentScore": 0.82,
+      "recencyScore": 0.8,
+      "memoryScore": 0.8233333333333333,
+      "status": "uncontacted",
+      "latestResearchAt": "2026-05-24T04:42:33.050Z",
+      "lastEngagementAt": null,
+      "lastPositiveAt": null,
+      "lastNegativeAt": null,
+      "nextEligibleAt": "2026-05-24T04:42:33.118Z",
+      "estimatedReach": 350000,
+      "notes": [
+        "Actively seeking early-stage compute protocols for fund allocation."
       ],
       "source": "manual-ingest"
     },
@@ -1505,11 +2154,11 @@
       "recencyScore": 0.88,
       "memoryScore": 0.91,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:37.485Z",
+      "latestResearchAt": "2026-05-24T04:42:33.249Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.510Z",
+      "nextEligibleAt": "2026-05-24T04:42:33.276Z",
       "estimatedReach": 200000,
       "notes": [
         "Posted RFP for enterprise interoperability platform in Q1."
@@ -1535,11 +2184,11 @@
       "recencyScore": 0.83,
       "memoryScore": 0.86,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:37.485Z",
+      "latestResearchAt": "2026-05-24T04:42:33.249Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.510Z",
+      "nextEligibleAt": "2026-05-24T04:42:33.276Z",
       "estimatedReach": 150000,
       "notes": [
         "Expanding telemedicine infrastructure, needs integration."
@@ -1564,11 +2213,11 @@
       "recencyScore": 0.84,
       "memoryScore": 0.8733333333333334,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:37.645Z",
+      "latestResearchAt": "2026-05-24T04:42:33.435Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.671Z",
+      "nextEligibleAt": "2026-05-24T04:42:33.460Z",
       "estimatedReach": 180000,
       "notes": [
         "Currently evaluating replacement for legacy CRM platform."
@@ -1594,11 +2243,11 @@
       "recencyScore": 0.8,
       "memoryScore": 0.8366666666666666,
       "status": "uncontacted",
-      "latestResearchAt": "2026-05-24T04:26:37.645Z",
+      "latestResearchAt": "2026-05-24T04:42:33.435Z",
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-24T04:26:37.671Z",
+      "nextEligibleAt": "2026-05-24T04:42:33.460Z",
       "estimatedReach": 110000,
       "notes": [
         "Growing APAC team, experimenting with ABM programs."
@@ -1653,7 +2302,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:36.981Z",
+      "lastObservedAt": "2026-05-24T04:42:32.575Z",
       "targetIds": [
         "acct-401"
       ],
@@ -1671,7 +2320,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:36.981Z",
+      "lastObservedAt": "2026-05-24T04:42:32.575Z",
       "targetIds": [
         "acct-401"
       ],
@@ -1689,7 +2338,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:36.981Z",
+      "lastObservedAt": "2026-05-24T04:42:32.575Z",
       "targetIds": [
         "acct-402"
       ],
@@ -1707,7 +2356,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:36.981Z",
+      "lastObservedAt": "2026-05-24T04:42:32.575Z",
       "targetIds": [
         "acct-402"
       ],
@@ -1725,7 +2374,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.151Z",
+      "lastObservedAt": "2026-05-24T04:42:32.736Z",
       "targetIds": [
         "acct-101"
       ],
@@ -1743,7 +2392,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.151Z",
+      "lastObservedAt": "2026-05-24T04:42:32.736Z",
       "targetIds": [
         "acct-101"
       ],
@@ -1761,7 +2410,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.151Z",
+      "lastObservedAt": "2026-05-24T04:42:32.736Z",
       "targetIds": [
         "acct-102"
       ],
@@ -2139,7 +2788,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.320Z",
+      "lastObservedAt": "2026-05-24T04:42:32.895Z",
       "targetIds": [
         "acct-001"
       ],
@@ -2157,7 +2806,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.320Z",
+      "lastObservedAt": "2026-05-24T04:42:32.895Z",
       "targetIds": [
         "acct-001"
       ],
@@ -2175,7 +2824,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.320Z",
+      "lastObservedAt": "2026-05-24T04:42:32.895Z",
       "targetIds": [
         "acct-002"
       ],
@@ -2193,9 +2842,207 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.320Z",
+      "lastObservedAt": "2026-05-24T04:42:32.895Z",
       "targetIds": [
         "acct-002"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|Solo Mining Ops|Russia|linkedin",
+      "campaignId": "hashnhedge-launch",
+      "segment": "Solo Mining Ops",
+      "region": "Russia",
+      "channel": "linkedin",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-501"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|Solo Mining Ops|Russia|telegram",
+      "campaignId": "hashnhedge-launch",
+      "segment": "Solo Mining Ops",
+      "region": "Russia",
+      "channel": "telegram",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-501"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|PC Gaming Community|US|linkedin",
+      "campaignId": "hashnhedge-launch",
+      "segment": "PC Gaming Community",
+      "region": "US",
+      "channel": "linkedin",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-502"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|PC Gaming Community|US|discord",
+      "campaignId": "hashnhedge-launch",
+      "segment": "PC Gaming Community",
+      "region": "US",
+      "channel": "discord",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-502"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|PC Gaming Community|US|youtube",
+      "campaignId": "hashnhedge-launch",
+      "segment": "PC Gaming Community",
+      "region": "US",
+      "channel": "youtube",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-502"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|AI Research|US|email",
+      "campaignId": "hashnhedge-launch",
+      "segment": "AI Research",
+      "region": "US",
+      "channel": "email",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-503"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|AI Research|US|linkedin",
+      "campaignId": "hashnhedge-launch",
+      "segment": "AI Research",
+      "region": "US",
+      "channel": "linkedin",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-503"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|Mid-Size Mining Farm|Brazil|telegram",
+      "campaignId": "hashnhedge-launch",
+      "segment": "Mid-Size Mining Farm",
+      "region": "Brazil",
+      "channel": "telegram",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-504"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|Mid-Size Mining Farm|Brazil|email",
+      "campaignId": "hashnhedge-launch",
+      "segment": "Mid-Size Mining Farm",
+      "region": "Brazil",
+      "channel": "email",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-504"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|Crypto Investment|United Kingdom|linkedin",
+      "campaignId": "hashnhedge-launch",
+      "segment": "Crypto Investment",
+      "region": "United Kingdom",
+      "channel": "linkedin",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-505"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "hashnhedge-launch|Crypto Investment|United Kingdom|twitter",
+      "campaignId": "hashnhedge-launch",
+      "segment": "Crypto Investment",
+      "region": "United Kingdom",
+      "channel": "twitter",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T04:42:33.050Z",
+      "targetIds": [
+        "acct-505"
       ],
       "successRate": 0,
       "negativeRate": 0,
@@ -2211,7 +3058,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.485Z",
+      "lastObservedAt": "2026-05-24T04:42:33.249Z",
       "targetIds": [
         "acct-201"
       ],
@@ -2229,7 +3076,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.485Z",
+      "lastObservedAt": "2026-05-24T04:42:33.249Z",
       "targetIds": [
         "acct-201"
       ],
@@ -2247,7 +3094,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.485Z",
+      "lastObservedAt": "2026-05-24T04:42:33.249Z",
       "targetIds": [
         "acct-202"
       ],
@@ -2265,7 +3112,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.485Z",
+      "lastObservedAt": "2026-05-24T04:42:33.249Z",
       "targetIds": [
         "acct-202"
       ],
@@ -2283,7 +3130,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.645Z",
+      "lastObservedAt": "2026-05-24T04:42:33.435Z",
       "targetIds": [
         "acct-301"
       ],
@@ -2301,7 +3148,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.645Z",
+      "lastObservedAt": "2026-05-24T04:42:33.435Z",
       "targetIds": [
         "acct-302"
       ],
@@ -2319,7 +3166,7 @@
       "engagedTargets": 0,
       "positiveOutcomes": 0,
       "negativeOutcomes": 0,
-      "lastObservedAt": "2026-05-24T04:26:37.645Z",
+      "lastObservedAt": "2026-05-24T04:42:33.435Z",
       "targetIds": [
         "acct-302"
       ],
@@ -3000,6 +3847,114 @@
       "id": "e549cb30-7a1e-46cc-aaf8-88dcec3dc446",
       "campaignId": "saas-expansion-apac",
       "createdAt": "2026-05-24T04:26:37.708Z",
+      "targetProfiles": 2,
+      "tacticObservations": 3,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "eb86a289-d878-455f-a64b-bfe69c061e2e",
+      "campaignId": "cybersec-q3-pipeline",
+      "createdAt": "2026-05-24T04:42:32.547Z",
+      "targetProfiles": 2,
+      "tacticObservations": 4,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "7a3bc4e9-fa29-4125-a41c-5654ff4a09ae",
+      "campaignId": "cybersec-q3-pipeline",
+      "createdAt": "2026-05-24T04:42:32.632Z",
+      "targetProfiles": 2,
+      "tacticObservations": 4,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "190eedfd-e60c-46f7-b736-f6e218429477",
+      "campaignId": "ecom-scaling-playbook",
+      "createdAt": "2026-05-24T04:42:32.722Z",
+      "targetProfiles": 2,
+      "tacticObservations": 3,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "d806707f-d1cb-4e87-8be6-203beb131719",
+      "campaignId": "ecom-scaling-playbook",
+      "createdAt": "2026-05-24T04:42:32.796Z",
+      "targetProfiles": 2,
+      "tacticObservations": 3,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "a4abe77d-0743-4059-8ebc-45054154a308",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-24T04:42:32.878Z",
+      "targetProfiles": 8,
+      "tacticObservations": 24,
+      "playbooks": 0,
+      "decisionsReviewed": 12
+    },
+    {
+      "id": "3debac2b-513d-4324-9639-e5b1d2096cb7",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-24T04:42:32.956Z",
+      "targetProfiles": 8,
+      "tacticObservations": 24,
+      "playbooks": 0,
+      "decisionsReviewed": 12
+    },
+    {
+      "id": "e32f5710-375d-4bae-a87b-f335aaa5c44c",
+      "campaignId": "hashnhedge-launch",
+      "createdAt": "2026-05-24T04:42:33.029Z",
+      "targetProfiles": 0,
+      "tacticObservations": 0,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "672944fc-e4e3-43a7-9cf3-3dd08023c38a",
+      "campaignId": "hashnhedge-launch",
+      "createdAt": "2026-05-24T04:42:33.156Z",
+      "targetProfiles": 5,
+      "tacticObservations": 11,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "e2794c46-05a9-43a8-ab1b-3befa6194ced",
+      "campaignId": "healthcare-lead-gen",
+      "createdAt": "2026-05-24T04:42:33.232Z",
+      "targetProfiles": 2,
+      "tacticObservations": 4,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "610d858e-9fb6-4ff1-93d9-4b02498a4856",
+      "campaignId": "healthcare-lead-gen",
+      "createdAt": "2026-05-24T04:42:33.314Z",
+      "targetProfiles": 2,
+      "tacticObservations": 4,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "5692f78c-b006-46fb-8d3e-b15e7eb161c1",
+      "campaignId": "saas-expansion-apac",
+      "createdAt": "2026-05-24T04:42:33.419Z",
+      "targetProfiles": 2,
+      "tacticObservations": 3,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "f40a7ea4-d330-4e17-bb7b-48c57b43960b",
+      "campaignId": "saas-expansion-apac",
+      "createdAt": "2026-05-24T04:42:33.499Z",
       "targetProfiles": 2,
       "tacticObservations": 3,
       "playbooks": 0,
@@ -17937,7 +18892,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "0ac98048-82c5-4f7b-87e0-0688104249e7",
@@ -17972,7 +18927,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "098c174e-d43a-4287-8091-61e3f6d78fb2",
@@ -18007,7 +18962,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "d6d9ec5a-ad79-42ec-8147-a0044a092fed",
@@ -18042,7 +18997,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "919548e0-80c3-409b-8fc5-3825777ea0e8",
@@ -18077,7 +19032,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "96cfcd25-f88e-4c62-afae-2fece1ae82dc",
@@ -18111,7 +19066,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "0bf4e3d8-28f0-4e06-ad74-92c4fd6234e4",
@@ -18145,7 +19100,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "538411b4-efe0-4b37-83a6-f6cbbdd4dda6",
@@ -18179,7 +19134,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "7d4787ed-bd6a-4c04-b31c-b9504e72c8b5",
@@ -18213,7 +19168,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "2eb4181a-0dc5-4d8d-bba5-d3566c7f8e2c",
@@ -18247,7 +19202,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "e4f930ee-b973-4938-a91e-3dc5342a7b46",
@@ -18281,7 +19236,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "b9b14f81-d4e0-4d98-aad1-9bc7717fe1db",
@@ -18315,7 +19270,7 @@
       "enrichmentStatus": "queued",
       "verificationStatus": "pending",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "53432ce2-d11c-4399-b0f0-3c97bc0a0db9",
@@ -18351,7 +19306,7 @@
       "fullName": "Marketing Operations And Demand Generation Leaders",
       "title": "Marketing Operations And Demand Generation Leaders",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "14256f86-80d2-4f9d-9d49-2b00777cda09",
@@ -18387,7 +19342,7 @@
       "fullName": "B2B Marketing",
       "title": "B2B Marketing",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "e7e696c1-a295-4673-b745-0bfc6de0d625",
@@ -18423,7 +19378,7 @@
       "fullName": "Revenue",
       "title": "Revenue",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "49e98af5-f913-48f5-96ef-828264ee34a2",
@@ -18459,7 +19414,7 @@
       "fullName": "GTM Leaders Evaluating AI",
       "title": "GTM Leaders Evaluating AI",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "1b54cd14-4388-48e2-a887-a9d5f0a5259f",
@@ -18495,7 +19450,7 @@
       "fullName": "Localization",
       "title": "Localization",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "14cccf0d-268d-41eb-a02b-ca623a13a917",
@@ -18530,7 +19485,7 @@
       "fullName": "Marketing And Revenue Leaders",
       "title": "Marketing And Revenue Leaders",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "d3ce59c4-65ca-4f5c-87ed-aa68e7ad702d",
@@ -18565,7 +19520,7 @@
       "fullName": "B2B Marketing",
       "title": "B2B Marketing",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "402e00ac-0f14-4d70-9bf1-d97c620ba631",
@@ -18600,7 +19555,7 @@
       "fullName": "Revenue",
       "title": "Revenue",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "c65cf82c-17e5-455b-839c-a8afd4f92051",
@@ -18635,7 +19590,7 @@
       "fullName": "GTM Leaders Evaluating AI",
       "title": "GTM Leaders Evaluating AI",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "e5485757-4f1f-47e9-ba4e-f2c9c0076aaf",
@@ -18670,7 +19625,7 @@
       "fullName": "Localization",
       "title": "Localization",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "153b76bc-c3e0-439d-ab71-0e88dc77e8a6",
@@ -18705,7 +19660,7 @@
       "fullName": "Marketing And Revenue Leaders",
       "title": "Marketing And Revenue Leaders",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "26c27bce-6733-47dd-a761-fc282aa87e43",
@@ -18740,7 +19695,7 @@
       "fullName": "B2B Marketing",
       "title": "B2B Marketing",
       "enrichmentProvider": "internal-waterfall",
-      "lastActionAt": "2026-05-24T04:26:37.850Z"
+      "lastActionAt": "2026-05-24T04:42:33.634Z"
     },
     {
       "id": "fed29407-16ed-460e-a9c7-bae6315a87a1",
@@ -19591,6 +20546,572 @@
         ],
         "createdAt": "2026-05-24T04:26:38.002Z"
       }
+    },
+    {
+      "id": "62b58fba-cd4b-4c58-a936-3ea14005bf97",
+      "campaignId": "cybersec-q3-pipeline",
+      "targetId": "acct-401",
+      "company": "Meridian Defense",
+      "fullName": "Raj Patel",
+      "title": "CISO",
+      "email": "raj.patel@meridiandefense.example",
+      "linkedinUrl": "https://linkedin.com/in/raj-patel",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "US-East",
+      "segment": "Enterprise (5000+ employees)",
+      "preferredChannel": "linkedin",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:32.649Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.558Z",
+      "sequencePlan": {
+        "channel": "linkedin",
+        "offer": "Free zero-trust architecture maturity assessment (30 min)",
+        "steps": [
+          "Connection request referencing Meridian Defense and Fill top-of-funnel with security decision-makers evaluating zero-trust network access.",
+          "Follow-up message anchored on Free zero-trust architecture maturity assessment (30 min) and one evidence-backed pain point for Raj Patel.",
+          "Value drop with proof asset, benchmark, or case study tailored to Enterprise (5000+ employees)."
+        ],
+        "personalizationAngles": [
+          "Enterprise (5000+ Employees) segment pressure",
+          "US-EAST market context",
+          "CISO"
+        ],
+        "createdAt": "2026-05-24T04:42:33.558Z"
+      }
+    },
+    {
+      "id": "d8b30d5c-7faf-4559-b8c5-b4badaba0548",
+      "campaignId": "cybersec-q3-pipeline",
+      "targetId": "acct-402",
+      "company": "Thames Security Group",
+      "fullName": "Claire Bennett",
+      "title": "VP Security Engineering",
+      "email": "claire.bennett@thames-security.example",
+      "linkedinUrl": "https://linkedin.com/in/claire-bennett",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "United Kingdom",
+      "segment": "Mid-Market (1000-5000 employees)",
+      "preferredChannel": "linkedin",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:32.649Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.558Z",
+      "sequencePlan": {
+        "channel": "linkedin",
+        "offer": "Free zero-trust architecture maturity assessment (30 min)",
+        "steps": [
+          "Connection request referencing Thames Security Group and Fill top-of-funnel with security decision-makers evaluating zero-trust network access.",
+          "Follow-up message anchored on Free zero-trust architecture maturity assessment (30 min) and one evidence-backed pain point for Claire Bennett.",
+          "Value drop with proof asset, benchmark, or case study tailored to Mid-Market (1000-5000 employees)."
+        ],
+        "personalizationAngles": [
+          "Mid Market (1000 5000 Employees) segment pressure",
+          "UNITED KINGDOM market context",
+          "VP Security Engineering"
+        ],
+        "createdAt": "2026-05-24T04:42:33.558Z"
+      }
+    },
+    {
+      "id": "d5c868f9-222c-48a2-9f3b-5a654ee5a28f",
+      "campaignId": "ecom-scaling-playbook",
+      "targetId": "acct-101",
+      "company": "Pura Vida Goods",
+      "fullName": "Samira Chen",
+      "title": "Head of Ecommerce",
+      "email": "samira@puravidagoods.example",
+      "linkedinUrl": "https://linkedin.com/in/samira-chen",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "US",
+      "segment": "DTC Apparel",
+      "preferredChannel": "email",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:32.809Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.609Z",
+      "sequencePlan": {
+        "channel": "email",
+        "offer": "Free retention audit with cohort-based LTV projection",
+        "steps": [
+          "Cold email 1 focused on Scale DTC revenue across US and UK markets with retention-first outbound and a concrete outcome for Pura Vida Goods.",
+          "Follow-up email with proof, objection handling, and localized relevance for US.",
+          "Breakup email offering Free retention audit with cohort-based LTV projection or a lighter CTA."
+        ],
+        "personalizationAngles": [
+          "DTC Apparel segment pressure",
+          "US market context",
+          "Head of Ecommerce"
+        ],
+        "createdAt": "2026-05-24T04:42:33.609Z"
+      }
+    },
+    {
+      "id": "6a1b00e1-a1d8-4956-a0e3-bf8eb3e81378",
+      "campaignId": "ecom-scaling-playbook",
+      "targetId": "acct-102",
+      "company": "Thames & Tide",
+      "fullName": "Oliver Grant",
+      "title": "Growth Marketing Manager",
+      "email": "oliver@thamesandtide.example",
+      "linkedinUrl": "https://linkedin.com/in/oliver-grant",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "United Kingdom",
+      "segment": "DTC Home Goods",
+      "preferredChannel": "email",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:32.809Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.609Z",
+      "sequencePlan": {
+        "channel": "email",
+        "offer": "Free retention audit with cohort-based LTV projection",
+        "steps": [
+          "Cold email 1 focused on Scale DTC revenue across US and UK markets with retention-first outbound and a concrete outcome for Thames & Tide.",
+          "Follow-up email with proof, objection handling, and localized relevance for United Kingdom.",
+          "Breakup email offering Free retention audit with cohort-based LTV projection or a lighter CTA."
+        ],
+        "personalizationAngles": [
+          "DTC Home Goods segment pressure",
+          "UNITED KINGDOM market context",
+          "Growth Marketing Manager"
+        ],
+        "createdAt": "2026-05-24T04:42:33.609Z"
+      }
+    },
+    {
+      "id": "7aac0b38-6b14-4453-bf8c-375fe12884b0",
+      "campaignId": "main-campaign",
+      "targetId": "acct-001",
+      "company": "Acme Cloud",
+      "fullName": "Jordan Patel",
+      "title": "VP Marketing",
+      "email": "jordan.patel@acmecloud.example",
+      "linkedinUrl": "https://linkedin.com/in/jordan-patel",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "US",
+      "segment": "B2B SaaS",
+      "preferredChannel": "linkedin",
+      "contactStatus": "ready-for-enrichment",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "unplanned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:32.969Z"
+    },
+    {
+      "id": "59729c3d-09ab-47df-8b2a-0a8788eb3612",
+      "campaignId": "main-campaign",
+      "targetId": "acct-002",
+      "company": "Nordic Ledger",
+      "fullName": "Mina Vogt",
+      "title": "Head of Growth",
+      "email": "mina.vogt@nordicledger.example",
+      "linkedinUrl": "https://linkedin.com/in/mina-vogt",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "DACH",
+      "segment": "Fintech",
+      "preferredChannel": "email",
+      "contactStatus": "ready-for-enrichment",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "unplanned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:32.969Z"
+    },
+    {
+      "id": "daff6994-d53d-45d7-ae3e-781d13cd3b39",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-501",
+      "company": "CryptoMiner Collective",
+      "fullName": "Alex Voronkov",
+      "title": "Founder & Mining Pool Operator",
+      "email": "alex@cryptominer.example",
+      "linkedinUrl": "https://linkedin.com/in/alex-voronkov",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "Russia",
+      "segment": "Solo Mining Ops",
+      "preferredChannel": "linkedin",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:33.170Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.708Z",
+      "sequencePlan": {
+        "channel": "linkedin",
+        "offer": "First month at 0% platform fee + exclusive early-adopter NFT badge",
+        "steps": [
+          "Connection request referencing CryptoMiner Collective and Acquire miners and compute providers to bootstrap the decentralized compute marketplace at launch.",
+          "Follow-up message anchored on First month at 0% platform fee + exclusive early-adopter NFT badge and one evidence-backed pain point for Alex Voronkov.",
+          "Value drop with proof asset, benchmark, or case study tailored to Solo Mining Ops."
+        ],
+        "personalizationAngles": [
+          "Solo Mining Ops segment pressure",
+          "RUSSIA market context",
+          "Founder & Mining Pool Operator"
+        ],
+        "createdAt": "2026-05-24T04:42:33.708Z"
+      }
+    },
+    {
+      "id": "29ed5dee-4b33-43ad-b550-b1872cc6c757",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-502",
+      "company": "PCMasterRace Builds",
+      "fullName": "Jake Torres",
+      "title": "Content Creator & PC Hardware Reviewer",
+      "email": "jake@pcmasterrace-builds.example",
+      "linkedinUrl": "https://linkedin.com/in/jake-torres",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "US",
+      "segment": "PC Gaming Community",
+      "preferredChannel": "linkedin",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:33.170Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.708Z",
+      "sequencePlan": {
+        "channel": "linkedin",
+        "offer": "First month at 0% platform fee + exclusive early-adopter NFT badge",
+        "steps": [
+          "Connection request referencing PCMasterRace Builds and Acquire miners and compute providers to bootstrap the decentralized compute marketplace at launch.",
+          "Follow-up message anchored on First month at 0% platform fee + exclusive early-adopter NFT badge and one evidence-backed pain point for Jake Torres.",
+          "Value drop with proof asset, benchmark, or case study tailored to PC Gaming Community."
+        ],
+        "personalizationAngles": [
+          "PC Gaming Community segment pressure",
+          "US market context",
+          "Content Creator & PC Hardware Reviewer"
+        ],
+        "createdAt": "2026-05-24T04:42:33.708Z"
+      }
+    },
+    {
+      "id": "a1467cf7-4d63-4536-8c4f-f405b106f1b4",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-503",
+      "company": "Nova AI Labs",
+      "fullName": "Dr. Mei Lin",
+      "title": "Head of Compute Infrastructure",
+      "email": "mei.lin@novaailabs.example",
+      "linkedinUrl": "https://linkedin.com/in/mei-lin",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "US",
+      "segment": "AI Research",
+      "preferredChannel": "email",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:33.170Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.708Z",
+      "sequencePlan": {
+        "channel": "email",
+        "offer": "First month at 0% platform fee + exclusive early-adopter NFT badge",
+        "steps": [
+          "Cold email 1 focused on Acquire miners and compute providers to bootstrap the decentralized compute marketplace at launch and a concrete outcome for Nova AI Labs.",
+          "Follow-up email with proof, objection handling, and localized relevance for US.",
+          "Breakup email offering First month at 0% platform fee + exclusive early-adopter NFT badge or a lighter CTA."
+        ],
+        "personalizationAngles": [
+          "AI Research segment pressure",
+          "US market context",
+          "Head of Compute Infrastructure"
+        ],
+        "createdAt": "2026-05-24T04:42:33.708Z"
+      }
+    },
+    {
+      "id": "9cbfe8a0-57e6-43ec-bdc6-6663ce4b1694",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-504",
+      "company": "MineBridge Consulting",
+      "fullName": "Carlos Silva",
+      "title": "Operations Director",
+      "email": "carlos@minebridge.example",
+      "linkedinUrl": "https://linkedin.com/in/carlos-silva",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "Brazil",
+      "segment": "Mid-Size Mining Farm",
+      "preferredChannel": "telegram",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:33.170Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.708Z",
+      "sequencePlan": {
+        "channel": "telegram",
+        "offer": "First month at 0% platform fee + exclusive early-adopter NFT badge",
+        "steps": [
+          "Cold email 1 focused on Acquire miners and compute providers to bootstrap the decentralized compute marketplace at launch and a concrete outcome for MineBridge Consulting.",
+          "Follow-up email with proof, objection handling, and localized relevance for Brazil.",
+          "Breakup email offering First month at 0% platform fee + exclusive early-adopter NFT badge or a lighter CTA."
+        ],
+        "personalizationAngles": [
+          "Mid Size Mining Farm segment pressure",
+          "BRAZIL market context",
+          "Operations Director"
+        ],
+        "createdAt": "2026-05-24T04:42:33.708Z"
+      }
+    },
+    {
+      "id": "cc2e7512-2c1d-42fe-9dde-5a0341510357",
+      "campaignId": "hashnhedge-launch",
+      "targetId": "acct-505",
+      "company": "BlockHeight Ventures",
+      "fullName": "Priya Nair",
+      "title": "Crypto Fund Manager & Angel Investor",
+      "email": "priya@blockheight.example",
+      "linkedinUrl": "https://linkedin.com/in/priya-nair",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "United Kingdom",
+      "segment": "Crypto Investment",
+      "preferredChannel": "linkedin",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:33.170Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.708Z",
+      "sequencePlan": {
+        "channel": "linkedin",
+        "offer": "First month at 0% platform fee + exclusive early-adopter NFT badge",
+        "steps": [
+          "Connection request referencing BlockHeight Ventures and Acquire miners and compute providers to bootstrap the decentralized compute marketplace at launch.",
+          "Follow-up message anchored on First month at 0% platform fee + exclusive early-adopter NFT badge and one evidence-backed pain point for Priya Nair.",
+          "Value drop with proof asset, benchmark, or case study tailored to Crypto Investment."
+        ],
+        "personalizationAngles": [
+          "Crypto Investment segment pressure",
+          "UNITED KINGDOM market context",
+          "Crypto Fund Manager & Angel Investor"
+        ],
+        "createdAt": "2026-05-24T04:42:33.708Z"
+      }
+    },
+    {
+      "id": "b20d30ec-b816-41b4-919b-89749c66a7f4",
+      "campaignId": "healthcare-lead-gen",
+      "targetId": "acct-201",
+      "company": "Great Lakes Health System",
+      "fullName": "Dr. Karen Wu",
+      "title": "VP Clinical Informatics",
+      "email": "karen.wu@greatlakeshealth.example",
+      "linkedinUrl": "https://linkedin.com/in/karen-wu",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "US-Midwest",
+      "segment": "Hospital System (500+ beds)",
+      "preferredChannel": "linkedin",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:33.330Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.768Z",
+      "sequencePlan": {
+        "channel": "linkedin",
+        "offer": "Free interoperability gap analysis report",
+        "steps": [
+          "Connection request referencing Great Lakes Health System and Generate qualified meetings with hospital system decision-makers for interoperability platform.",
+          "Follow-up message anchored on Free interoperability gap analysis report and one evidence-backed pain point for Dr. Karen Wu.",
+          "Value drop with proof asset, benchmark, or case study tailored to Hospital System (500+ beds)."
+        ],
+        "personalizationAngles": [
+          "Hospital System (500+ Beds) segment pressure",
+          "US-MIDWEST market context",
+          "VP Clinical Informatics"
+        ],
+        "createdAt": "2026-05-24T04:42:33.768Z"
+      }
+    },
+    {
+      "id": "80de6906-5604-4d0d-b44f-03f1498bf27c",
+      "campaignId": "healthcare-lead-gen",
+      "targetId": "acct-202",
+      "company": "Southwest Regional Medical",
+      "fullName": "Marcus Reeves",
+      "title": "Director of Health IT",
+      "email": "marcus.reeves@swregional.example",
+      "linkedinUrl": "https://linkedin.com/in/marcus-reeves",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "US-Southwest",
+      "segment": "Hospital System (200-400 beds)",
+      "preferredChannel": "linkedin",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:33.330Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.768Z",
+      "sequencePlan": {
+        "channel": "linkedin",
+        "offer": "Free interoperability gap analysis report",
+        "steps": [
+          "Connection request referencing Southwest Regional Medical and Generate qualified meetings with hospital system decision-makers for interoperability platform.",
+          "Follow-up message anchored on Free interoperability gap analysis report and one evidence-backed pain point for Marcus Reeves.",
+          "Value drop with proof asset, benchmark, or case study tailored to Hospital System (200-400 beds)."
+        ],
+        "personalizationAngles": [
+          "Hospital System (200 400 Beds) segment pressure",
+          "US-SOUTHWEST market context",
+          "Director of Health IT"
+        ],
+        "createdAt": "2026-05-24T04:42:33.768Z"
+      }
+    },
+    {
+      "id": "f7803ebf-52be-427f-bb3a-2b5583143472",
+      "campaignId": "saas-expansion-apac",
+      "targetId": "acct-301",
+      "company": "Tokyo FinServe",
+      "fullName": "Yuki Tanaka",
+      "title": "VP Sales APAC",
+      "email": "yuki.tanaka@tokyofinserve.example",
+      "linkedinUrl": "https://linkedin.com/in/yuki-tanaka",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "Japan",
+      "segment": "Financial Services",
+      "preferredChannel": "email",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:33.515Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.822Z",
+      "sequencePlan": {
+        "channel": "email",
+        "offer": "Localized ROI assessment for APAC enterprise deployment",
+        "steps": [
+          "Cold email 1 focused on Establish enterprise pipeline in APAC markets with localized outbound sequences and a concrete outcome for Tokyo FinServe.",
+          "Follow-up email with proof, objection handling, and localized relevance for Japan.",
+          "Breakup email offering Localized ROI assessment for APAC enterprise deployment or a lighter CTA."
+        ],
+        "personalizationAngles": [
+          "Financial Services segment pressure",
+          "JAPAN market context",
+          "VP Sales APAC"
+        ],
+        "createdAt": "2026-05-24T04:42:33.822Z"
+      }
+    },
+    {
+      "id": "d31d0071-47fc-4af1-8161-97b8f43a7a6e",
+      "campaignId": "saas-expansion-apac",
+      "targetId": "acct-302",
+      "company": "Outback Digital",
+      "fullName": "Sarah Mitchell",
+      "title": "Regional Marketing Director",
+      "email": "sarah.mitchell@outbackdigital.example",
+      "linkedinUrl": "https://linkedin.com/in/sarah-mitchell",
+      "companyWebsite": "",
+      "phone": "",
+      "region": "Australia",
+      "segment": "Technology Consulting",
+      "preferredChannel": "email",
+      "contactStatus": "sequenced",
+      "complianceStatus": "reviewed",
+      "enrichmentStatus": "completed",
+      "verificationStatus": "verified",
+      "sequenceStatus": "planned",
+      "source": "manual-import",
+      "notes": "",
+      "createdAt": "2026-05-24T04:42:33.515Z",
+      "enrichmentProvider": "internal-waterfall",
+      "lastActionAt": "2026-05-24T04:42:33.822Z",
+      "sequencePlan": {
+        "channel": "email",
+        "offer": "Localized ROI assessment for APAC enterprise deployment",
+        "steps": [
+          "Cold email 1 focused on Establish enterprise pipeline in APAC markets with localized outbound sequences and a concrete outcome for Outback Digital.",
+          "Follow-up email with proof, objection handling, and localized relevance for Australia.",
+          "Breakup email offering Localized ROI assessment for APAC enterprise deployment or a lighter CTA."
+        ],
+        "personalizationAngles": [
+          "Technology Consulting segment pressure",
+          "AUSTRALIA market context",
+          "Regional Marketing Director"
+        ],
+        "createdAt": "2026-05-24T04:42:33.822Z"
+      }
     }
   ],
   "activationRuns": [
@@ -19754,6 +21275,120 @@
       "processedContacts": 2,
       "connectorResults": [],
       "createdAt": "2026-05-24T04:26:38.013Z"
+    },
+    {
+      "id": "7dca5265-d369-41ce-9e0b-042fec908e6b",
+      "campaignId": "cybersec-q3-pipeline",
+      "action": "enrich",
+      "provider": "internal-waterfall",
+      "status": "completed",
+      "processedContacts": 2,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.543Z"
+    },
+    {
+      "id": "55774c48-ba3f-4a34-9d3c-f01b78339639",
+      "campaignId": "cybersec-q3-pipeline",
+      "action": "sequence",
+      "status": "completed",
+      "processedContacts": 2,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.569Z"
+    },
+    {
+      "id": "dbc82c80-cfb9-44fe-b29e-8e4301d1b05c",
+      "campaignId": "ecom-scaling-playbook",
+      "action": "enrich",
+      "provider": "internal-waterfall",
+      "status": "completed",
+      "processedContacts": 2,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.596Z"
+    },
+    {
+      "id": "33d2c353-bd6c-443d-9f98-9ab694833275",
+      "campaignId": "ecom-scaling-playbook",
+      "action": "sequence",
+      "status": "completed",
+      "processedContacts": 2,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.620Z"
+    },
+    {
+      "id": "f8dcab9f-5d97-461f-b61d-355058069855",
+      "campaignId": "main-campaign",
+      "action": "enrich",
+      "provider": "internal-waterfall",
+      "status": "completed",
+      "processedContacts": 24,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.645Z"
+    },
+    {
+      "id": "b7996db8-41ab-4f44-a792-4beefc3e8512",
+      "campaignId": "main-campaign",
+      "action": "sequence",
+      "status": "completed",
+      "processedContacts": 0,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.670Z"
+    },
+    {
+      "id": "78259d43-62f8-4248-9b1d-aab38422c3e9",
+      "campaignId": "hashnhedge-launch",
+      "action": "enrich",
+      "provider": "internal-waterfall",
+      "status": "completed",
+      "processedContacts": 5,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.696Z"
+    },
+    {
+      "id": "099bfae5-5e77-43ac-b92b-d9c4439127a4",
+      "campaignId": "hashnhedge-launch",
+      "action": "sequence",
+      "status": "completed",
+      "processedContacts": 5,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.719Z"
+    },
+    {
+      "id": "4ddf6a86-3db0-40c4-9d53-6672b064fa22",
+      "campaignId": "healthcare-lead-gen",
+      "action": "enrich",
+      "provider": "internal-waterfall",
+      "status": "completed",
+      "processedContacts": 2,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.746Z"
+    },
+    {
+      "id": "243a5cee-0967-470d-ac7e-3995a1e9cc0f",
+      "campaignId": "healthcare-lead-gen",
+      "action": "sequence",
+      "status": "completed",
+      "processedContacts": 2,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.780Z"
+    },
+    {
+      "id": "53a70802-5033-461e-a7a7-1a4c1246dca8",
+      "campaignId": "saas-expansion-apac",
+      "action": "enrich",
+      "provider": "internal-waterfall",
+      "status": "completed",
+      "processedContacts": 2,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.808Z"
+    },
+    {
+      "id": "3df0d555-f74e-4e11-9f51-de60fd95a4cf",
+      "campaignId": "saas-expansion-apac",
+      "action": "sequence",
+      "status": "completed",
+      "processedContacts": 2,
+      "connectorResults": [],
+      "createdAt": "2026-05-24T04:42:33.833Z"
     }
   ]
 }

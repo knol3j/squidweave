@@ -14,6 +14,9 @@ RUN curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/
 ENV PATH="/root/.local/bin:${PATH}"
 WORKDIR /app
 
+# Copy prism skills into Hermes Agent skill directory
+COPY deploy/railway/worker/skills/ /app/.hermes/skills/
+
 COPY deploy/railway/worker/start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 

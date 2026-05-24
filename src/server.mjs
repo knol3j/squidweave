@@ -3,6 +3,18 @@ import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "./config.mjs";
+
+// ── Auth middleware ───────────────────────────────────────────────
+const API_KEY = process.env.SQUIDWEAVE_API_KEY || null;
+
+function requireApiKey(request, response) {
+  if (!API_KEY) return true;
+  const provided = request.headers["x-api-key"];
+  if (provided === API_KEY) return true;
+  sendJson(request, response, 401, { error: "Unauthorized. Provide x-api-key header matching SQUIDWEAVE_API_KEY." });
+  return false;
+}
+// ──────────────────────────────────────────────────────────────────
 import { normalizeEvent } from "./lib/analytics.mjs";
 import { AutomationEngine } from "./lib/automation-engine.mjs";
 import { OpenclawConnector } from "./connectors/openclaw.mjs";
@@ -46,7 +58,7 @@ function buildCorsHeaders(request) {
   return {
     "access-control-allow-origin": allowedOrigins.has(origin) ? origin : "http://127.0.0.1:3000",
     "access-control-allow-methods": "GET,POST,OPTIONS",
-    "access-control-allow-headers": "content-type,authorization",
+    "access-control-allow-headers": "content-type,authorization,x-api-key",
     "access-control-max-age": "86400",
     vary: "Origin",
   };
@@ -362,6 +374,8 @@ async function createApp() {
       response.end();
       return;
     }
+
+    if (!requireApiKey(request, response)) return;
 
     const url = new URL(request.url, `http://${request.headers.host}`);
     const parts = splitPath(url.pathname);
@@ -1014,10 +1028,17 @@ async function createApp() {
 
     sendJson(request, response, 404, { error: "Not found" });
   } catch (error) {
-    sendJson(request, response, 500, {
-      error: error.message,
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
-    });
+    try {
+      sendJson(request, response, 500, {
+        error: error.message,
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+      });
+    } catch {
+      if (!response.headersSent) {
+        response.writeHead(500, { "content-type": "application/json" });
+      }
+      response.end(JSON.stringify({ error: "Internal server error" }));
+    }
   }
   });
 
@@ -1037,3 +1058,28 @@ export async function startServer({ port = config.port, host = process.env.HOST 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   await startServer();
 }
+
+// ── Process-level error handlers ──────────────────────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled Rejection:', reason instanceof Error ? reason.message : reason);
+  if (reason instanceof Error && reason.stack) {
+    console.error(reason.stack.split('\n').slice(0, 3).join('\n'));
+  }
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err.message);
+  console.error(err.stack?.split('\n').slice(0, 5).join('\n') || err.stack);
+  process.exit(1);
+});
+
+// Graceful shutdown
+let shuttingDown = false;
+async function gracefulShutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\n[SHUTDOWN] ${signal} received, exiting...`);
+  process.exit(0);
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

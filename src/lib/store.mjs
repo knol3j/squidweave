@@ -29,6 +29,10 @@ export class Store {
     this.state = defaultState();
     this.events = new EventEmitter();
     this.sequence = 0;
+    this._persistTimer = null;
+    this._persistPromise = null;
+    this._persistDebounceMs = options.persistDebounceMs ?? 500;
+    this._maxEventsPerCollection = options.maxEventsPerCollection ?? 50_000;
   }
 
   async init() {
@@ -52,7 +56,50 @@ export class Store {
   }
 
   async persist() {
-    await writeFile(this.fileUrl, JSON.stringify(this.state, null, 2));
+    if (this._persistTimer) {
+      clearTimeout(this._persistTimer);
+    }
+    return new Promise((resolve, reject) => {
+      this._persistTimer = setTimeout(async () => {
+        try {
+          this._compactEventArrays();
+          await writeFile(this.fileUrl, JSON.stringify(this.state, null, 2));
+          this._persistPromise = null;
+          resolve();
+        } catch (err) {
+          this._persistPromise = null;
+          reject(err);
+        }
+      }, this._persistDebounceMs);
+      this._persistPromise ??= new Promise((res) => {
+        const orig = this._persistTimer;
+        const check = setInterval(() => {
+          if (this._persistTimer !== orig) {
+            clearInterval(check);
+            res();
+          }
+        }, 10);
+      });
+    });
+  }
+
+  /** Trim the oldest events when a collection exceeds maxEventsPerCollection */
+  _compactEventArrays() {
+    for (const key of Object.keys(this.state)) {
+      if (Array.isArray(this.state[key]) && this.state[key].length > this._maxEventsPerCollection) {
+        this.state[key] = this.state[key].slice(-this._maxEventsPerCollection);
+      }
+    }
+  }
+
+  /** Force an immediate synchronous persist (bypasses debounce). Use on shutdown. */
+  flushSync() {
+    if (this._persistTimer) {
+      clearTimeout(this._persistTimer);
+      this._persistTimer = null;
+    }
+    this._compactEventArrays();
+    writeFile(this.fileUrl, JSON.stringify(this.state, null, 2));
   }
 
   emitChange(collection, operation, payload = {}) {

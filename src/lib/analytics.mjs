@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 const metricTypes = [
   "impression",
   "click",
