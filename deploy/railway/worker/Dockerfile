@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     git \
     bash \
+    xz-utils \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Hermes Agent CLI
