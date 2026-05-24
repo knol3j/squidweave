@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Activity,
   BarChart3,
-  Bot,
   CheckCircle2,
   Columns,
   Eye,
@@ -19,6 +18,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useCollaboration } from './CollaborationProvider';
 import { dataService, SetupRequirements } from '../services/dataService';
+import { AGENT_STAGES, AGENT_SYSTEM, getAllAgentIds } from '../lib/agentSystem';
 
 interface SidebarProps {
   onSelectTemplate?: (prompt: string) => void;
@@ -26,18 +26,10 @@ interface SidebarProps {
   onSelectTab: (tab: string) => void;
 }
 
-const MODULES = [
-  { id: 'AdSync', label: 'AdSync', description: 'deployment routes' },
-  { id: 'EmailFlow', label: 'EmailFlow', description: 'crm automations' },
-  { id: 'SocialPilot', label: 'SocialPilot', description: 'social scheduling' },
-  { id: 'SearchInsight', label: 'SearchInsight', description: 'trend ingestion' },
-  { id: 'CopySentinel', label: 'CopySentinel', description: 'brand guardrails' },
-];
-
 const TEMPLATES = [
-  { icon: Rocket, label: 'Product Launch', prompt: 'Create a comprehensive 30-day product launch strategy for a new eco-friendly consumer tech product.' },
-  { icon: Workflow, label: 'SaaS Expansion', prompt: 'Develop a localized B2B SaaS expansion plan focused on lead generation and conversion efficiency in multiple regions.' },
-  { icon: Palette, label: 'Brand Refresh', prompt: 'Outline a brand identity refresh strategy for a boutique coffee roastery targeting urban professionals.' },
+  { icon: Rocket, label: 'Product Launch', prompt: 'Create a comprehensive autonomous launch system covering intake, segmentation, offer design, outreach, sales handoff, retention, and analytics for a new eco-friendly consumer tech product.' },
+  { icon: Workflow, label: 'SaaS Expansion', prompt: 'Develop a localized B2B SaaS growth engine with dedicated research, outreach, conversion, onboarding, retention, and expansion agents across multiple regions.' },
+  { icon: Palette, label: 'Brand Refresh', prompt: 'Design a full-funnel brand refresh operating system with creative direction, landing pages, audience research, social distribution, and lifecycle retention loops.' },
 ];
 
 export default function Sidebar({ onSelectTemplate, activeTab, onSelectTab }: SidebarProps) {
@@ -68,19 +60,27 @@ export default function Sidebar({ onSelectTemplate, activeTab, onSelectTab }: Si
   };
 
   const menuItems = [
-    { id: 'engine', icon: Bot, label: 'Brain' },
-    { id: 'campaigns', icon: Eye, label: 'Overview' },
+    { id: 'engine', icon: Workflow, label: 'Brain' },
+    { id: 'campaigns', icon: Eye, label: 'Intake' },
     { id: 'ab-test', icon: Columns, label: 'Experiments' },
     { id: 'audience', icon: Target, label: 'Segments' },
     { id: 'performance', icon: BarChart3, label: 'Performance' },
   ];
+
+  const activeAgents = enabledModules.length;
+  const totalAgents = AGENT_SYSTEM.length;
+  const agentsByStage = AGENT_STAGES.map(stage => ({
+    stage,
+    count: AGENT_SYSTEM.filter(agent => agent.stage === stage && enabledModules.includes(agent.id)).length,
+    total: AGENT_SYSTEM.filter(agent => agent.stage === stage).length,
+  }));
 
   return (
     <div className="flex h-full flex-col gap-6 overflow-y-auto px-4 py-5 custom-scrollbar">
       <button
         onClick={handleSave}
         disabled={saveStatus === 'saving'}
-        className="flex items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-violet-700 transition hover:bg-violet-100"
+        className="flex items-center justify-center gap-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-200 transition hover:bg-indigo-500/15"
       >
         <AnimatePresence mode="wait">
           {saveStatus === 'saved' ? (
@@ -110,18 +110,18 @@ export default function Sidebar({ onSelectTemplate, activeTab, onSelectTab }: Si
             className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm transition ${
               activeTab === item.id
                 ? 'bg-violet-50 text-violet-700 shadow-[inset_0_0_0_1px_rgba(167,139,250,0.35)]'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
             }`}
           >
-            <item.icon className={`h-4 w-4 ${activeTab === item.id ? 'text-violet-500' : 'text-slate-400'}`} />
+            <item.icon className={`h-4 w-4 ${activeTab === item.id ? 'text-indigo-300' : 'text-slate-500'}`} />
             <span className="font-medium">{item.label}</span>
           </button>
         ))}
       </div>
 
-      <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(99,102,241,0.05)]">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-          <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+      <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 shadow-[0_10px_30px_rgba(2,6,23,0.25)]">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
           Agent Studio
         </div>
         <div className="mt-3 space-y-2">
@@ -129,110 +129,115 @@ export default function Sidebar({ onSelectTemplate, activeTab, onSelectTab }: Si
             <button
               key={template.label}
               onClick={() => onSelectTemplate?.(template.prompt)}
-              className="flex w-full items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3 text-left text-sm text-slate-600 transition hover:bg-violet-50 hover:text-violet-700"
+              className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-3 text-left text-sm text-slate-300 transition hover:bg-indigo-500/10 hover:text-white"
             >
-              <template.icon className="h-4 w-4 text-violet-500" />
+              <template.icon className="h-4 w-4 text-indigo-400" />
               <span>{template.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(99,102,241,0.05)]">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-          <Network className="h-3.5 w-3.5 text-violet-500" />
-          Translation Layer
+      <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 shadow-[0_10px_30px_rgba(2,6,23,0.25)]">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <Network className="h-3.5 w-3.5 text-indigo-400" />
+          Mission Brief
         </div>
         <div className="mt-3 space-y-2">
-          <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3 text-sm">
-            <span className="text-slate-500">Locales</span>
-            <span className="font-medium text-slate-800">{campaignState.locales?.join(', ') || 'en-US'}</span>
+          <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
+            <span className="text-slate-500">Markets</span>
+            <span className="font-medium text-slate-100">{campaignState.markets?.join(', ') || campaignState.locales?.join(', ') || 'unscoped'}</span>
           </div>
-          <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3 text-sm">
+          <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
             <span className="text-slate-500">Audience</span>
-            <span className="max-w-[110px] truncate font-medium text-slate-800">{campaignState.audience || 'Prospects'}</span>
+            <span className="max-w-[110px] truncate font-medium text-slate-100">{campaignState.audience || 'Prospects'}</span>
           </div>
-          <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3 text-sm">
-            <span className="text-slate-500">Voice</span>
-            <span className="max-w-[110px] truncate font-medium text-slate-800">{campaignState.brandVoice || 'Default'}</span>
+          <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
+            <span className="text-slate-500">Success</span>
+            <span className="max-w-[110px] truncate font-medium text-slate-100">{campaignState.successDefinition || 'Not defined'}</span>
           </div>
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(99,102,241,0.05)]">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-          <MemoryStick className="h-3.5 w-3.5 text-violet-500" />
-          Memory
+      <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 shadow-[0_10px_30px_rgba(2,6,23,0.25)]">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <MemoryStick className="h-3.5 w-3.5 text-indigo-400" />
+          Autonomous Stack
         </div>
         <div className="mt-3 space-y-2">
-          <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3 text-sm">
+          <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
             <span className="text-slate-500">Automation</span>
-            <span className="font-medium text-slate-800">{campaignState.automationEnabled ? 'enabled' : 'disabled'}</span>
+            <span className="font-medium text-slate-100">{campaignState.automationEnabled ? 'enabled' : 'disabled'}</span>
           </div>
-          <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3 text-sm">
-            <span className="text-slate-500">Prompt</span>
-            <span className="max-w-[110px] truncate font-medium text-slate-800">{campaignState.activePrompt || 'No prompt'}</span>
+          <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
+            <span className="text-slate-500">Agents online</span>
+            <span className="max-w-[110px] truncate font-medium text-slate-100">{activeAgents}/{totalAgents}</span>
           </div>
-          <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3 text-sm">
-            <span className="text-slate-500">Channel</span>
-            <span className="max-w-[110px] truncate font-medium text-slate-800">{campaignState.channel || 'Unconfigured'}</span>
+          <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
+            <span className="text-slate-500">Intake</span>
+            <span className="max-w-[110px] truncate font-medium text-slate-100">{campaignState.intakeStatus || 'draft'}</span>
           </div>
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(99,102,241,0.05)]">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-          <Globe2 className="h-3.5 w-3.5 text-violet-500" />
-          Automation Modules
+      <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 shadow-[0_10px_30px_rgba(2,6,23,0.25)]">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <Globe2 className="h-3.5 w-3.5 text-indigo-400" />
+          Agent Coverage
         </div>
         <div className="mt-3 space-y-2">
-          <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm">
+          <div className="rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
             <div className="text-slate-500">Active rails</div>
-            <div className="mt-1 text-xs text-slate-700">{campaignState.connectors?.join(', ') || campaignState.connector || 'openclaw, clawdbot'}</div>
+            <div className="mt-1 text-xs text-slate-200">{campaignState.connectors?.join(', ') || campaignState.connector || 'openclaw, clawdbot'}</div>
           </div>
-          {MODULES.map(module => {
-            const active = enabledModules.includes(module.id);
+          <button
+            onClick={() => updateCampaignState({ enabledModules: getAllAgentIds() })}
+            className="w-full rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-3 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200 transition hover:bg-indigo-500/15"
+          >
+            Enable Full Marketing Stack
+          </button>
+          {agentsByStage.map(stage => {
+            const active = stage.count === stage.total;
             return (
-              <button
-                key={module.id}
-                onClick={() => toggleModule(module.id)}
+              <div
+                key={stage.stage}
                 className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left transition ${
-                  active ? 'bg-violet-50 text-violet-700' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  active ? 'bg-emerald-500/10 text-emerald-100' : 'bg-white/[0.04] text-slate-300'
                 }`}
               >
                 <div>
-                  <div className="text-sm font-medium">{module.label}</div>
-                  <div className="text-[10px] uppercase tracking-[0.16em] text-slate-400">{module.description}</div>
+                  <div className="text-sm font-medium">{stage.stage}</div>
+                  <div className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{stage.count}/{stage.total} agents enabled</div>
                 </div>
-                <div className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-              </button>
+                <div className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+              </div>
             );
           })}
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(99,102,241,0.05)]">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-          <Activity className="h-3.5 w-3.5 text-violet-500" />
+      <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 shadow-[0_10px_30px_rgba(2,6,23,0.25)]">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <Activity className="h-3.5 w-3.5 text-indigo-400" />
           Live Setup
         </div>
         <div className="mt-3 space-y-2">
-          <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm">
+          <div className="rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
             <div className="text-slate-500">Connector env vars</div>
-            <div className="mt-1 text-xs text-slate-700">
+            <div className="mt-1 text-xs text-slate-200">
               {(setupRequirements?.environment.requiredForLiveConnectors || []).join(', ') || 'Loading requirements'}
             </div>
           </div>
-          <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm">
+          <div className="rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
             <div className="text-slate-500">Outreach signals</div>
-            <div className="mt-1 text-xs text-slate-700">
+            <div className="mt-1 text-xs text-slate-200">
               {(setupRequirements?.outreachEventTypes || []).slice(0, 4).join(', ')}
               {(setupRequirements?.outreachEventTypes?.length || 0) > 4 ? '...' : ''}
             </div>
           </div>
-          <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm">
+          <div className="rounded-2xl bg-white/[0.04] px-3 py-3 text-sm">
             <div className="text-slate-500">Analytics signals</div>
-            <div className="mt-1 text-xs text-slate-700">
+            <div className="mt-1 text-xs text-slate-200">
               {(setupRequirements?.analyticsEventTypes || []).slice(0, 4).join(', ')}
               {(setupRequirements?.analyticsEventTypes?.length || 0) > 4 ? '...' : ''}
             </div>

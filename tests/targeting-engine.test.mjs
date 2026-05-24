@@ -92,6 +92,10 @@ test("TargetingEngine builds a reengagement queue from real outreach timing", ()
 });
 
 test("TargetingEngine uses learned cadence days for sent-only outreach", () => {
+  const now = new Date();
+  const capturedAt = new Date(now.getTime() - (2 * 24 * 60 * 60 * 1000)).toISOString();
+  const sentAt = new Date(now.getTime() - (1 * 24 * 60 * 60 * 1000)).toISOString();
+  const expectedNextEligibleAt = new Date(new Date(sentAt).getTime() + (5 * 24 * 60 * 60 * 1000)).toISOString();
   const records = [
     normalizeResearchRecord({
       campaignId: "c1",
@@ -103,7 +107,7 @@ test("TargetingEngine uses learned cadence days for sent-only outreach", () => {
       preferredChannel: "linkedin",
       segment: "b2b-tech-saas",
       region: "global",
-      capturedAt: "2026-05-07T12:00:00.000Z",
+      capturedAt,
     }),
   ];
   const outreachEvents = [
@@ -112,7 +116,7 @@ test("TargetingEngine uses learned cadence days for sent-only outreach", () => {
       targetId: "t4",
       type: "sent",
       channel: "linkedin",
-      timestamp: "2026-05-06T12:00:00.000Z",
+      timestamp: sentAt,
     }),
   ];
   const store = createStore(records, outreachEvents);
@@ -128,6 +132,6 @@ test("TargetingEngine uses learned cadence days for sent-only outreach", () => {
   const engine = new TargetingEngine({ store });
   const rankings = engine.rankTargets("c1");
 
-  assert.match(rankings[0].nextEligibleAt, /^2026-05-11T12:00:00.000Z$/);
+  assert.equal(rankings[0].nextEligibleAt, expectedNextEligibleAt);
   assert.equal(rankings[0].recommendation, "wait");
 });

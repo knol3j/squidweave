@@ -1,14 +1,17 @@
 export class AutomationEngine {
-  constructor({ store, decisionEngine, planner, memoryEngine }) {
+  constructor({ store, decisionEngine, planner, memoryEngine, agentOrchestrator }) {
     this.store = store;
     this.decisionEngine = decisionEngine;
     this.planner = planner;
     this.memoryEngine = memoryEngine;
+    this.agentOrchestrator = agentOrchestrator;
   }
 
-  shouldRefreshContent(decision) {
+  shouldRefreshContent(campaign, decision) {
     const actionType = decision?.plan?.recommendedAction?.type;
-    return [
+    const creativeAgents = new Set(["CreativeDirector", "Copywriter", "SocialPublisher", "LandingPageArchitect"]);
+    const hasCreativeAgent = Array.isArray(campaign?.enabledModules) && campaign.enabledModules.some(agentId => creativeAgents.has(agentId));
+    return hasCreativeAgent || [
       "rotate_creative",
       "adjust_outreach_copy",
       "launch_test_batch",
@@ -47,7 +50,8 @@ export class AutomationEngine {
   async runCampaign(campaignId, options = {}) {
     await this.memoryEngine.consolidateCampaign(campaignId);
     const decision = await this.decisionEngine.run(campaignId);
-    const contentPack = this.shouldRefreshContent(decision)
+    const campaign = this.store.getCampaign(campaignId);
+    const contentPack = this.shouldRefreshContent(campaign, decision)
       ? await this.generateContentPack(campaignId, {
           summary: decision.summary,
           locales: options.locales,
@@ -66,8 +70,23 @@ export class AutomationEngine {
       status: "completed",
     };
 
+    const agentResult = this.agentOrchestrator
+      ? await this.agentOrchestrator.runCampaign(campaignId, {
+          automationRunId: run.id,
+          campaign,
+          decision,
+          contentPack,
+          summary: decision.summary,
+          memoryContext: decision.memoryContext,
+          targeting: decision.targeting,
+        })
+      : { agentRuns: [], lifecycle: { coverage: [], activeAgents: 0 } };
+
+    run.agentRunIds = agentResult.agentRuns.map(agentRun => agentRun.id);
+    run.agentRunCount = agentResult.agentRuns.length;
+    run.lifecycle = agentResult.lifecycle;
     await this.store.addAutomationRun(run);
     await this.memoryEngine.consolidateCampaign(campaignId);
-    return { run, decision, contentPack };
+    return { run, decision, contentPack, agentRuns: agentResult.agentRuns, lifecycle: agentResult.lifecycle };
   }
 }

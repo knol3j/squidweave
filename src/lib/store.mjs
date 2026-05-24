@@ -16,6 +16,10 @@ const defaultState = () => ({
   decisions: [],
   contentPacks: [],
   automationRuns: [],
+  agentRuns: [],
+  prospectingRuns: [],
+  sourcedContacts: [],
+  activationRuns: [],
 });
 
 export class Store {
@@ -275,6 +279,98 @@ export class Store {
       return [...this.state.automationRuns];
     }
     return this.state.automationRuns.filter(run => run.campaignId === campaignId);
+  }
+
+  async addAgentRun(run) {
+    this.state.agentRuns.push(run);
+    await this.persist();
+    this.emitChange("agentRuns", "insert", { item: run });
+    return run;
+  }
+
+  async addAgentRuns(runs) {
+    this.state.agentRuns.push(...runs);
+    await this.persist();
+    this.emitChange("agentRuns", "insertMany", { count: runs.length, items: runs });
+    return runs;
+  }
+
+  listAgentRuns(campaignId) {
+    if (!campaignId) {
+      return [...this.state.agentRuns];
+    }
+    return this.state.agentRuns.filter(run => run.campaignId === campaignId);
+  }
+
+  async addProspectingRun(run) {
+    this.state.prospectingRuns.push(run);
+    await this.persist();
+    this.emitChange("prospectingRuns", "insert", { item: run });
+    return run;
+  }
+
+  listProspectingRuns(campaignId) {
+    if (!campaignId) {
+      return [...this.state.prospectingRuns];
+    }
+    return this.state.prospectingRuns.filter(run => run.campaignId === campaignId);
+  }
+
+  async addSourcedContact(contact) {
+    this.state.sourcedContacts.push(contact);
+    await this.persist();
+    this.emitChange("sourcedContacts", "insert", { item: contact });
+    return contact;
+  }
+
+  async addSourcedContacts(contacts) {
+    this.state.sourcedContacts.push(...contacts);
+    await this.persist();
+    this.emitChange("sourcedContacts", "insertMany", { count: contacts.length, items: contacts });
+    return contacts;
+  }
+
+  async updateSourcedContacts(campaignId, updates = []) {
+    const nextById = new Map(updates.map(item => [item.id, item]));
+    let changed = 0;
+    this.state.sourcedContacts = this.state.sourcedContacts.map(contact => {
+      if (contact.campaignId !== campaignId) {
+        return contact;
+      }
+      const patch = nextById.get(contact.id);
+      if (!patch) {
+        return contact;
+      }
+      changed += 1;
+      return {
+        ...contact,
+        ...patch,
+      };
+    });
+    await this.persist();
+    this.emitChange("sourcedContacts", "updateMany", { campaignId, count: changed, items: updates });
+    return this.listSourcedContacts(campaignId);
+  }
+
+  listSourcedContacts(campaignId) {
+    if (!campaignId) {
+      return [...this.state.sourcedContacts];
+    }
+    return this.state.sourcedContacts.filter(contact => contact.campaignId === campaignId);
+  }
+
+  async addActivationRun(run) {
+    this.state.activationRuns.push(run);
+    await this.persist();
+    this.emitChange("activationRuns", "insert", { item: run });
+    return run;
+  }
+
+  listActivationRuns(campaignId) {
+    if (!campaignId) {
+      return [...this.state.activationRuns];
+    }
+    return this.state.activationRuns.filter(run => run.campaignId === campaignId);
   }
 
   snapshot() {

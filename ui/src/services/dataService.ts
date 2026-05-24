@@ -3,6 +3,7 @@ const API_BASE = import.meta.env.VITE_BRAIN_API_BASE || 'http://127.0.0.1:4010';
 export interface Campaign {
   id: string;
   name?: string;
+  clientName?: string;
   connector?: string;
   connectors?: string[];
   activePrompt: string;
@@ -17,6 +18,15 @@ export interface Campaign {
   brandVoice?: string;
   channel?: string;
   automationEnabled?: boolean;
+  clientNeed?: string;
+  intakeStatus?: string;
+  successDefinition?: string;
+  constraints?: string;
+  differentiators?: string;
+  researchNotes?: string;
+  markets?: string[];
+  researchObjectives?: string[];
+  successMetrics?: string[];
   baseBody?: string;
   baseHeadline?: string;
   baseSubject?: string;
@@ -208,6 +218,72 @@ export interface ResearchRecord {
   };
 }
 
+export interface ProspectingPlan {
+  campaignId: string;
+  generatedAt: string;
+  objective: string;
+  audience: string;
+  offer: string;
+  channel: string;
+  topAccounts: Array<{
+    targetId: string;
+    company: string;
+    segment: string;
+    region: string;
+    sourceMix: string[];
+    roleClusters: string[];
+    preferredChannel: string | null;
+    evidence: string[];
+  }>;
+  sourcingWorkflow: string[];
+  enrichmentChecklist: string[];
+  proceduralSignals: Array<{
+    segment: string;
+    region: string;
+    channel: string;
+    confidence: number;
+  }>;
+  targetSummary: {
+    totalTargets: number;
+    actionableTargets: number;
+  };
+}
+
+export interface SourcedContact {
+  id: string;
+  campaignId: string;
+  targetId: string;
+  company: string;
+  fullName?: string;
+  title?: string;
+  role?: string;
+  email?: string;
+  linkedinUrl?: string;
+  companyWebsite?: string;
+  phone?: string;
+  region?: string;
+  segment?: string;
+  preferredChannel?: string;
+  sourceMix?: string[];
+  searchQuery?: string;
+  contactStatus: string;
+  complianceStatus: string;
+  source?: string;
+  score?: number;
+  evidence?: string[];
+  notes?: string;
+  createdAt: string;
+}
+
+export interface ProspectingRun {
+  id: string;
+  campaignId: string;
+  createdAt: string;
+  reason: string;
+  generatedCandidates: number;
+  plan: ProspectingPlan;
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { 'content-type': 'application/json' },
@@ -325,6 +401,46 @@ export const dataService = {
 
   async getResearchRecords(campaignId: string) {
     return api<ResearchRecord[]>(`/research/records?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async getProspectingPlan(campaignId: string) {
+    return api<ProspectingPlan>(`/prospecting/plan?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async generateProspects(campaignId: string, payload?: { reason?: string; limit?: number }) {
+    return api<{ run: ProspectingRun; plan: ProspectingPlan; candidates: SourcedContact[] }>('/prospecting/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        campaignId,
+        ...payload,
+      }),
+    });
+  },
+
+  async getProspects(campaignId: string) {
+    return api<SourcedContact[]>(`/prospects?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async importProspects(campaignId: string, contacts: Partial<SourcedContact>[], source = 'manual-import') {
+    return api<SourcedContact[]>('/prospects/import', {
+      method: 'POST',
+      body: JSON.stringify({
+        campaignId,
+        source,
+        contacts,
+      }),
+    });
+  },
+
+  async getProspectingRuns(campaignId: string) {
+    return api<ProspectingRun[]>(`/prospecting/runs?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async addResearchRecord(record: Partial<ResearchRecord> & { campaignId: string; targetId: string }) {
+    return api<ResearchRecord>('/research/records', {
+      method: 'POST',
+      body: JSON.stringify(record),
+    });
   },
 
   async getAnalyticsEvents(campaignId: string) {

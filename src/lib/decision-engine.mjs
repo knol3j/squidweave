@@ -25,7 +25,7 @@ export class DecisionEngine {
     const summary = summarizeCampaign(campaign, events);
     const recentDecisions = this.store.listDecisions(campaignId);
     const policyResult = evaluatePolicy(campaign, summary, this.config, recentDecisions);
-    const memoryContext = this.memoryEngine.buildDecisionContext(campaignId);
+    const memoryContext = await this.memoryEngine.buildDecisionContext(campaignId);
     const plan = await this.planner.buildActionPlan(campaign, summary, policyResult, memoryContext);
     const targeting = this.targetingEngine.buildDecision(campaignId);
 
@@ -48,6 +48,7 @@ export class DecisionEngine {
           targeting,
           memoryContext,
           latestContentPack: this.store.getLatestContentPack(campaignId),
+          recentAgentRuns: this.store.listAgentRuns ? this.store.listAgentRuns(campaignId).slice(-12) : [],
         }));
       }
       execution = executions[0] || null;

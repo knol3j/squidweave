@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Campaign, dataService } from '../services/dataService';
+import { getAllAgentIds } from '../lib/agentSystem';
 
 type LocalUser = {
   uid: string;
@@ -60,14 +61,24 @@ export function CollaborationProvider({ children }: { children: React.ReactNode 
     connectors: ['openclaw', 'clawdbot'],
     activePrompt: '',
     activeTab: 'engine',
-    enabledModules: [],
     locales: [],
     objective: '',
     audience: '',
     offer: '',
     brandVoice: '',
     channel: '',
+    clientName: '',
+    clientNeed: '',
+    intakeStatus: 'draft',
+    successDefinition: '',
+    constraints: '',
+    differentiators: '',
+    researchNotes: '',
+    markets: [],
+    researchObjectives: [],
+    successMetrics: [],
     automationEnabled: false,
+    enabledModules: getAllAgentIds(),
   });
   const [messages, setMessages] = useState<ChatMessage[]>(() => readStoredMessages());
 

@@ -39,6 +39,10 @@ export class SchemaRegistry {
         { name: "decisions", type: "many", collection: "decisions", localField: "id", foreignField: "campaignId" },
         { name: "contentPacks", type: "many", collection: "contentPacks", localField: "id", foreignField: "campaignId" },
         { name: "automationRuns", type: "many", collection: "automationRuns", localField: "id", foreignField: "campaignId" },
+        { name: "agentRuns", type: "many", collection: "agentRuns", localField: "id", foreignField: "campaignId" },
+        { name: "prospectingRuns", type: "many", collection: "prospectingRuns", localField: "id", foreignField: "campaignId" },
+        { name: "sourcedContacts", type: "many", collection: "sourcedContacts", localField: "id", foreignField: "campaignId" },
+        { name: "activationRuns", type: "many", collection: "activationRuns", localField: "id", foreignField: "campaignId" },
         { name: "targetProfiles", type: "many", collection: "targetProfiles", localField: "id", foreignField: "campaignId" },
         { name: "playbooks", type: "many", collection: "playbooks", localField: "id", foreignField: "campaignId" },
       ],
@@ -174,6 +178,77 @@ export class SchemaRegistry {
     });
 
     this.register({
+      name: "agentRuns",
+      source: { type: "store", live: true },
+      primaryKey: "id",
+      fields: [
+        scalar("id", "string", { indexed: true }),
+        scalar("campaignId", "string", { indexed: true }),
+        scalar("automationRunId", "string", { indexed: true }),
+        scalar("agentId", "string", { indexed: true }),
+        scalar("stage", "string"),
+        scalar("createdAt", "datetime"),
+        scalar("status", "string"),
+      ],
+      relations: [{ name: "campaign", type: "one", collection: "campaigns", localField: "campaignId", foreignField: "id" }],
+      metadata: { label: "Agent Runs", domain: "automation" },
+    });
+
+    this.register({
+      name: "prospectingRuns",
+      source: { type: "store", live: true },
+      primaryKey: "id",
+      fields: [
+        scalar("id", "string", { indexed: true }),
+        scalar("campaignId", "string", { indexed: true }),
+        scalar("createdAt", "datetime"),
+        scalar("reason", "string"),
+        scalar("generatedCandidates", "number"),
+      ],
+      relations: [{ name: "campaign", type: "one", collection: "campaigns", localField: "campaignId", foreignField: "id" }],
+      metadata: { label: "Prospecting Runs", domain: "outreach" },
+    });
+
+    this.register({
+      name: "sourcedContacts",
+      source: { type: "store", live: true },
+      primaryKey: "id",
+      fields: [
+        scalar("id", "string", { indexed: true }),
+        scalar("campaignId", "string", { indexed: true }),
+        scalar("targetId", "string", { indexed: true }),
+        scalar("company", "string"),
+        scalar("fullName", "string"),
+        scalar("title", "string"),
+        scalar("email", "string"),
+        scalar("contactStatus", "string"),
+        scalar("complianceStatus", "string"),
+        scalar("enrichmentStatus", "string"),
+        scalar("verificationStatus", "string"),
+        scalar("sequenceStatus", "string"),
+        scalar("createdAt", "datetime"),
+      ],
+      relations: [{ name: "campaign", type: "one", collection: "campaigns", localField: "campaignId", foreignField: "id" }],
+      metadata: { label: "Sourced Contacts", domain: "outreach" },
+    });
+
+    this.register({
+      name: "activationRuns",
+      source: { type: "store", live: true },
+      primaryKey: "id",
+      fields: [
+        scalar("id", "string", { indexed: true }),
+        scalar("campaignId", "string", { indexed: true }),
+        scalar("action", "string"),
+        scalar("status", "string"),
+        scalar("processedContacts", "number"),
+        scalar("createdAt", "datetime"),
+      ],
+      relations: [{ name: "campaign", type: "one", collection: "campaigns", localField: "campaignId", foreignField: "id" }],
+      metadata: { label: "Activation Runs", domain: "outreach" },
+    });
+
+    this.register({
       name: "connectorConfigs",
       source: { type: "store", live: false },
       primaryKey: "connector",
@@ -213,4 +288,3 @@ export class SchemaRegistry {
     });
   }
 }
-

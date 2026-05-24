@@ -73,14 +73,16 @@ function summarizeTactic(observation) {
 }
 
 export class MemoryEngine {
-  constructor({ store }) {
+  constructor({ store, hermesClient = null }) {
     this.store = store;
+    this.hermesClient = hermesClient;
   }
 
   async consolidateCampaign(campaignId) {
     const researchRecords = this.store.listResearchRecords(campaignId);
     const outreachEvents = this.store.listOutreachEvents(campaignId);
     const decisions = this.store.listDecisions(campaignId);
+    const agentRuns = this.store.listAgentRuns ? this.store.listAgentRuns(campaignId) : [];
     const campaigns = this.store.listCampaigns ? this.store.listCampaigns() : [];
     const campaign = campaigns.find(item => item.id === campaignId) || null;
 
@@ -214,15 +216,43 @@ export class MemoryEngine {
     };
     await this.store.addMemoryConsolidation(snapshot);
 
+    let hermesSync = {
+      synced: false,
+      mode: "not-configured",
+      entries: 0,
+    };
+    if (this.hermesClient?.isConfigured()) {
+      hermesSync = await this.hermesClient.syncCampaignMemory({
+        campaignId,
+        campaign,
+        snapshot,
+        summary: {
+          eventCount: outreachEvents.length + researchRecords.length,
+          derived: {},
+        },
+        targetProfiles,
+        tacticObservations,
+        playbooks,
+        decisions,
+        agentRuns,
+      }).catch(error => ({
+        synced: false,
+        mode: "error",
+        entries: 0,
+        error: error.message,
+      }));
+    }
+
     return {
       snapshot,
       targetProfiles,
       tacticObservations,
       playbooks,
+      hermesSync,
     };
   }
 
-  recall(campaignId, options = {}) {
+  async recall(campaignId, options = {}) {
     const targetProfiles = this.store.listTargetProfiles(campaignId);
     const tacticObservations = this.store.listTacticObservations(campaignId);
     const playbooks = this.store.listPlaybooks(campaignId);
@@ -240,6 +270,25 @@ export class MemoryEngine {
         ))
       : playbooks;
 
+    const remoteRecall = this.hermesClient?.isConfigured()
+      ? await this.hermesClient.recallCampaignMemory({
+          campaignId,
+          targetId: options.targetId || null,
+          query: options.query
+            || targetProfile?.company
+            || targetProfile?.targetId
+            || "campaign memory and durable learnings",
+          limit: Number(options.limit) || 8,
+        }).catch(error => ({
+          mode: "error",
+          items: [],
+          error: error.message,
+        }))
+      : {
+          mode: "not-configured",
+          items: [],
+        };
+
     return {
       updatedAt: new Date().toISOString(),
       targetProfile,
@@ -256,21 +305,46 @@ export class MemoryEngine {
         .slice()
         .sort((a, b) => b.confidence - a.confidence)
         .slice(0, 10),
+      externalMemories: remoteRecall.items,
+      externalMemoryStatus: {
+        mode: remoteRecall.mode,
+        count: remoteRecall.items.length,
+        error: remoteRecall.error || null,
+      },
     };
   }
 
-  buildDecisionContext(campaignId) {
+  async buildDecisionContext(campaignId) {
     const targetProfiles = this.store.listTargetProfiles(campaignId);
     const playbooks = this.store.listPlaybooks(campaignId)
       .slice()
       .sort((a, b) => b.confidence - a.confidence);
     const latestSnapshot = this.store.listMemoryConsolidations(campaignId).at(-1) || null;
+    const remoteRecall = this.hermesClient?.isConfigured()
+      ? await this.hermesClient.recallCampaignMemory({
+          campaignId,
+          query: "best-performing strategies, warnings, and intuitive marketing memory",
+          limit: 6,
+        }).catch(error => ({
+          mode: "error",
+          items: [],
+          error: error.message,
+        }))
+      : {
+          mode: "not-configured",
+          items: [],
+        };
 
     return {
       refreshedAt: latestSnapshot?.createdAt || null,
       totalProfiles: targetProfiles.length,
       playbooks: playbooks.slice(0, 5),
       stale: !latestSnapshot,
+      externalMemory: {
+        mode: remoteRecall.mode,
+        items: remoteRecall.items,
+        error: remoteRecall.error || null,
+      },
     };
   }
 }
