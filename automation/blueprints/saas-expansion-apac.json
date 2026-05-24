@@ -1,0 +1,109 @@
+{
+  "campaign": {
+    "id": "saas-expansion-apac",
+    "name": "APAC SaaS Expansion Engine",
+    "clientName": "CloudNova Inc.",
+    "clientNeed": "Establish enterprise pipeline in APAC markets with localized outbound sequences",
+    "objective": "Generate 10 qualified opportunities per month across Japan, Australia, and Singapore",
+    "audience": "VP Sales APAC, Head of Partner Ecosystems, Regional Marketing Director",
+    "offer": "Localized ROI assessment for APAC enterprise deployment",
+    "channel": "email",
+    "locales": ["en-AU", "ja-JP", "en-SG"],
+    "markets": ["Australia", "Japan", "Singapore"],
+    "brandVoice": "Professional, respectful, data-rich, low-pressure",
+    "successDefinition": "10 opps/month with >20% progression to demo stage",
+    "successMetrics": ["opps_created", "demo_progression_rate", "localized_reply_rate", "pipeline_weighted"],
+    "researchObjectives": [
+      "Identify APAC enterprises running competitive tools with expiring contracts",
+      "Map regional decision-makers who prefer relationship-led buying cycles",
+      "Surface localization gaps in competitor APAC messaging as entry points"
+    ],
+    "designTheme": "Pacific Horizon",
+    "designPalette": ["#0c1222", "#06b6d4", "#6366f1", "#a78bfa", "#f8fafc"],
+    "designGuidelines": [
+      "Ocean-inspired palette with cyan-to-indigo gradient accents",
+      "Localization indicators visible on every content card",
+      "Regional flag icons as subtle meta tags for locale targeting",
+      "Trust-signal layout with recognizable local testimonial formats"
+    ],
+    "contentAngles": [
+      "Global product, locally relevant deployment stories",
+      "The compliance shortcut for APAC data residency requirements",
+      "Why regional competitors can't match your core architecture"
+    ]
+  },
+  "researchRecords": [
+    {
+      "targetId": "acct-301",
+      "source": "manual-ingest",
+      "company": "Tokyo FinServe",
+      "contactName": "Yuki Tanaka",
+      "title": "VP Sales APAC",
+      "segment": "Financial Services",
+      "region": "Japan",
+      "preferredChannel": "email",
+      "channels": ["email"],
+      "fitScore": 0.91,
+      "intentScore": 0.87,
+      "recencyScore": 0.84,
+      "estimatedReach": 180000,
+      "notes": "Currently evaluating replacement for legacy CRM platform.",
+      "metadata": {
+        "sourceUrl": "https://example.com/tokyo-finserve",
+        "evidence": [
+          "RFP distributed to 3 vendors in Q2",
+          "Hiring for digital transformation lead role"
+        ]
+      }
+    },
+    {
+      "targetId": "acct-302",
+      "source": "manual-ingest",
+      "company": "Outback Digital",
+      "contactName": "Sarah Mitchell",
+      "title": "Regional Marketing Director",
+      "segment": "Technology Consulting",
+      "region": "Australia",
+      "preferredChannel": "email",
+      "channels": ["email", "linkedin"],
+      "fitScore": 0.88,
+      "intentScore": 0.83,
+      "recencyScore": 0.8,
+      "estimatedReach": 110000,
+      "notes": "Growing APAC team, experimenting with ABM programs.",
+      "metadata": {
+        "sourceUrl": "https://example.com/outback-digital",
+        "evidence": [
+          "Hiring 3 SDRs for APAC outbound",
+          "Testing personalized video in sequences"
+        ]
+      }
+    }
+  ],
+  "prospects": [
+    {
+      "targetId": "acct-301",
+      "company": "Tokyo FinServe",
+      "fullName": "Yuki Tanaka",
+      "title": "VP Sales APAC",
+      "email": "yuki.tanaka@tokyofinserve.example",
+      "linkedinUrl": "https://linkedin.com/in/yuki-tanaka",
+      "region": "Japan",
+      "segment": "Financial Services",
+      "preferredChannel": "email",
+      "source": "manual-import"
+    },
+    {
+      "targetId": "acct-302",
+      "company": "Outback Digital",
+      "fullName": "Sarah Mitchell",
+      "title": "Regional Marketing Director",
+      "email": "sarah.mitchell@outbackdigital.example",
+      "linkedinUrl": "https://linkedin.com/in/sarah-mitchell",
+      "region": "Australia",
+      "segment": "Technology Consulting",
+      "preferredChannel": "email",
+      "source": "manual-import"
+    }
+  ]
+}

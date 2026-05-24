@@ -20,7 +20,9 @@ import {
 import ReactMarkdown from 'react-markdown';
 import { useCollaboration } from './CollaborationProvider';
 import {
+  ActivationRun,
   dataService,
+  ProspectPipeline,
   ProspectingPlan,
   ProspectingRun,
   ResearchRecord,
@@ -154,6 +156,8 @@ export default function CampaignPreview() {
   const [prospectingPlan, setProspectingPlan] = React.useState<ProspectingPlan | null>(null);
   const [prospects, setProspects] = React.useState<SourcedContact[]>([]);
   const [prospectingRuns, setProspectingRuns] = React.useState<ProspectingRun[]>([]);
+  const [prospectPipeline, setProspectPipeline] = React.useState<ProspectPipeline | null>(null);
+  const [activationRuns, setActivationRuns] = React.useState<ActivationRun[]>([]);
   const [intakeDraft, setIntakeDraft] = React.useState<IntakeDraft>(() => buildIntakeDraft(campaignState));
   const [researchDraft, setResearchDraft] = React.useState<ResearchDraft>(() => emptyResearchDraft());
   const [contactImportDraft, setContactImportDraft] = React.useState<ContactImportDraft>(() => emptyContactImportDraft());
@@ -162,6 +166,8 @@ export default function CampaignPreview() {
   const [prospectingLoading, setProspectingLoading] = React.useState(false);
   const [prospectingRunning, setProspectingRunning] = React.useState(false);
   const [contactImporting, setContactImporting] = React.useState(false);
+  const [enrichingProspects, setEnrichingProspects] = React.useState(false);
+  const [sequencingProspects, setSequencingProspects] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
 
   const refreshResearch = React.useCallback(async () => {
@@ -179,6 +185,16 @@ export default function CampaignPreview() {
     setProspectingPlan(plan);
     setProspects(nextProspects);
     setProspectingRuns(runs);
+  }, [campaignState.id]);
+
+  const refreshActivation = React.useCallback(async () => {
+    const campaignId = campaignState.id || 'main-campaign';
+    const [pipeline, runs] = await Promise.all([
+      dataService.getProspectPipeline(campaignId),
+      dataService.getActivationRuns(campaignId),
+    ]);
+    setProspectPipeline(pipeline);
+    setActivationRuns(runs);
   }, [campaignState.id]);
 
   React.useEffect(() => {
@@ -208,10 +224,10 @@ export default function CampaignPreview() {
 
   React.useEffect(() => {
     setProspectingLoading(true);
-    refreshProspecting()
+    Promise.all([refreshProspecting(), refreshActivation()])
       .catch(error => console.error(error))
       .finally(() => setProspectingLoading(false));
-  }, [refreshProspecting]);
+  }, [refreshProspecting, refreshActivation]);
 
   const lastCampaign = React.useMemo(
     () => [...messages].reverse().find(message => message.role === 'assistant' && message.content.includes('[Campaign Strategy]')),
@@ -352,13 +368,52 @@ export default function CampaignPreview() {
       );
       setProspects(current => [...imported, ...current]);
       setContactImportDraft(emptyContactImportDraft());
-      await refreshProspecting();
+      await Promise.all([refreshProspecting(), refreshActivation()]);
       setStatusMessage(`Imported ${imported.length} validated contacts into the sourcing queue.`);
     } catch (error) {
       console.error(error);
       setStatusMessage('Failed to import contacts.');
     } finally {
       setContactImporting(false);
+    }
+  };
+
+  const handleProspectEnrichment = async () => {
+    setEnrichingProspects(true);
+    setStatusMessage(null);
+    try {
+      const result = await dataService.enrichProspects(campaignState.id || 'main-campaign', {
+        provider: 'internal-waterfall',
+        limit: 24,
+      });
+      setProspects(result.contacts);
+      setProspectPipeline(result.pipeline);
+      setActivationRuns(current => [result.run, ...current]);
+      setStatusMessage(`Enrichment advanced ${result.run.processedContacts} contacts toward sequencing.`);
+    } catch (error) {
+      console.error(error);
+      setStatusMessage('Failed to enrich prospect queue.');
+    } finally {
+      setEnrichingProspects(false);
+    }
+  };
+
+  const handleSequenceBuild = async () => {
+    setSequencingProspects(true);
+    setStatusMessage(null);
+    try {
+      const result = await dataService.sequenceProspects(campaignState.id || 'main-campaign', {
+        limit: 24,
+      });
+      setProspects(result.contacts);
+      setProspectPipeline(result.pipeline);
+      setActivationRuns(current => [result.run, ...current]);
+      setStatusMessage(`Built sequence plans for ${result.run.processedContacts} contacts.`);
+    } catch (error) {
+      console.error(error);
+      setStatusMessage('Failed to build sequence plans.');
+    } finally {
+      setSequencingProspects(false);
     }
   };
 
@@ -901,6 +956,65 @@ export default function CampaignPreview() {
               </div>
             </div>
 
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {[
+                { label: 'Ready for Enrichment', value: prospectPipeline?.counts.readyForEnrichment || 0 },
+                { label: 'Ready for Sequencing', value: prospectPipeline?.counts.readyForSequencing || 0 },
+                { label: 'Sequenced', value: prospectPipeline?.counts.sequenced || 0 },
+                { label: 'Suppressed', value: prospectPipeline?.counts.suppressed || 0 },
+              ].map(item => (
+                <div key={item.label} className="rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{item.label}</div>
+                  <div className="mt-2 text-lg font-semibold text-white">{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handleProspectEnrichment}
+                  disabled={enrichingProspects}
+                  className="rounded-2xl bg-emerald-400 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60"
+                >
+                  {enrichingProspects ? 'Enriching...' : 'Run Enrichment'}
+                </button>
+                <button
+                  onClick={handleSequenceBuild}
+                  disabled={sequencingProspects}
+                  className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-500/15 disabled:opacity-60"
+                >
+                  {sequencingProspects ? 'Planning...' : 'Build Sequences'}
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {(activationRuns.slice(0, 3) || []).map(run => (
+                  <div key={run.id} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-white">{run.action}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {run.processedContacts} contacts processed
+                          {run.provider ? ` via ${run.provider}` : ''}
+                        </div>
+                      </div>
+                      <div className="text-right text-[10px] uppercase tracking-[0.16em] text-slate-500">
+                        <div>{run.status}</div>
+                        <div className="mt-1">{new Date(run.createdAt).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {!activationRuns.length && (
+                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">
+                    No activation runs yet. Enrichment turns sourced contacts into sequence-ready records, then sequence planning turns them into outreach cadences.
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="mt-6 space-y-3">
               {recentProspects.length ? (
                 recentProspects.map(contact => (
@@ -923,6 +1037,12 @@ export default function CampaignPreview() {
                         <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-[11px] text-cyan-100">{contact.preferredChannel}</span>
                       )}
                       <span className="rounded-full bg-white/[0.05] px-3 py-1 text-[11px] text-slate-300">{contact.complianceStatus}</span>
+                      {contact.enrichmentStatus && (
+                        <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] text-emerald-100">{contact.enrichmentStatus}</span>
+                      )}
+                      {contact.sequenceStatus && (
+                        <span className="rounded-full bg-fuchsia-500/10 px-3 py-1 text-[11px] text-fuchsia-100">{contact.sequenceStatus}</span>
+                      )}
                       {(contact.sourceMix || []).slice(0, 3).map(source => (
                         <span key={source} className="rounded-full bg-white/[0.05] px-3 py-1 text-[11px] text-slate-300">
                           {source}
@@ -933,6 +1053,19 @@ export default function CampaignPreview() {
                     {contact.searchQuery && (
                       <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-300">
                         Query: {contact.searchQuery}
+                      </div>
+                    )}
+
+                    {!!contact.sequencePlan?.steps?.length && (
+                      <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                          {contact.sequencePlan.channel} sequence
+                        </div>
+                        <div className="mt-2 space-y-1 text-xs leading-5 text-slate-300">
+                          {contact.sequencePlan.steps.slice(0, 3).map(step => (
+                            <div key={step}>{step}</div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
