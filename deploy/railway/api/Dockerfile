@@ -1,0 +1,20 @@
+FROM node:22-slim
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY ui/package*.json ./ui/
+
+RUN npm ci && npm --prefix ui ci
+
+COPY . .
+
+RUN npm run ui:build
+
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=4010
+
+EXPOSE 4010
+
+CMD ["node", "src/server.mjs"]
