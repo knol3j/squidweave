@@ -1,0 +1,109 @@
+{
+  "campaign": {
+    "id": "healthcare-lead-gen",
+    "name": "HealthTech Pipeline Accelerator",
+    "clientName": "MediConnect Solutions",
+    "clientNeed": "Generate qualified meetings with hospital system decision-makers for interoperability platform",
+    "objective": "Book 15 discovery calls per month with Director+ titles at 200+ bed hospitals",
+    "audience": "VP Clinical Informatics, Director of Health IT, Chief Nursing Informatics Officer",
+    "offer": "Free interoperability gap analysis report",
+    "channel": "linkedin",
+    "locales": ["en-US"],
+    "markets": ["US"],
+    "brandVoice": "Clinical, credible, compliance-aware, evidence-based",
+    "successDefinition": "15 discovery calls/month with 60%+ show rate",
+    "successMetrics": ["discovery_calls_booked", "show_rate", "pipeline_value", "avg_deal_size"],
+    "researchObjectives": [
+      "Surface hospital systems with active EHR interoperability RFPs or grants",
+      "Identify health IT decision-makers at 200+ bed facilities who changed vendors in last 12 months",
+      "Map HIMMS stage progress as intent signal for integration needs"
+    ],
+    "designTheme": "Sterile Precision",
+    "designPalette": ["#0a0e17", "#06b6d4", "#10b981", "#fbbf24", "#94a3b8"],
+    "designGuidelines": [
+      "Clean clinical feel with teal and emerald accents on dark base",
+      "Data points displayed as trust badges rather than flashy metrics",
+      "Compliance and security callouts in visibly distinct zones",
+      "Typography prioritizes readability and information density"
+    ],
+    "contentAngles": [
+      "Interoperability delays directly impact patient throughput",
+      "Surviving on legacy HL7 when the market demands FHIR",
+      "The cost of unconnected clinical data in ER handoffs"
+    ]
+  },
+  "researchRecords": [
+    {
+      "targetId": "acct-201",
+      "source": "manual-ingest",
+      "company": "Great Lakes Health System",
+      "contactName": "Dr. Karen Wu",
+      "title": "VP Clinical Informatics",
+      "segment": "Hospital System (500+ beds)",
+      "region": "US-Midwest",
+      "preferredChannel": "linkedin",
+      "channels": ["linkedin", "email"],
+      "fitScore": 0.94,
+      "intentScore": 0.91,
+      "recencyScore": 0.88,
+      "estimatedReach": 200000,
+      "notes": "Posted RFP for enterprise interoperability platform in Q1.",
+      "metadata": {
+        "sourceUrl": "https://example.com/glakes",
+        "evidence": [
+          "Published RFP for FHIR-native integration layer",
+          "Recently ended legacy EHR support contract"
+        ]
+      }
+    },
+    {
+      "targetId": "acct-202",
+      "source": "manual-ingest",
+      "company": "Southwest Regional Medical",
+      "contactName": "Marcus Reeves",
+      "title": "Director of Health IT",
+      "segment": "Hospital System (200-400 beds)",
+      "region": "US-Southwest",
+      "preferredChannel": "linkedin",
+      "channels": ["email", "linkedin"],
+      "fitScore": 0.89,
+      "intentScore": 0.86,
+      "recencyScore": 0.83,
+      "estimatedReach": 150000,
+      "notes": "Expanding telemedicine infrastructure, needs integration.",
+      "metadata": {
+        "sourceUrl": "https://example.com/swregional",
+        "evidence": [
+          "$4M telemedicine grant awarded",
+          "New CIO started 60 days ago"
+        ]
+      }
+    }
+  ],
+  "prospects": [
+    {
+      "targetId": "acct-201",
+      "company": "Great Lakes Health System",
+      "fullName": "Dr. Karen Wu",
+      "title": "VP Clinical Informatics",
+      "email": "karen.wu@greatlakeshealth.example",
+      "linkedinUrl": "https://linkedin.com/in/karen-wu",
+      "region": "US-Midwest",
+      "segment": "Hospital System (500+ beds)",
+      "preferredChannel": "linkedin",
+      "source": "manual-import"
+    },
+    {
+      "targetId": "acct-202",
+      "company": "Southwest Regional Medical",
+      "fullName": "Marcus Reeves",
+      "title": "Director of Health IT",
+      "email": "marcus.reeves@swregional.example",
+      "linkedinUrl": "https://linkedin.com/in/marcus-reeves",
+      "region": "US-Southwest",
+      "segment": "Hospital System (200-400 beds)",
+      "preferredChannel": "linkedin",
+      "source": "manual-import"
+    }
+  ]
+}

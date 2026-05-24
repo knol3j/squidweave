@@ -1,0 +1,109 @@
+{
+  "campaign": {
+    "id": "cybersec-q3-pipeline",
+    "name": "Cybersecurity Q3 Pipeline Blitz",
+    "clientName": "DefendLayer",
+    "clientNeed": "Fill top-of-funnel with security decision-makers evaluating zero-trust network access",
+    "objective": "60 qualified meetings in Q3 from mid-market and enterprise security teams",
+    "audience": "CISO, VP Security Engineering, Director of Network Security",
+    "offer": "Free zero-trust architecture maturity assessment (30 min)",
+    "channel": "linkedin",
+    "locales": ["en-US", "en-GB", "en-AU"],
+    "markets": ["US", "United Kingdom", "Australia"],
+    "brandVoice": "Sharp, urgent, authority-driven, technically grounded",
+    "successDefinition": "60 meetings booked in Q3 with 70%+ attendance rate",
+    "successMetrics": ["meetings_booked", "attendance_rate", "pipeline_created", "sql_conversion_rate"],
+    "researchObjectives": [
+      "Identify companies post-breach in last 90 days with public disclosures",
+      "Map security teams scaling headcount (new CISO, VP NetSec hires)",
+      "Surface zero-trust migration RFPs and compliance deadline signals"
+    ],
+    "designTheme": "Iron Shield",
+    "designPalette": ["#070a14", "#ef4444", "#3b82f6", "#22c55e", "#fbbf24"],
+    "designGuidelines": [
+      "High-impact red and blue on near-black base for urgency",
+      "Security posture indicators displayed as shield/badge metrics",
+      "Threat-level color coding for segment prioritization",
+      "Clean, no-noise layout optimized for executive scan speed"
+    ],
+    "contentAngles": [
+      "Post-breach speed to containment determines breach cost",
+      "Legacy VPN is your biggest lateral movement liability",
+      "Compliance deadlines are moving faster than your architecture"
+    ]
+  },
+  "researchRecords": [
+    {
+      "targetId": "acct-401",
+      "source": "manual-ingest",
+      "company": "Meridian Defense",
+      "contactName": "Raj Patel",
+      "title": "CISO",
+      "segment": "Enterprise (5000+ employees)",
+      "region": "US-East",
+      "preferredChannel": "linkedin",
+      "channels": ["linkedin", "email"],
+      "fitScore": 0.95,
+      "intentScore": 0.93,
+      "recencyScore": 0.9,
+      "estimatedReach": 300000,
+      "notes": "New CISO hired after Q1 breach disclosure.",
+      "metadata": {
+        "sourceUrl": "https://example.com/meridian-defense",
+        "evidence": [
+          "Public breach disclosure filed with SEC March 2026",
+          "Zero-trust migration RFP published on procurement portal"
+        ]
+      }
+    },
+    {
+      "targetId": "acct-402",
+      "source": "manual-ingest",
+      "company": "Thames Security Group",
+      "contactName": "Claire Bennett",
+      "title": "VP Security Engineering",
+      "segment": "Mid-Market (1000-5000 employees)",
+      "region": "United Kingdom",
+      "preferredChannel": "linkedin",
+      "channels": ["email", "linkedin"],
+      "fitScore": 0.9,
+      "intentScore": 0.88,
+      "recencyScore": 0.85,
+      "estimatedReach": 175000,
+      "notes": "Scaling SecOps team, evaluating network segmentation vendors.",
+      "metadata": {
+        "sourceUrl": "https://example.com/thames-sec",
+        "evidence": [
+          "6 new security headcount approved",
+          "Attending RSA and Infosecurity Europe 2026"
+        ]
+      }
+    }
+  ],
+  "prospects": [
+    {
+      "targetId": "acct-401",
+      "company": "Meridian Defense",
+      "fullName": "Raj Patel",
+      "title": "CISO",
+      "email": "raj.patel@meridiandefense.example",
+      "linkedinUrl": "https://linkedin.com/in/raj-patel",
+      "region": "US-East",
+      "segment": "Enterprise (5000+ employees)",
+      "preferredChannel": "linkedin",
+      "source": "manual-import"
+    },
+    {
+      "targetId": "acct-402",
+      "company": "Thames Security Group",
+      "fullName": "Claire Bennett",
+      "title": "VP Security Engineering",
+      "email": "claire.bennett@thames-security.example",
+      "linkedinUrl": "https://linkedin.com/in/claire-bennett",
+      "region": "United Kingdom",
+      "segment": "Mid-Market (1000-5000 employees)",
+      "preferredChannel": "linkedin",
+      "source": "manual-import"
+    }
+  ]
+}

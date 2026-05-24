@@ -13,7 +13,10 @@
     "ui:lint": "npm --prefix ui run lint",
     "desktop:dev": "electron .",
     "build:exe": "npm run ui:build && electron-builder --win portable",
-    "automation:bootstrap": "node scripts/bootstrap-automation.mjs"
+    "automation:bootstrap": "node scripts/bootstrap-automation.mjs",
+    "automation:orchestrate": "node scripts/orchestrate-blueprints.mjs",
+    "automation:enrich": "node scripts/orchestrate-blueprints.mjs --enrich-only",
+    "automation:cron": "node scripts/orchestrate-blueprints.mjs --enrich-only"
   },
   "devDependencies": {
     "electron": "^41.7.0",

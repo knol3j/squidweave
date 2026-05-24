@@ -1,0 +1,109 @@
+{
+  "campaign": {
+    "id": "ecom-scaling-playbook",
+    "name": "Ecom DTC Scaling Engine",
+    "clientName": "Velocity Retail",
+    "clientNeed": "Scale DTC revenue across US and UK markets with retention-first outbound",
+    "objective": "Increase repeat purchase rate and reactivate lapsed buyers",
+    "audience": "Head of Ecommerce, Growth Marketing Manager, Retention Lead",
+    "offer": "Free retention audit with cohort-based LTV projection",
+    "channel": "email",
+    "locales": ["en-US", "en-GB"],
+    "markets": ["US", "United Kingdom"],
+    "brandVoice": "Conversational, data-driven, action-oriented",
+    "successDefinition": "15% repeat purchase rate lift with >10% positive reply rate",
+    "successMetrics": ["repeat_purchase_rate", "positive_reply_rate", "reactivation_rate", "ltv_cohort_shift"],
+    "researchObjectives": [
+      "Map DTC brands with declining LTV cohorts in last 90 days",
+      "Identify retention tech stack gaps (no post-purchase automation)",
+      "Surface subscriber churn signals across email and SMS channels"
+    ],
+    "designTheme": "Coral Commerce",
+    "designPalette": ["#0b0f19", "#f43f5e", "#f97316", "#e2e8f0", "#1e293b"],
+    "designGuidelines": [
+      "Warm accent palette against dark base for urgency without anxiety",
+      "Prominent metric cards for retention and LTV data",
+      "Progress bars for cohort comparison views",
+      "Minimal layout optimized for quick scan and action"
+    ],
+    "contentAngles": [
+      "LTV leakage from unaddressed subscription churn",
+      "Post-purchase automation gaps that leave money on the table",
+      "Cross-sell opportunity scoring by browsing behavior"
+    ]
+  },
+  "researchRecords": [
+    {
+      "targetId": "acct-101",
+      "source": "manual-ingest",
+      "company": "Pura Vida Goods",
+      "contactName": "Samira Chen",
+      "title": "Head of Ecommerce",
+      "segment": "DTC Apparel",
+      "region": "US",
+      "preferredChannel": "email",
+      "channels": ["email", "sms"],
+      "fitScore": 0.9,
+      "intentScore": 0.85,
+      "recencyScore": 0.81,
+      "estimatedReach": 95000,
+      "notes": "Recently raised Series A for US market expansion.",
+      "metadata": {
+        "sourceUrl": "https://example.com/puravida",
+        "evidence": [
+          "Hiring for retention marketing role",
+          "Testing SMS channel in 3 states"
+        ]
+      }
+    },
+    {
+      "targetId": "acct-102",
+      "source": "manual-ingest",
+      "company": "Thames & Tide",
+      "contactName": "Oliver Grant",
+      "title": "Growth Marketing Manager",
+      "segment": "DTC Home Goods",
+      "region": "United Kingdom",
+      "preferredChannel": "email",
+      "channels": ["email"],
+      "fitScore": 0.87,
+      "intentScore": 0.82,
+      "recencyScore": 0.78,
+      "estimatedReach": 72000,
+      "notes": "Expanding into EU market by Q3.",
+      "metadata": {
+        "sourceUrl": "https://example.com/thames-tide",
+        "evidence": [
+          "Open role for CRM marketing specialist",
+          "Launched loyalty program in beta"
+        ]
+      }
+    }
+  ],
+  "prospects": [
+    {
+      "targetId": "acct-101",
+      "company": "Pura Vida Goods",
+      "fullName": "Samira Chen",
+      "title": "Head of Ecommerce",
+      "email": "samira@puravidagoods.example",
+      "linkedinUrl": "https://linkedin.com/in/samira-chen",
+      "region": "US",
+      "segment": "DTC Apparel",
+      "preferredChannel": "email",
+      "source": "manual-import"
+    },
+    {
+      "targetId": "acct-102",
+      "company": "Thames & Tide",
+      "fullName": "Oliver Grant",
+      "title": "Growth Marketing Manager",
+      "email": "oliver@thamesandtide.example",
+      "linkedinUrl": "https://linkedin.com/in/oliver-grant",
+      "region": "United Kingdom",
+      "segment": "DTC Home Goods",
+      "preferredChannel": "email",
+      "source": "manual-import"
+    }
+  ]
+}
