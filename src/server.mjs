@@ -673,6 +673,57 @@ async function createApp() {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/prospects/pipeline") {
+      const campaignId = url.searchParams.get("campaignId");
+      if (!campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      sendJson(request, response, 200, prospectActivationEngine.buildPipeline(campaignId));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/prospects/enrich") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      const result = await prospectActivationEngine.enrichContacts(body.campaignId, {
+        provider: body.provider,
+        limit: body.limit,
+        dispatch: body.dispatch,
+        connectors: Array.isArray(body.connectors) ? body.connectors.map(resolveConnectorName) : undefined,
+      });
+      sendJson(request, response, 201, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/prospects/sequence") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      const result = await prospectActivationEngine.sequenceContacts(body.campaignId, {
+        limit: body.limit,
+        dispatch: body.dispatch,
+        connectors: Array.isArray(body.connectors) ? body.connectors.map(resolveConnectorName) : undefined,
+      });
+      sendJson(request, response, 201, result);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/prospects/activation-runs") {
+      const campaignId = url.searchParams.get("campaignId");
+      if (!campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      sendJson(request, response, 200, store.listActivationRuns(campaignId));
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/targets/decide") {
       const body = await readBody(request);
       if (!body.campaignId) {
