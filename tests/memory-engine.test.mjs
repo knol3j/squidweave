@@ -152,9 +152,54 @@ test("MemoryEngine recall returns procedural and episodic memory for a target", 
 
   const engine = new MemoryEngine({ store });
   await engine.consolidateCampaign("c1");
-  const recall = engine.recall("c1", { targetId: "t9" });
+  const recall = await engine.recall("c1", { targetId: "t9" });
 
   assert.equal(recall.targetProfile.targetId, "t9");
   assert.ok(recall.episodicMemories.outreachEvents.length >= 1);
   assert.ok(recall.proceduralMemories.length >= 1);
+});
+
+test("MemoryEngine merges Hermes recall and syncs persistent memory when configured", async () => {
+  const store = createMemoryStore({
+    campaigns: [{ id: "c2", channel: "email", objective: "Grow pipeline" }],
+    researchRecords: [
+      normalizeResearchRecord({
+        campaignId: "c2",
+        targetId: "t1",
+        company: "Omega",
+        segment: "security",
+        region: "us",
+        preferredChannel: "email",
+        fitScore: 0.9,
+        intentScore: 0.84,
+        recencyScore: 0.8,
+      }),
+    ],
+    outreachEvents: [
+      normalizeOutreachEvent({ campaignId: "c2", targetId: "t1", type: "open", channel: "email" }),
+    ],
+  });
+  const hermesClient = {
+    isConfigured() {
+      return true;
+    },
+    async syncCampaignMemory(payload) {
+      return { synced: true, mode: "live", entries: payload.playbooks.length + 2 };
+    },
+    async recallCampaignMemory() {
+      return {
+        mode: "live",
+        items: [{ text: "Past winning cadence: email plus proof-led CTA." }],
+      };
+    },
+  };
+
+  const engine = new MemoryEngine({ store, hermesClient });
+  const consolidated = await engine.consolidateCampaign("c2");
+  const recall = await engine.recall("c2", { targetId: "t1" });
+  const decisionContext = await engine.buildDecisionContext("c2");
+
+  assert.equal(consolidated.hermesSync.synced, true);
+  assert.equal(recall.externalMemories.length, 1);
+  assert.equal(decisionContext.externalMemory.items.length, 1);
 });

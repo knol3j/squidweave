@@ -34,10 +34,72 @@
       "baseBody": "",
       "baseCta": "",
       "lastUpdatedAt": "2026-05-08T04:07:09.651Z"
+    },
+    "smoke-e2e-003": {
+      "id": "smoke-e2e-003",
+      "name": "Smoke E2E Campaign",
+      "channel": "email",
+      "connector": "openclaw",
+      "connectors": [
+        "openclaw",
+        "clawdbot"
+      ],
+      "objective": "Verify e2e",
+      "dailyBudget": null,
+      "targeting": {},
+      "locales": [
+        "en-US"
+      ],
+      "sourceLocale": "en-US",
+      "automationEnabled": false,
+      "audience": "",
+      "offer": "",
+      "brandVoice": "",
+      "landingUrl": "",
+      "baseSubject": "",
+      "basePreheader": "",
+      "baseHeadline": "",
+      "baseBody": "",
+      "baseCta": "",
+      "activePrompt": "",
+      "activeTab": "engine",
+      "enabledModules": [],
+      "clientName": "",
+      "clientNeed": "",
+      "intakeStatus": "draft",
+      "successDefinition": "",
+      "constraints": "",
+      "differentiators": "",
+      "researchNotes": "",
+      "markets": [],
+      "researchObjectives": [],
+      "successMetrics": [],
+      "lastUpdatedAt": "2026-05-24T03:31:23.187Z"
     }
   },
   "connectorConfigs": {},
-  "analyticsEvents": [],
+  "analyticsEvents": [
+    {
+      "id": "627f47ef-5bf2-403f-9f45-7e3b8b50b43e",
+      "campaignId": "smoke-e2e-002",
+      "type": "impression",
+      "value": 1,
+      "metadata": {
+        "source": "smoke"
+      },
+      "timestamp": "2026-05-24T03:30:46Z"
+    },
+    {
+      "id": "c1c4a1c9-d33e-4ccf-b8ae-3f375cc4f92d",
+      "campaignId": "smoke-e2e-003",
+      "type": "impression",
+      "value": 1,
+      "metadata": {
+        "source": "smoke"
+      },
+      "timestamp": "2026-05-24T03:31:36Z"
+    }
+  ],
   "researchRecords": [
     {
       "company": "DACH B2B tech and SaaS decision-makers",
@@ -279,9 +341,94 @@
       "segment": "localization-opportunity",
       "title": "Localization and expansion planners",
       "estimatedReach": null
+    },
+    {
+      "id": "3ba9c224-fb56-4dd0-a5d6-3fb94d5c23e3",
+      "campaignId": "smoke-e2e-001",
+      "targetId": "lead-001",
+      "source": "manual-ingest",
+      "company": "Acme Inc",
+      "contactName": "Jane Doe",
+      "title": "",
+      "segment": "SaaS",
+      "region": "",
+      "preferredChannel": "",
+      "channels": [],
+      "fitScore": null,
+      "intentScore": null,
+      "recencyScore": null,
+      "estimatedReach": null,
+      "notes": "",
+      "metadata": {
+        "source": "smoke"
+      },
+      "capturedAt": "2026-05-24T03:30:05.153Z"
+    },
+    {
+      "id": "19b5d9d1-8f6f-40d2-940f-989ddcc571b9",
+      "campaignId": "smoke-e2e-002",
+      "targetId": "lead-001",
+      "source": "manual-ingest",
+      "company": "Acme Inc",
+      "contactName": "Jane Doe",
+      "title": "",
+      "segment": "SaaS",
+      "region": "",
+      "preferredChannel": "",
+      "channels": [],
+      "fitScore": null,
+      "intentScore": null,
+      "recencyScore": null,
+      "estimatedReach": null,
+      "notes": "",
+      "metadata": {
+        "source": "smoke"
+      },
+      "capturedAt": "2026-05-24T03:30:46.155Z"
+    },
+    {
+      "id": "2120646f-b1d1-4ac5-801d-58b332f8a7ed",
+      "campaignId": "smoke-e2e-003",
+      "targetId": "lead-101",
+      "source": "manual-ingest",
+      "company": "Acme Inc",
+      "contactName": "Jane Doe",
+      "title": "",
+      "segment": "SaaS",
+      "region": "",
+      "preferredChannel": "",
+      "channels": [],
+      "fitScore": null,
+      "intentScore": null,
+      "recencyScore": null,
+      "estimatedReach": null,
+      "notes": "",
+      "metadata": {
+        "source": "smoke"
+      },
+      "capturedAt": "2026-05-24T03:31:36.450Z"
     }
   ],
-  "outreachEvents": [],
+  "outreachEvents": [
+    {
+      "id": "f24835a9-9cdf-42b1-964f-e5e659118850",
+      "campaignId": "smoke-e2e-002",
+      "targetId": "lead-001",
+      "type": "sent",
+      "channel": "email",
+      "metadata": {},
+      "timestamp": "2026-05-24T03:30:46.000Z"
+    },
+    {
+      "id": "26ddc5a1-9c5d-4226-a387-1bd22f770ecc",
+      "campaignId": "smoke-e2e-003",
+      "targetId": "lead-101",
+      "type": "sent",
+      "channel": "email",
+      "metadata": {},
+      "timestamp": "2026-05-24T03:31:36.000Z"
+    }
+  ],
   "targetProfiles": [
     {
       "id": "main-campaign:segment-dach-b2b-tech-trust-video",
@@ -307,7 +454,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-10T08:52:09.332Z",
+      "nextEligibleAt": "2026-05-23T00:31:55.022Z",
       "estimatedReach": null,
       "notes": [
         "LinkedIn and creator-led video are high-signal trust channels for B2B decision-makers in markets that include Germany."
@@ -338,7 +485,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-10T08:52:09.332Z",
+      "nextEligibleAt": "2026-05-23T00:31:55.022Z",
       "estimatedReach": null,
       "notes": [
         "The same LinkedIn benchmark included Brazil, making trust-first creator and video outreach relevant for localized PT-BR campaigns."
@@ -370,7 +517,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-10T08:52:09.332Z",
+      "nextEligibleAt": "2026-05-23T00:31:55.022Z",
       "estimatedReach": null,
       "notes": [
         "High-intent buyers cluster around reviews, pricing, and comparison content; follow-up should route to proof-heavy assets rather than generic awareness copy."
@@ -402,7 +549,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-10T08:52:09.332Z",
+      "nextEligibleAt": "2026-05-23T00:31:55.022Z",
       "estimatedReach": null,
       "notes": [
         "Enterprise buyers need brand recall and self-serve proof before outreach; if you are not already known pre-research, shortlist odds are poor."
@@ -433,7 +580,7 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-10T08:52:09.332Z",
+      "nextEligibleAt": "2026-05-23T00:31:55.022Z",
       "estimatedReach": null,
       "notes": [
         "Teams already using AI and under pressure to personalize are strong targets for localization and orchestration messaging, especially where audience-data quality is a known bottleneck."
@@ -464,12 +611,91 @@
       "lastEngagementAt": null,
       "lastPositiveAt": null,
       "lastNegativeAt": null,
-      "nextEligibleAt": "2026-05-10T08:52:09.332Z",
+      "nextEligibleAt": "2026-05-23T00:31:55.022Z",
       "estimatedReach": null,
       "notes": [
         "CSA indicates digital opportunity is concentrated; language expansion should prioritize the limited set of languages controlling material shares of online GDP."
       ],
       "source": "csa-language-opportunity"
+    },
+    {
+      "id": "smoke-e2e-001:lead-001",
+      "campaignId": "smoke-e2e-001",
+      "targetId": "lead-001",
+      "company": "Acme Inc",
+      "contactName": "Jane Doe",
+      "title": "",
+      "segment": "SaaS",
+      "region": "",
+      "preferredChannel": "",
+      "channels": [],
+      "fitScore": null,
+      "intentScore": null,
+      "recencyScore": null,
+      "memoryScore": null,
+      "status": "uncontacted",
+      "latestResearchAt": "2026-05-24T03:30:05.153Z",
+      "lastEngagementAt": null,
+      "lastPositiveAt": null,
+      "lastNegativeAt": null,
+      "nextEligibleAt": "2026-05-24T03:30:05.167Z",
+      "estimatedReach": null,
+      "notes": [],
+      "source": "manual-ingest"
+    },
+    {
+      "id": "smoke-e2e-002:lead-001",
+      "campaignId": "smoke-e2e-002",
+      "targetId": "lead-001",
+      "company": "Acme Inc",
+      "contactName": "Jane Doe",
+      "title": "",
+      "segment": "SaaS",
+      "region": "",
+      "preferredChannel": "",
+      "channels": [
+        "email"
+      ],
+      "fitScore": null,
+      "intentScore": null,
+      "recencyScore": null,
+      "memoryScore": null,
+      "status": "contacted",
+      "latestResearchAt": "2026-05-24T03:30:46.155Z",
+      "lastEngagementAt": "2026-05-24T03:30:46.000Z",
+      "lastPositiveAt": null,
+      "lastNegativeAt": null,
+      "nextEligibleAt": "2026-05-27T03:30:46.000Z",
+      "estimatedReach": null,
+      "notes": [],
+      "source": "manual-ingest"
+    },
+    {
+      "id": "smoke-e2e-003:lead-101",
+      "campaignId": "smoke-e2e-003",
+      "targetId": "lead-101",
+      "company": "Acme Inc",
+      "contactName": "Jane Doe",
+      "title": "",
+      "segment": "SaaS",
+      "region": "",
+      "preferredChannel": "",
+      "channels": [
+        "email"
+      ],
+      "fitScore": null,
+      "intentScore": null,
+      "recencyScore": null,
+      "memoryScore": null,
+      "status": "contacted",
+      "latestResearchAt": "2026-05-24T03:31:36.450Z",
+      "lastEngagementAt": "2026-05-24T03:31:36.000Z",
+      "lastPositiveAt": null,
+      "lastNegativeAt": null,
+      "nextEligibleAt": "2026-05-27T03:31:36.000Z",
+      "estimatedReach": null,
+      "notes": [],
+      "source": "manual-ingest"
     }
   ],
   "tacticObservations": [
@@ -832,6 +1058,42 @@
       "successRate": 0,
       "negativeRate": 0,
       "engagementRate": 0
+    },
+    {
+      "id": "smoke-e2e-002|SaaS|unknown-region|email",
+      "campaignId": "smoke-e2e-002",
+      "segment": "SaaS",
+      "region": "unknown-region",
+      "channel": "email",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T03:30:46.155Z",
+      "targetIds": [
+        "lead-001"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
+    },
+    {
+      "id": "smoke-e2e-003|SaaS|unknown-region|email",
+      "campaignId": "smoke-e2e-003",
+      "segment": "SaaS",
+      "region": "unknown-region",
+      "channel": "email",
+      "totalTargets": 1,
+      "engagedTargets": 0,
+      "positiveOutcomes": 0,
+      "negativeOutcomes": 0,
+      "lastObservedAt": "2026-05-24T03:31:36.450Z",
+      "targetIds": [
+        "lead-101"
+      ],
+      "successRate": 0,
+      "negativeRate": 0,
+      "engagementRate": 0
     }
   ],
   "playbooks": [],
@@ -1024,6 +1286,114 @@
       "tacticObservations": 20,
       "playbooks": 0,
       "decisionsReviewed": 6
+    },
+    {
+      "id": "1f373ec5-1f09-4ff1-bd80-0a1ebe723ce1",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-23T00:31:26.842Z",
+      "targetProfiles": 6,
+      "tacticObservations": 20,
+      "playbooks": 0,
+      "decisionsReviewed": 6
+    },
+    {
+      "id": "77c6168c-c4ca-4854-ac12-f22604e74447",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-23T00:31:26.918Z",
+      "targetProfiles": 6,
+      "tacticObservations": 20,
+      "playbooks": 0,
+      "decisionsReviewed": 7
+    },
+    {
+      "id": "b870cda7-5ae6-46f4-9661-dc02b3b5edcb",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-23T00:31:54.976Z",
+      "targetProfiles": 6,
+      "tacticObservations": 20,
+      "playbooks": 0,
+      "decisionsReviewed": 7
+    },
+    {
+      "id": "75e2aca2-55ed-40e1-80c7-dce94d6ec3cd",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-23T00:31:55.049Z",
+      "targetProfiles": 6,
+      "tacticObservations": 20,
+      "playbooks": 0,
+      "decisionsReviewed": 8
+    },
+    {
+      "id": "83547e31-de8e-4a70-9cdc-8040760b7cbd",
+      "campaignId": "smoke-e2e-001",
+      "createdAt": "2026-05-24T03:30:05.200Z",
+      "targetProfiles": 1,
+      "tacticObservations": 0,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "2928379a-99d8-4e69-9be1-08eaf0d8bc73",
+      "campaignId": "smoke-e2e-002",
+      "createdAt": "2026-05-24T03:30:46.193Z",
+      "targetProfiles": 1,
+      "tacticObservations": 0,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "435db74c-fe54-409f-8226-71c1ab4bc47c",
+      "campaignId": "smoke-e2e-002",
+      "createdAt": "2026-05-24T03:30:46.257Z",
+      "targetProfiles": 1,
+      "tacticObservations": 1,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "ee236b34-9f34-4837-9246-db0fe3d806f1",
+      "campaignId": "smoke-e2e-002",
+      "createdAt": "2026-05-24T03:30:46.317Z",
+      "targetProfiles": 1,
+      "tacticObservations": 1,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "71dc45dc-7db0-4d76-9dae-94609f861023",
+      "campaignId": "smoke-e2e-003",
+      "createdAt": "2026-05-24T03:31:23.221Z",
+      "targetProfiles": 0,
+      "tacticObservations": 0,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "0791cff6-4bed-4b97-9483-14754ebd3e76",
+      "campaignId": "smoke-e2e-003",
+      "createdAt": "2026-05-24T03:31:36.482Z",
+      "targetProfiles": 1,
+      "tacticObservations": 1,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "ecaee984-26cd-40da-bea8-d75aa459571a",
+      "campaignId": "smoke-e2e-003",
+      "createdAt": "2026-05-24T03:31:36.528Z",
+      "targetProfiles": 1,
+      "tacticObservations": 1,
+      "playbooks": 0,
+      "decisionsReviewed": 0
+    },
+    {
+      "id": "bd3a217c-9486-45fa-906a-7504bccfe276",
+      "campaignId": "smoke-e2e-003",
+      "createdAt": "2026-05-24T03:31:36.578Z",
+      "targetProfiles": 1,
+      "tacticObservations": 1,
+      "playbooks": 0,
+      "decisionsReviewed": 0
     }
   ],
   "decisions": [
@@ -4944,6 +5314,1850 @@
           "tokenLikelyRotated": false
         }
       ]
+    },
+    {
+      "id": "48625389-b538-4a58-9b2e-0775d01540ee",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-23T00:31:26.866Z",
+      "summary": {
+        "campaignId": "main-campaign",
+        "eventCount": 0,
+        "totals": {
+          "impression": 0,
+          "click": 0,
+          "conversion": 0,
+          "reply": 0,
+          "positive_reply": 0,
+          "unsubscribe": 0,
+          "bounce": 0,
+          "spend": 0,
+          "revenue": 0
+        },
+        "derived": {
+          "ctr": 0,
+          "cvr": 0,
+          "replyRate": 0,
+          "positiveReplyRate": 0,
+          "unsubscribeRate": 0,
+          "cpa": 0,
+          "roas": 0
+        },
+        "lastEventAt": null
+      },
+      "policyResult": {
+        "status": "ready",
+        "reasons": [],
+        "allowedActions": [
+          {
+            "type": "launch_test_batch",
+            "delta": 25,
+            "reason": "Not enough signal yet. Launch a small controlled batch."
+          }
+        ]
+      },
+      "plan": {
+        "source": "policy-fallback",
+        "confidence": 0.55,
+        "recommendedAction": {
+          "type": "launch_test_batch",
+          "delta": 25,
+          "reason": "Not enough signal yet. Launch a small controlled batch."
+        },
+        "rationale": "LLM unavailable, using first policy-approved action. LM Studio server unavailable at http://127.0.0.1:1234. fetch failed"
+      },
+      "targeting": {
+        "updatedAt": "2026-05-23T00:31:26.866Z",
+        "totalTargets": 6,
+        "actionableTargets": 6,
+        "topTargets": [
+          {
+            "targetId": "segment-ai-personalization-ready-marketers",
+            "company": "AI-adopting marketing teams with personalization pressure",
+            "contactName": "",
+            "title": "Marketing operations and demand generation leaders",
+            "segment": "ai-personalization",
+            "region": "global",
+            "source": "hubspot-state-of-marketing-2026",
+            "channels": [
+              "email",
+              "linkedin",
+              "webinar"
+            ],
+            "fitScore": 0.932,
+            "intentScore": 0.938,
+            "recencyScore": 0.864,
+            "score": 0.9113,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "email",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 93%",
+              "intent 94%",
+              "recency 86%"
+            ],
+            "latestResearchAt": "2026-05-07T19:24:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-dach-b2b-tech-trust-video",
+            "company": "DACH B2B tech and SaaS decision-makers",
+            "contactName": "",
+            "title": "Marketing and revenue leaders",
+            "segment": "b2b-tech-saas",
+            "region": "dach",
+            "source": "linkedin-b2b-benchmark-2025",
+            "channels": [
+              "linkedin",
+              "video",
+              "creator"
+            ],
+            "fitScore": 0.94,
+            "intentScore": 0.82,
+            "recencyScore": 0.79,
+            "score": 0.85,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ],
+            "latestResearchAt": "2026-05-07T19:20:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-brazil-b2b-tech-trust-video",
+            "company": "Brazil B2B tech and SaaS decision-makers",
+            "contactName": "",
+            "title": "Marketing and revenue leaders",
+            "segment": "b2b-tech-saas",
+            "region": "brazil",
+            "source": "linkedin-b2b-benchmark-2025",
+            "channels": [
+              "linkedin",
+              "video",
+              "creator"
+            ],
+            "fitScore": 0.94,
+            "intentScore": 0.82,
+            "recencyScore": 0.79,
+            "score": 0.85,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ],
+            "latestResearchAt": "2026-05-07T19:21:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-enterprise-shortlist-mindshare",
+            "company": "Enterprise software buyers before shortlist formation",
+            "contactName": "",
+            "title": "Enterprise buying committees",
+            "segment": "enterprise-shortlist",
+            "region": "global",
+            "source": "trustradius-shortlist-2025",
+            "channels": [
+              "search",
+              "website",
+              "reviews",
+              "youtube"
+            ],
+            "fitScore": 0.89,
+            "intentScore": 0.82,
+            "recencyScore": 0.72,
+            "score": 0.81,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 89%",
+              "intent 82%",
+              "recency 72%"
+            ],
+            "latestResearchAt": "2026-05-07T19:23:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-global-review-comparison-intent",
+            "company": "Global B2B software buyers in active review/comparison mode",
+            "contactName": "",
+            "title": "High-intent software evaluators",
+            "segment": "review-intent",
+            "region": "global",
+            "source": "trustradius-review-quality-2025",
+            "channels": [
+              "search",
+              "reviews",
+              "comparison-pages",
+              "email"
+            ],
+            "fitScore": 0.73,
+            "intentScore": 0.56,
+            "recencyScore": 0.54,
+            "score": 0.61,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 73%",
+              "intent 56%",
+              "recency 54%"
+            ],
+            "latestResearchAt": "2026-05-07T19:22:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-language-priority-global",
+            "company": "Language-priority global expansion opportunities",
+            "contactName": "",
+            "title": "Localization and expansion planners",
+            "segment": "localization-opportunity",
+            "region": "global",
+            "source": "csa-language-opportunity",
+            "channels": [
+              "web",
+              "search",
+              "localization"
+            ],
+            "fitScore": 0.17,
+            "intentScore": null,
+            "recencyScore": null,
+            "score": 0.17,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "web",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 17%"
+            ],
+            "latestResearchAt": "2026-05-07T19:25:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          }
+        ],
+        "initialTargets": [
+          {
+            "targetId": "segment-ai-personalization-ready-marketers",
+            "company": "AI-adopting marketing teams with personalization pressure",
+            "contactName": "",
+            "title": "Marketing operations and demand generation leaders",
+            "segment": "ai-personalization",
+            "region": "global",
+            "source": "hubspot-state-of-marketing-2026",
+            "channels": [
+              "email",
+              "linkedin",
+              "webinar"
+            ],
+            "fitScore": 0.932,
+            "intentScore": 0.938,
+            "recencyScore": 0.864,
+            "score": 0.9113,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "email",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 93%",
+              "intent 94%",
+              "recency 86%"
+            ],
+            "latestResearchAt": "2026-05-07T19:24:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-dach-b2b-tech-trust-video",
+            "company": "DACH B2B tech and SaaS decision-makers",
+            "contactName": "",
+            "title": "Marketing and revenue leaders",
+            "segment": "b2b-tech-saas",
+            "region": "dach",
+            "source": "linkedin-b2b-benchmark-2025",
+            "channels": [
+              "linkedin",
+              "video",
+              "creator"
+            ],
+            "fitScore": 0.94,
+            "intentScore": 0.82,
+            "recencyScore": 0.79,
+            "score": 0.85,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ],
+            "latestResearchAt": "2026-05-07T19:20:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-brazil-b2b-tech-trust-video",
+            "company": "Brazil B2B tech and SaaS decision-makers",
+            "contactName": "",
+            "title": "Marketing and revenue leaders",
+            "segment": "b2b-tech-saas",
+            "region": "brazil",
+            "source": "linkedin-b2b-benchmark-2025",
+            "channels": [
+              "linkedin",
+              "video",
+              "creator"
+            ],
+            "fitScore": 0.94,
+            "intentScore": 0.82,
+            "recencyScore": 0.79,
+            "score": 0.85,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ],
+            "latestResearchAt": "2026-05-07T19:21:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-enterprise-shortlist-mindshare",
+            "company": "Enterprise software buyers before shortlist formation",
+            "contactName": "",
+            "title": "Enterprise buying committees",
+            "segment": "enterprise-shortlist",
+            "region": "global",
+            "source": "trustradius-shortlist-2025",
+            "channels": [
+              "search",
+              "website",
+              "reviews",
+              "youtube"
+            ],
+            "fitScore": 0.89,
+            "intentScore": 0.82,
+            "recencyScore": 0.72,
+            "score": 0.81,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 89%",
+              "intent 82%",
+              "recency 72%"
+            ],
+            "latestResearchAt": "2026-05-07T19:23:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-global-review-comparison-intent",
+            "company": "Global B2B software buyers in active review/comparison mode",
+            "contactName": "",
+            "title": "High-intent software evaluators",
+            "segment": "review-intent",
+            "region": "global",
+            "source": "trustradius-review-quality-2025",
+            "channels": [
+              "search",
+              "reviews",
+              "comparison-pages",
+              "email"
+            ],
+            "fitScore": 0.73,
+            "intentScore": 0.56,
+            "recencyScore": 0.54,
+            "score": 0.61,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 73%",
+              "intent 56%",
+              "recency 54%"
+            ],
+            "latestResearchAt": "2026-05-07T19:22:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          }
+        ],
+        "reengagementQueue": [],
+        "advancementQueue": []
+      },
+      "memoryContext": {
+        "refreshedAt": "2026-05-23T00:31:26.842Z",
+        "totalProfiles": 6,
+        "playbooks": [],
+        "stale": false
+      },
+      "execution": {
+        "connector": "openclaw",
+        "mode": "dry-run-disabled",
+        "accepted": false,
+        "executionId": "84943f5e-0846-4dd1-be41-65be0d4257c2",
+        "actionType": "launch_test_batch",
+        "payload": {
+          "executionId": "84943f5e-0846-4dd1-be41-65be0d4257c2",
+          "action": {
+            "type": "launch_test_batch",
+            "delta": 25,
+            "reason": "Not enough signal yet. Launch a small controlled batch."
+          },
+          "context": {
+            "campaign": {
+              "id": "main-campaign",
+              "name": "LocaleWeave Market Intelligence",
+              "activePrompt": "Outline a brand identity refresh strategy for a boutique coffee roastery targeting urban professionals.",
+              "activeTab": "engine",
+              "locales": [
+                "en-US",
+                "de-DE",
+                "pt-BR"
+              ],
+              "sourceLocale": "en-US",
+              "objective": "Research, rank, and reengage high-intent B2B marketing and revenue teams with localized trust-first outreach.",
+              "audience": "B2B marketing, revenue, and GTM leaders evaluating AI, localization, and workflow automation.",
+              "offer": "Localized AI marketing orchestration",
+              "brandVoice": "direct, credible, evidence-led",
+              "channel": "linkedin",
+              "automationEnabled": true,
+              "enabledModules": [
+                "SearchInsight",
+                "CopySentinel",
+                "AdSync",
+                "EmailFlow",
+                "SocialPilot"
+              ],
+              "connector": "moltbot",
+              "dailyBudget": 0,
+              "targeting": {},
+              "landingUrl": "",
+              "baseSubject": "",
+              "basePreheader": "",
+              "baseHeadline": "",
+              "baseBody": "",
+              "baseCta": "",
+              "lastUpdatedAt": "2026-05-08T04:07:09.651Z"
+            },
+            "summary": {
+              "campaignId": "main-campaign",
+              "eventCount": 0,
+              "totals": {
+                "impression": 0,
+                "click": 0,
+                "conversion": 0,
+                "reply": 0,
+                "positive_reply": 0,
+                "unsubscribe": 0,
+                "bounce": 0,
+                "spend": 0,
+                "revenue": 0
+              },
+              "derived": {
+                "ctr": 0,
+                "cvr": 0,
+                "replyRate": 0,
+                "positiveReplyRate": 0,
+                "unsubscribeRate": 0,
+                "cpa": 0,
+                "roas": 0
+              },
+              "lastEventAt": null
+            },
+            "targeting": {
+              "updatedAt": "2026-05-23T00:31:26.866Z",
+              "totalTargets": 6,
+              "actionableTargets": 6,
+              "topTargets": [
+                {
+                  "targetId": "segment-ai-personalization-ready-marketers",
+                  "company": "AI-adopting marketing teams with personalization pressure",
+                  "contactName": "",
+                  "title": "Marketing operations and demand generation leaders",
+                  "segment": "ai-personalization",
+                  "region": "global",
+                  "source": "hubspot-state-of-marketing-2026",
+                  "channels": [
+                    "email",
+                    "linkedin",
+                    "webinar"
+                  ],
+                  "fitScore": 0.932,
+                  "intentScore": 0.938,
+                  "recencyScore": 0.864,
+                  "score": 0.9113,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "email",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 93%",
+                    "intent 94%",
+                    "recency 86%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:24:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                },
+                {
+                  "targetId": "segment-dach-b2b-tech-trust-video",
+                  "company": "DACH B2B tech and SaaS decision-makers",
+                  "contactName": "",
+                  "title": "Marketing and revenue leaders",
+                  "segment": "b2b-tech-saas",
+                  "region": "dach",
+                  "source": "linkedin-b2b-benchmark-2025",
+                  "channels": [
+                    "linkedin",
+                    "video",
+                    "creator"
+                  ],
+                  "fitScore": 0.94,
+                  "intentScore": 0.82,
+                  "recencyScore": 0.79,
+                  "score": 0.85,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "linkedin",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 94%",
+                    "intent 82%",
+                    "recency 79%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:20:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                },
+                {
+                  "targetId": "segment-brazil-b2b-tech-trust-video",
+                  "company": "Brazil B2B tech and SaaS decision-makers",
+                  "contactName": "",
+                  "title": "Marketing and revenue leaders",
+                  "segment": "b2b-tech-saas",
+                  "region": "brazil",
+                  "source": "linkedin-b2b-benchmark-2025",
+                  "channels": [
+                    "linkedin",
+                    "video",
+                    "creator"
+                  ],
+                  "fitScore": 0.94,
+                  "intentScore": 0.82,
+                  "recencyScore": 0.79,
+                  "score": 0.85,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "linkedin",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 94%",
+                    "intent 82%",
+                    "recency 79%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:21:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                },
+                {
+                  "targetId": "segment-enterprise-shortlist-mindshare",
+                  "company": "Enterprise software buyers before shortlist formation",
+                  "contactName": "",
+                  "title": "Enterprise buying committees",
+                  "segment": "enterprise-shortlist",
+                  "region": "global",
+                  "source": "trustradius-shortlist-2025",
+                  "channels": [
+                    "search",
+                    "website",
+                    "reviews",
+                    "youtube"
+                  ],
+                  "fitScore": 0.89,
+                  "intentScore": 0.82,
+                  "recencyScore": 0.72,
+                  "score": 0.81,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "search",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 89%",
+                    "intent 82%",
+                    "recency 72%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:23:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                },
+                {
+                  "targetId": "segment-global-review-comparison-intent",
+                  "company": "Global B2B software buyers in active review/comparison mode",
+                  "contactName": "",
+                  "title": "High-intent software evaluators",
+                  "segment": "review-intent",
+                  "region": "global",
+                  "source": "trustradius-review-quality-2025",
+                  "channels": [
+                    "search",
+                    "reviews",
+                    "comparison-pages",
+                    "email"
+                  ],
+                  "fitScore": 0.73,
+                  "intentScore": 0.56,
+                  "recencyScore": 0.54,
+                  "score": 0.61,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "search",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 73%",
+                    "intent 56%",
+                    "recency 54%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:22:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                },
+                {
+                  "targetId": "segment-language-priority-global",
+                  "company": "Language-priority global expansion opportunities",
+                  "contactName": "",
+                  "title": "Localization and expansion planners",
+                  "segment": "localization-opportunity",
+                  "region": "global",
+                  "source": "csa-language-opportunity",
+                  "channels": [
+                    "web",
+                    "search",
+                    "localization"
+                  ],
+                  "fitScore": 0.17,
+                  "intentScore": null,
+                  "recencyScore": null,
+                  "score": 0.17,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "web",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 17%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:25:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                }
+              ],
+              "initialTargets": [
+                {
+                  "targetId": "segment-ai-personalization-ready-marketers",
+                  "company": "AI-adopting marketing teams with personalization pressure",
+                  "contactName": "",
+                  "title": "Marketing operations and demand generation leaders",
+                  "segment": "ai-personalization",
+                  "region": "global",
+                  "source": "hubspot-state-of-marketing-2026",
+                  "channels": [
+                    "email",
+                    "linkedin",
+                    "webinar"
+                  ],
+                  "fitScore": 0.932,
+                  "intentScore": 0.938,
+                  "recencyScore": 0.864,
+                  "score": 0.9113,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "email",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 93%",
+                    "intent 94%",
+                    "recency 86%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:24:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                },
+                {
+                  "targetId": "segment-dach-b2b-tech-trust-video",
+                  "company": "DACH B2B tech and SaaS decision-makers",
+                  "contactName": "",
+                  "title": "Marketing and revenue leaders",
+                  "segment": "b2b-tech-saas",
+                  "region": "dach",
+                  "source": "linkedin-b2b-benchmark-2025",
+                  "channels": [
+                    "linkedin",
+                    "video",
+                    "creator"
+                  ],
+                  "fitScore": 0.94,
+                  "intentScore": 0.82,
+                  "recencyScore": 0.79,
+                  "score": 0.85,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "linkedin",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 94%",
+                    "intent 82%",
+                    "recency 79%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:20:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                },
+                {
+                  "targetId": "segment-brazil-b2b-tech-trust-video",
+                  "company": "Brazil B2B tech and SaaS decision-makers",
+                  "contactName": "",
+                  "title": "Marketing and revenue leaders",
+                  "segment": "b2b-tech-saas",
+                  "region": "brazil",
+                  "source": "linkedin-b2b-benchmark-2025",
+                  "channels": [
+                    "linkedin",
+                    "video",
+                    "creator"
+                  ],
+                  "fitScore": 0.94,
+                  "intentScore": 0.82,
+                  "recencyScore": 0.79,
+                  "score": 0.85,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "linkedin",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 94%",
+                    "intent 82%",
+                    "recency 79%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:21:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                },
+                {
+                  "targetId": "segment-enterprise-shortlist-mindshare",
+                  "company": "Enterprise software buyers before shortlist formation",
+                  "contactName": "",
+                  "title": "Enterprise buying committees",
+                  "segment": "enterprise-shortlist",
+                  "region": "global",
+                  "source": "trustradius-shortlist-2025",
+                  "channels": [
+                    "search",
+                    "website",
+                    "reviews",
+                    "youtube"
+                  ],
+                  "fitScore": 0.89,
+                  "intentScore": 0.82,
+                  "recencyScore": 0.72,
+                  "score": 0.81,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "search",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 89%",
+                    "intent 82%",
+                    "recency 72%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:23:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                },
+                {
+                  "targetId": "segment-global-review-comparison-intent",
+                  "company": "Global B2B software buyers in active review/comparison mode",
+                  "contactName": "",
+                  "title": "High-intent software evaluators",
+                  "segment": "review-intent",
+                  "region": "global",
+                  "source": "trustradius-review-quality-2025",
+                  "channels": [
+                    "search",
+                    "reviews",
+                    "comparison-pages",
+                    "email"
+                  ],
+                  "fitScore": 0.73,
+                  "intentScore": 0.56,
+                  "recencyScore": 0.54,
+                  "score": 0.61,
+                  "status": "uncontacted",
+                  "recommendation": "initial_outreach",
+                  "recommendedChannel": "search",
+                  "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                  "lastEngagementAt": null,
+                  "estimatedReach": null,
+                  "reasons": [
+                    "fit 73%",
+                    "intent 56%",
+                    "recency 54%"
+                  ],
+                  "latestResearchAt": "2026-05-07T19:22:00-05:00",
+                  "outreachEvents": 0,
+                  "playbookId": null
+                }
+              ],
+              "reengagementQueue": [],
+              "advancementQueue": []
+            },
+            "memoryContext": {
+              "refreshedAt": "2026-05-23T00:31:26.842Z",
+              "totalProfiles": 6,
+              "playbooks": [],
+              "stale": false
+            },
+            "latestContentPack": {
+              "id": "6598de53-c522-4047-a54f-7233889340c9",
+              "campaignId": "main-campaign",
+              "createdAt": "2026-05-10T08:52:09.328Z",
+              "automationReason": "prompt-tightening-check",
+              "decisionId": "c544dae4-4169-492a-97e6-3cdeacc199dd",
+              "source": "lmstudio",
+              "generatedAt": "2026-05-10T08:52:09.328Z",
+              "sourceLocale": "en-US",
+              "objective": "Research, rank, and reengage high-intent B2B marketing and revenue teams with localized trust-first outreach.",
+              "variants": [
+                {
+                  "locale": "en-US",
+                  "language": "en",
+                  "audience": "B2B marketing, revenue, and GTM leaders",
+                  "channel": "linkedin",
+                  "subject": "Unlock Global Growth with Localized AI Marketing",
+                  "preheader": "Reach more prospects with trust-first AI-powered solutions.",
+                  "headline": "Localized AI Marketing: Build Trust, Drive Results",
+                  "body": "Are your marketing and revenue teams ready to connect with global audiences? We deliver localized AI marketing orchestration to help you build trust and drive higher conversion rates.  Stop guessing, start connecting authentically.",
+                  "cta": "Learn More",
+                  "complianceNotes": []
+                },
+                {
+                  "locale": "de-DE",
+                  "language": "de",
+                  "audience": "B2B marketing, revenue, and GTM leaders",
+                  "channel": "linkedin",
+                  "subject": "Globales Wachstum mit lokalisierter KI-Marketing-Orchestrierung",
+                  "preheader": "Mehr Leads erreichen – mit KI-gestützten Lösungen, die Vertrauen aufbauen.",
+                  "headline": "Lokalisierte KI-Marketing: Vertrauen aufbauen und Ergebnisse erzielen",
+                  "body": "Sind Ihre Marketing- und Vertriebsteams bereit, globale Zielgruppen zu erreichen? Wir bieten lokalisierte KI-Marketing-Orchestrierung, um Ihnen zu helfen, Vertrauen aufzubauen und die Conversion-Rate zu steigern. Hören Sie auf zu raten, beginnen Sie mit authentischen Verbindungen.",
+                  "cta": "Mehr erfahren",
+                  "complianceNotes": []
+                },
+                {
+                  "locale": "pt-BR",
+                  "language": "pt",
+                  "audience": "B2B marketing, revenue, and GTM leaders",
+                  "channel": "linkedin",
+                  "subject": "Expanda-se Globalmente com Marketing de IA Localizado",
+                  "preheader": "Alcance mais clientes potenciais com soluções de IA impulsionadas pela confiança.",
+                  "headline": "Marketing de IA Localizado: Construa Confiança, Obtenha Resultados",
+                  "body": "Sua equipe de marketing e vendas está pronta para se conectar com públicos globais? Oferecemos orquestração de marketing de IA localizada para ajudá-lo a construir confiança e aumentar as taxas de conversão. Pare de adivinhar, comece a se conectar de forma autêntica.",
+                  "cta": "Saiba Mais",
+                  "complianceNotes": []
+                }
+              ],
+              "globalNotes": "All variants emphasize the benefit of localized AI marketing for building trust and driving results. CTAs are translated to be locally appropriate."
+            }
+          },
+          "metadata": {
+            "connector": "openclaw",
+            "sentAt": "2026-05-23T00:31:26.866Z"
+          }
+        }
+      },
+      "executions": [
+        {
+          "connector": "openclaw",
+          "mode": "dry-run-disabled",
+          "accepted": false,
+          "executionId": "84943f5e-0846-4dd1-be41-65be0d4257c2",
+          "actionType": "launch_test_batch",
+          "payload": {
+            "executionId": "84943f5e-0846-4dd1-be41-65be0d4257c2",
+            "action": {
+              "type": "launch_test_batch",
+              "delta": 25,
+              "reason": "Not enough signal yet. Launch a small controlled batch."
+            },
+            "context": {
+              "campaign": {
+                "id": "main-campaign",
+                "name": "LocaleWeave Market Intelligence",
+                "activePrompt": "Outline a brand identity refresh strategy for a boutique coffee roastery targeting urban professionals.",
+                "activeTab": "engine",
+                "locales": [
+                  "en-US",
+                  "de-DE",
+                  "pt-BR"
+                ],
+                "sourceLocale": "en-US",
+                "objective": "Research, rank, and reengage high-intent B2B marketing and revenue teams with localized trust-first outreach.",
+                "audience": "B2B marketing, revenue, and GTM leaders evaluating AI, localization, and workflow automation.",
+                "offer": "Localized AI marketing orchestration",
+                "brandVoice": "direct, credible, evidence-led",
+                "channel": "linkedin",
+                "automationEnabled": true,
+                "enabledModules": [
+                  "SearchInsight",
+                  "CopySentinel",
+                  "AdSync",
+                  "EmailFlow",
+                  "SocialPilot"
+                ],
+                "connector": "moltbot",
+                "dailyBudget": 0,
+                "targeting": {},
+                "landingUrl": "",
+                "baseSubject": "",
+                "basePreheader": "",
+                "baseHeadline": "",
+                "baseBody": "",
+                "baseCta": "",
+                "lastUpdatedAt": "2026-05-08T04:07:09.651Z"
+              },
+              "summary": {
+                "campaignId": "main-campaign",
+                "eventCount": 0,
+                "totals": {
+                  "impression": 0,
+                  "click": 0,
+                  "conversion": 0,
+                  "reply": 0,
+                  "positive_reply": 0,
+                  "unsubscribe": 0,
+                  "bounce": 0,
+                  "spend": 0,
+                  "revenue": 0
+                },
+                "derived": {
+                  "ctr": 0,
+                  "cvr": 0,
+                  "replyRate": 0,
+                  "positiveReplyRate": 0,
+                  "unsubscribeRate": 0,
+                  "cpa": 0,
+                  "roas": 0
+                },
+                "lastEventAt": null
+              },
+              "targeting": {
+                "updatedAt": "2026-05-23T00:31:26.866Z",
+                "totalTargets": 6,
+                "actionableTargets": 6,
+                "topTargets": [
+                  {
+                    "targetId": "segment-ai-personalization-ready-marketers",
+                    "company": "AI-adopting marketing teams with personalization pressure",
+                    "contactName": "",
+                    "title": "Marketing operations and demand generation leaders",
+                    "segment": "ai-personalization",
+                    "region": "global",
+                    "source": "hubspot-state-of-marketing-2026",
+                    "channels": [
+                      "email",
+                      "linkedin",
+                      "webinar"
+                    ],
+                    "fitScore": 0.932,
+                    "intentScore": 0.938,
+                    "recencyScore": 0.864,
+                    "score": 0.9113,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "email",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 93%",
+                      "intent 94%",
+                      "recency 86%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:24:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  },
+                  {
+                    "targetId": "segment-dach-b2b-tech-trust-video",
+                    "company": "DACH B2B tech and SaaS decision-makers",
+                    "contactName": "",
+                    "title": "Marketing and revenue leaders",
+                    "segment": "b2b-tech-saas",
+                    "region": "dach",
+                    "source": "linkedin-b2b-benchmark-2025",
+                    "channels": [
+                      "linkedin",
+                      "video",
+                      "creator"
+                    ],
+                    "fitScore": 0.94,
+                    "intentScore": 0.82,
+                    "recencyScore": 0.79,
+                    "score": 0.85,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "linkedin",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 94%",
+                      "intent 82%",
+                      "recency 79%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:20:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  },
+                  {
+                    "targetId": "segment-brazil-b2b-tech-trust-video",
+                    "company": "Brazil B2B tech and SaaS decision-makers",
+                    "contactName": "",
+                    "title": "Marketing and revenue leaders",
+                    "segment": "b2b-tech-saas",
+                    "region": "brazil",
+                    "source": "linkedin-b2b-benchmark-2025",
+                    "channels": [
+                      "linkedin",
+                      "video",
+                      "creator"
+                    ],
+                    "fitScore": 0.94,
+                    "intentScore": 0.82,
+                    "recencyScore": 0.79,
+                    "score": 0.85,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "linkedin",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 94%",
+                      "intent 82%",
+                      "recency 79%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:21:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  },
+                  {
+                    "targetId": "segment-enterprise-shortlist-mindshare",
+                    "company": "Enterprise software buyers before shortlist formation",
+                    "contactName": "",
+                    "title": "Enterprise buying committees",
+                    "segment": "enterprise-shortlist",
+                    "region": "global",
+                    "source": "trustradius-shortlist-2025",
+                    "channels": [
+                      "search",
+                      "website",
+                      "reviews",
+                      "youtube"
+                    ],
+                    "fitScore": 0.89,
+                    "intentScore": 0.82,
+                    "recencyScore": 0.72,
+                    "score": 0.81,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "search",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 89%",
+                      "intent 82%",
+                      "recency 72%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:23:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  },
+                  {
+                    "targetId": "segment-global-review-comparison-intent",
+                    "company": "Global B2B software buyers in active review/comparison mode",
+                    "contactName": "",
+                    "title": "High-intent software evaluators",
+                    "segment": "review-intent",
+                    "region": "global",
+                    "source": "trustradius-review-quality-2025",
+                    "channels": [
+                      "search",
+                      "reviews",
+                      "comparison-pages",
+                      "email"
+                    ],
+                    "fitScore": 0.73,
+                    "intentScore": 0.56,
+                    "recencyScore": 0.54,
+                    "score": 0.61,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "search",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 73%",
+                      "intent 56%",
+                      "recency 54%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:22:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  },
+                  {
+                    "targetId": "segment-language-priority-global",
+                    "company": "Language-priority global expansion opportunities",
+                    "contactName": "",
+                    "title": "Localization and expansion planners",
+                    "segment": "localization-opportunity",
+                    "region": "global",
+                    "source": "csa-language-opportunity",
+                    "channels": [
+                      "web",
+                      "search",
+                      "localization"
+                    ],
+                    "fitScore": 0.17,
+                    "intentScore": null,
+                    "recencyScore": null,
+                    "score": 0.17,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "web",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 17%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:25:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  }
+                ],
+                "initialTargets": [
+                  {
+                    "targetId": "segment-ai-personalization-ready-marketers",
+                    "company": "AI-adopting marketing teams with personalization pressure",
+                    "contactName": "",
+                    "title": "Marketing operations and demand generation leaders",
+                    "segment": "ai-personalization",
+                    "region": "global",
+                    "source": "hubspot-state-of-marketing-2026",
+                    "channels": [
+                      "email",
+                      "linkedin",
+                      "webinar"
+                    ],
+                    "fitScore": 0.932,
+                    "intentScore": 0.938,
+                    "recencyScore": 0.864,
+                    "score": 0.9113,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "email",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 93%",
+                      "intent 94%",
+                      "recency 86%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:24:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  },
+                  {
+                    "targetId": "segment-dach-b2b-tech-trust-video",
+                    "company": "DACH B2B tech and SaaS decision-makers",
+                    "contactName": "",
+                    "title": "Marketing and revenue leaders",
+                    "segment": "b2b-tech-saas",
+                    "region": "dach",
+                    "source": "linkedin-b2b-benchmark-2025",
+                    "channels": [
+                      "linkedin",
+                      "video",
+                      "creator"
+                    ],
+                    "fitScore": 0.94,
+                    "intentScore": 0.82,
+                    "recencyScore": 0.79,
+                    "score": 0.85,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "linkedin",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 94%",
+                      "intent 82%",
+                      "recency 79%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:20:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  },
+                  {
+                    "targetId": "segment-brazil-b2b-tech-trust-video",
+                    "company": "Brazil B2B tech and SaaS decision-makers",
+                    "contactName": "",
+                    "title": "Marketing and revenue leaders",
+                    "segment": "b2b-tech-saas",
+                    "region": "brazil",
+                    "source": "linkedin-b2b-benchmark-2025",
+                    "channels": [
+                      "linkedin",
+                      "video",
+                      "creator"
+                    ],
+                    "fitScore": 0.94,
+                    "intentScore": 0.82,
+                    "recencyScore": 0.79,
+                    "score": 0.85,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "linkedin",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 94%",
+                      "intent 82%",
+                      "recency 79%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:21:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  },
+                  {
+                    "targetId": "segment-enterprise-shortlist-mindshare",
+                    "company": "Enterprise software buyers before shortlist formation",
+                    "contactName": "",
+                    "title": "Enterprise buying committees",
+                    "segment": "enterprise-shortlist",
+                    "region": "global",
+                    "source": "trustradius-shortlist-2025",
+                    "channels": [
+                      "search",
+                      "website",
+                      "reviews",
+                      "youtube"
+                    ],
+                    "fitScore": 0.89,
+                    "intentScore": 0.82,
+                    "recencyScore": 0.72,
+                    "score": 0.81,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "search",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 89%",
+                      "intent 82%",
+                      "recency 72%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:23:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  },
+                  {
+                    "targetId": "segment-global-review-comparison-intent",
+                    "company": "Global B2B software buyers in active review/comparison mode",
+                    "contactName": "",
+                    "title": "High-intent software evaluators",
+                    "segment": "review-intent",
+                    "region": "global",
+                    "source": "trustradius-review-quality-2025",
+                    "channels": [
+                      "search",
+                      "reviews",
+                      "comparison-pages",
+                      "email"
+                    ],
+                    "fitScore": 0.73,
+                    "intentScore": 0.56,
+                    "recencyScore": 0.54,
+                    "score": 0.61,
+                    "status": "uncontacted",
+                    "recommendation": "initial_outreach",
+                    "recommendedChannel": "search",
+                    "nextEligibleAt": "2026-05-23T00:31:26.866Z",
+                    "lastEngagementAt": null,
+                    "estimatedReach": null,
+                    "reasons": [
+                      "fit 73%",
+                      "intent 56%",
+                      "recency 54%"
+                    ],
+                    "latestResearchAt": "2026-05-07T19:22:00-05:00",
+                    "outreachEvents": 0,
+                    "playbookId": null
+                  }
+                ],
+                "reengagementQueue": [],
+                "advancementQueue": []
+              },
+              "memoryContext": {
+                "refreshedAt": "2026-05-23T00:31:26.842Z",
+                "totalProfiles": 6,
+                "playbooks": [],
+                "stale": false
+              },
+              "latestContentPack": {
+                "id": "6598de53-c522-4047-a54f-7233889340c9",
+                "campaignId": "main-campaign",
+                "createdAt": "2026-05-10T08:52:09.328Z",
+                "automationReason": "prompt-tightening-check",
+                "decisionId": "c544dae4-4169-492a-97e6-3cdeacc199dd",
+                "source": "lmstudio",
+                "generatedAt": "2026-05-10T08:52:09.328Z",
+                "sourceLocale": "en-US",
+                "objective": "Research, rank, and reengage high-intent B2B marketing and revenue teams with localized trust-first outreach.",
+                "variants": [
+                  {
+                    "locale": "en-US",
+                    "language": "en",
+                    "audience": "B2B marketing, revenue, and GTM leaders",
+                    "channel": "linkedin",
+                    "subject": "Unlock Global Growth with Localized AI Marketing",
+                    "preheader": "Reach more prospects with trust-first AI-powered solutions.",
+                    "headline": "Localized AI Marketing: Build Trust, Drive Results",
+                    "body": "Are your marketing and revenue teams ready to connect with global audiences? We deliver localized AI marketing orchestration to help you build trust and drive higher conversion rates.  Stop guessing, start connecting authentically.",
+                    "cta": "Learn More",
+                    "complianceNotes": []
+                  },
+                  {
+                    "locale": "de-DE",
+                    "language": "de",
+                    "audience": "B2B marketing, revenue, and GTM leaders",
+                    "channel": "linkedin",
+                    "subject": "Globales Wachstum mit lokalisierter KI-Marketing-Orchestrierung",
+                    "preheader": "Mehr Leads erreichen – mit KI-gestützten Lösungen, die Vertrauen aufbauen.",
+                    "headline": "Lokalisierte KI-Marketing: Vertrauen aufbauen und Ergebnisse erzielen",
+                    "body": "Sind Ihre Marketing- und Vertriebsteams bereit, globale Zielgruppen zu erreichen? Wir bieten lokalisierte KI-Marketing-Orchestrierung, um Ihnen zu helfen, Vertrauen aufzubauen und die Conversion-Rate zu steigern. Hören Sie auf zu raten, beginnen Sie mit authentischen Verbindungen.",
+                    "cta": "Mehr erfahren",
+                    "complianceNotes": []
+                  },
+                  {
+                    "locale": "pt-BR",
+                    "language": "pt",
+                    "audience": "B2B marketing, revenue, and GTM leaders",
+                    "channel": "linkedin",
+                    "subject": "Expanda-se Globalmente com Marketing de IA Localizado",
+                    "preheader": "Alcance mais clientes potenciais com soluções de IA impulsionadas pela confiança.",
+                    "headline": "Marketing de IA Localizado: Construa Confiança, Obtenha Resultados",
+                    "body": "Sua equipe de marketing e vendas está pronta para se conectar com públicos globais? Oferecemos orquestração de marketing de IA localizada para ajudá-lo a construir confiança e aumentar as taxas de conversão. Pare de adivinhar, comece a se conectar de forma autêntica.",
+                    "cta": "Saiba Mais",
+                    "complianceNotes": []
+                  }
+                ],
+                "globalNotes": "All variants emphasize the benefit of localized AI marketing for building trust and driving results. CTAs are translated to be locally appropriate."
+              }
+            },
+            "metadata": {
+              "connector": "openclaw",
+              "sentAt": "2026-05-23T00:31:26.866Z"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-23T00:31:54.987Z",
+      "summary": {
+        "campaignId": "main-campaign",
+        "eventCount": 0,
+        "totals": {
+          "impression": 0,
+          "click": 0,
+          "conversion": 0,
+          "reply": 0,
+          "positive_reply": 0,
+          "unsubscribe": 0,
+          "bounce": 0,
+          "spend": 0,
+          "revenue": 0
+        },
+        "derived": {
+          "ctr": 0,
+          "cvr": 0,
+          "replyRate": 0,
+          "positiveReplyRate": 0,
+          "unsubscribeRate": 0,
+          "cpa": 0,
+          "roas": 0
+        },
+        "lastEventAt": null
+      },
+      "policyResult": {
+        "status": "cooldown",
+        "reasons": [
+          "Campaign is in decision cooldown window."
+        ],
+        "allowedActions": []
+      },
+      "plan": {
+        "source": "policy",
+        "confidence": 0.6,
+        "recommendedAction": null,
+        "rationale": "Campaign is in decision cooldown window."
+      },
+      "targeting": {
+        "updatedAt": "2026-05-23T00:31:54.987Z",
+        "totalTargets": 6,
+        "actionableTargets": 6,
+        "topTargets": [
+          {
+            "targetId": "segment-ai-personalization-ready-marketers",
+            "company": "AI-adopting marketing teams with personalization pressure",
+            "contactName": "",
+            "title": "Marketing operations and demand generation leaders",
+            "segment": "ai-personalization",
+            "region": "global",
+            "source": "hubspot-state-of-marketing-2026",
+            "channels": [
+              "email",
+              "linkedin",
+              "webinar"
+            ],
+            "fitScore": 0.932,
+            "intentScore": 0.938,
+            "recencyScore": 0.864,
+            "score": 0.9113,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "email",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 93%",
+              "intent 94%",
+              "recency 86%"
+            ],
+            "latestResearchAt": "2026-05-07T19:24:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-dach-b2b-tech-trust-video",
+            "company": "DACH B2B tech and SaaS decision-makers",
+            "contactName": "",
+            "title": "Marketing and revenue leaders",
+            "segment": "b2b-tech-saas",
+            "region": "dach",
+            "source": "linkedin-b2b-benchmark-2025",
+            "channels": [
+              "linkedin",
+              "video",
+              "creator"
+            ],
+            "fitScore": 0.94,
+            "intentScore": 0.82,
+            "recencyScore": 0.79,
+            "score": 0.85,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ],
+            "latestResearchAt": "2026-05-07T19:20:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-brazil-b2b-tech-trust-video",
+            "company": "Brazil B2B tech and SaaS decision-makers",
+            "contactName": "",
+            "title": "Marketing and revenue leaders",
+            "segment": "b2b-tech-saas",
+            "region": "brazil",
+            "source": "linkedin-b2b-benchmark-2025",
+            "channels": [
+              "linkedin",
+              "video",
+              "creator"
+            ],
+            "fitScore": 0.94,
+            "intentScore": 0.82,
+            "recencyScore": 0.79,
+            "score": 0.85,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ],
+            "latestResearchAt": "2026-05-07T19:21:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-enterprise-shortlist-mindshare",
+            "company": "Enterprise software buyers before shortlist formation",
+            "contactName": "",
+            "title": "Enterprise buying committees",
+            "segment": "enterprise-shortlist",
+            "region": "global",
+            "source": "trustradius-shortlist-2025",
+            "channels": [
+              "search",
+              "website",
+              "reviews",
+              "youtube"
+            ],
+            "fitScore": 0.89,
+            "intentScore": 0.82,
+            "recencyScore": 0.72,
+            "score": 0.81,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 89%",
+              "intent 82%",
+              "recency 72%"
+            ],
+            "latestResearchAt": "2026-05-07T19:23:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-global-review-comparison-intent",
+            "company": "Global B2B software buyers in active review/comparison mode",
+            "contactName": "",
+            "title": "High-intent software evaluators",
+            "segment": "review-intent",
+            "region": "global",
+            "source": "trustradius-review-quality-2025",
+            "channels": [
+              "search",
+              "reviews",
+              "comparison-pages",
+              "email"
+            ],
+            "fitScore": 0.73,
+            "intentScore": 0.56,
+            "recencyScore": 0.54,
+            "score": 0.61,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 73%",
+              "intent 56%",
+              "recency 54%"
+            ],
+            "latestResearchAt": "2026-05-07T19:22:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-language-priority-global",
+            "company": "Language-priority global expansion opportunities",
+            "contactName": "",
+            "title": "Localization and expansion planners",
+            "segment": "localization-opportunity",
+            "region": "global",
+            "source": "csa-language-opportunity",
+            "channels": [
+              "web",
+              "search",
+              "localization"
+            ],
+            "fitScore": 0.17,
+            "intentScore": null,
+            "recencyScore": null,
+            "score": 0.17,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "web",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 17%"
+            ],
+            "latestResearchAt": "2026-05-07T19:25:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          }
+        ],
+        "initialTargets": [
+          {
+            "targetId": "segment-ai-personalization-ready-marketers",
+            "company": "AI-adopting marketing teams with personalization pressure",
+            "contactName": "",
+            "title": "Marketing operations and demand generation leaders",
+            "segment": "ai-personalization",
+            "region": "global",
+            "source": "hubspot-state-of-marketing-2026",
+            "channels": [
+              "email",
+              "linkedin",
+              "webinar"
+            ],
+            "fitScore": 0.932,
+            "intentScore": 0.938,
+            "recencyScore": 0.864,
+            "score": 0.9113,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "email",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 93%",
+              "intent 94%",
+              "recency 86%"
+            ],
+            "latestResearchAt": "2026-05-07T19:24:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-dach-b2b-tech-trust-video",
+            "company": "DACH B2B tech and SaaS decision-makers",
+            "contactName": "",
+            "title": "Marketing and revenue leaders",
+            "segment": "b2b-tech-saas",
+            "region": "dach",
+            "source": "linkedin-b2b-benchmark-2025",
+            "channels": [
+              "linkedin",
+              "video",
+              "creator"
+            ],
+            "fitScore": 0.94,
+            "intentScore": 0.82,
+            "recencyScore": 0.79,
+            "score": 0.85,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ],
+            "latestResearchAt": "2026-05-07T19:20:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-brazil-b2b-tech-trust-video",
+            "company": "Brazil B2B tech and SaaS decision-makers",
+            "contactName": "",
+            "title": "Marketing and revenue leaders",
+            "segment": "b2b-tech-saas",
+            "region": "brazil",
+            "source": "linkedin-b2b-benchmark-2025",
+            "channels": [
+              "linkedin",
+              "video",
+              "creator"
+            ],
+            "fitScore": 0.94,
+            "intentScore": 0.82,
+            "recencyScore": 0.79,
+            "score": 0.85,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ],
+            "latestResearchAt": "2026-05-07T19:21:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-enterprise-shortlist-mindshare",
+            "company": "Enterprise software buyers before shortlist formation",
+            "contactName": "",
+            "title": "Enterprise buying committees",
+            "segment": "enterprise-shortlist",
+            "region": "global",
+            "source": "trustradius-shortlist-2025",
+            "channels": [
+              "search",
+              "website",
+              "reviews",
+              "youtube"
+            ],
+            "fitScore": 0.89,
+            "intentScore": 0.82,
+            "recencyScore": 0.72,
+            "score": 0.81,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 89%",
+              "intent 82%",
+              "recency 72%"
+            ],
+            "latestResearchAt": "2026-05-07T19:23:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          },
+          {
+            "targetId": "segment-global-review-comparison-intent",
+            "company": "Global B2B software buyers in active review/comparison mode",
+            "contactName": "",
+            "title": "High-intent software evaluators",
+            "segment": "review-intent",
+            "region": "global",
+            "source": "trustradius-review-quality-2025",
+            "channels": [
+              "search",
+              "reviews",
+              "comparison-pages",
+              "email"
+            ],
+            "fitScore": 0.73,
+            "intentScore": 0.56,
+            "recencyScore": 0.54,
+            "score": 0.61,
+            "status": "uncontacted",
+            "recommendation": "initial_outreach",
+            "recommendedChannel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z",
+            "lastEngagementAt": null,
+            "estimatedReach": null,
+            "reasons": [
+              "fit 73%",
+              "intent 56%",
+              "recency 54%"
+            ],
+            "latestResearchAt": "2026-05-07T19:22:00-05:00",
+            "outreachEvents": 0,
+            "playbookId": null
+          }
+        ],
+        "reengagementQueue": [],
+        "advancementQueue": []
+      },
+      "memoryContext": {
+        "refreshedAt": "2026-05-23T00:31:54.976Z",
+        "totalProfiles": 6,
+        "playbooks": [],
+        "stale": false
+      },
+      "execution": null,
+      "executions": []
     }
   ],
   "contentPacks": [
@@ -5076,6 +7290,21 @@
         }
       ],
       "globalNotes": "All variants emphasize the benefit of localized AI marketing for building trust and driving results. CTAs are translated to be locally appropriate."
+    },
+    {
+      "id": "fb99063d-7390-447c-b783-bfd7bb203cb7",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-23T00:31:26.876Z",
+      "automationReason": "agent-orchestrator-verification",
+      "decisionId": "48625389-b538-4a58-9b2e-0775d01540ee",
+      "source": "unavailable",
+      "generatedAt": "2026-05-23T00:31:26.876Z",
+      "sourceLocale": "en-US",
+      "objective": "Research, rank, and reengage high-intent B2B marketing and revenue teams with localized trust-first outreach.",
+      "variants": [],
+      "globalNotes": [
+        "LM Studio unavailable for localization. LM Studio server unavailable at http://127.0.0.1:1234. fetch failed"
+      ]
     }
   ],
   "automationRuns": [
@@ -5123,6 +7352,1483 @@
       "decisionId": "c544dae4-4169-492a-97e6-3cdeacc199dd",
       "contentPackId": "6598de53-c522-4047-a54f-7233889340c9",
       "status": "completed"
+    },
+    {
+      "id": "9ae58786-2250-48f3-9fe9-5762c1de632b",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-23T00:31:26.882Z",
+      "reason": "agent-orchestrator-verification",
+      "decisionId": "48625389-b538-4a58-9b2e-0775d01540ee",
+      "contentPackId": "fb99063d-7390-447c-b783-bfd7bb203cb7",
+      "status": "completed",
+      "agentRunIds": [],
+      "agentRunCount": 0,
+      "lifecycle": {
+        "coverage": [
+          {
+            "stage": "Intake",
+            "total": 1,
+            "completed": 0
+          },
+          {
+            "stage": "Strategy",
+            "total": 2,
+            "completed": 0
+          },
+          {
+            "stage": "Design",
+            "total": 2,
+            "completed": 0
+          },
+          {
+            "stage": "Acquisition",
+            "total": 3,
+            "completed": 0
+          },
+          {
+            "stage": "Research",
+            "total": 4,
+            "completed": 0
+          },
+          {
+            "stage": "Planning",
+            "total": 2,
+            "completed": 0
+          },
+          {
+            "stage": "Outreach",
+            "total": 3,
+            "completed": 0
+          },
+          {
+            "stage": "Sales",
+            "total": 2,
+            "completed": 0
+          },
+          {
+            "stage": "Retention",
+            "total": 3,
+            "completed": 0
+          },
+          {
+            "stage": "Measurement",
+            "total": 2,
+            "completed": 0
+          },
+          {
+            "stage": "Governance",
+            "total": 1,
+            "completed": 0
+          }
+        ],
+        "activeAgents": 0
+      }
+    },
+    {
+      "id": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-23T00:31:54.997Z",
+      "reason": "agent-orchestrator-verification-2",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "status": "completed",
+      "agentRunIds": [
+        "b70b4700-d51b-47bb-84f5-cb15a7c145b0",
+        "8a402a64-2156-4587-b70a-1885b674e0ac",
+        "52511952-f428-407a-b19b-3b1627d1c737",
+        "b55e4568-5a6f-4ec3-b262-f757be3b6dca",
+        "9e735a79-b963-4ad6-a841-f51b14882c3f",
+        "dc37cb97-77f3-4604-833c-aad609b42cf7",
+        "accc6c9a-1c3b-44ce-9b2b-aa7ce2d2cd9c",
+        "66355d83-8366-40a3-8aa4-0f3cac8dcff0",
+        "6da4ed12-8dec-4ec7-930d-789dcfa47f61",
+        "8c10acc2-29ba-43ab-a624-fa013a0fe58c",
+        "0b3aad21-219d-4e25-8acb-091c3dd6c9be",
+        "cf5bf39d-3f11-4faf-994d-9ef4f7e13b26",
+        "13ff4ff6-3da2-438c-909f-07e13c2f103d",
+        "96af5c10-a2c4-44ca-858a-2339b77bf576",
+        "3b1afe15-5f87-4588-9236-7b2ea205bb7b",
+        "4a45a65c-52f5-4beb-98d6-378e05f363a7",
+        "9f96297a-c545-4748-9d02-477d433d7849",
+        "245ef57f-eb22-4116-83d0-8f93c563cc47",
+        "d6558677-1b65-4233-8059-a50d5bc77826",
+        "c9799096-8dc7-41ad-b100-94f69f4305b8",
+        "1d75799d-283b-40f7-986c-40489d731941",
+        "ceb6c0ed-76fd-48b9-9569-3fa4b392faee",
+        "37fcedaa-3bfa-4db6-b2b1-d5b1106b8a9e",
+        "8d11f582-0c83-4bbd-9cf0-71265fd15a0e",
+        "2c8033f9-108d-430d-b5e2-b77349d97150"
+      ],
+      "agentRunCount": 25,
+      "lifecycle": {
+        "coverage": [
+          {
+            "stage": "Intake",
+            "total": 1,
+            "completed": 0
+          },
+          {
+            "stage": "Strategy",
+            "total": 2,
+            "completed": 2
+          },
+          {
+            "stage": "Design",
+            "total": 2,
+            "completed": 2
+          },
+          {
+            "stage": "Acquisition",
+            "total": 3,
+            "completed": 2
+          },
+          {
+            "stage": "Research",
+            "total": 4,
+            "completed": 4
+          },
+          {
+            "stage": "Planning",
+            "total": 2,
+            "completed": 2
+          },
+          {
+            "stage": "Outreach",
+            "total": 3,
+            "completed": 2
+          },
+          {
+            "stage": "Sales",
+            "total": 2,
+            "completed": 2
+          },
+          {
+            "stage": "Retention",
+            "total": 3,
+            "completed": 3
+          },
+          {
+            "stage": "Measurement",
+            "total": 2,
+            "completed": 2
+          },
+          {
+            "stage": "Governance",
+            "total": 1,
+            "completed": 1
+          }
+        ],
+        "activeAgents": 25
+      }
+    }
+  ],
+  "agentRuns": [
+    {
+      "id": "b70b4700-d51b-47bb-84f5-cb15a7c145b0",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "ClientIntake",
+      "stage": "Intake",
+      "outcome": "Aligned mandate",
+      "status": "attention",
+      "summary": "Intake incomplete: missing clientName, successDefinition.",
+      "handoff": "Operator should fill the intake gaps before scaling automation.",
+      "metrics": {},
+      "output": {
+        "clientName": null,
+        "mission": "Research, rank, and reengage high-intent B2B marketing and revenue teams with localized trust-first outreach.",
+        "missingFields": [
+          "clientName",
+          "successDefinition"
+        ],
+        "markets": [
+          "en-US",
+          "de-DE",
+          "pt-BR"
+        ]
+      }
+    },
+    {
+      "id": "8a402a64-2156-4587-b70a-1885b674e0ac",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "OfferArchitect",
+      "stage": "Strategy",
+      "outcome": "Offer clarity",
+      "status": "completed",
+      "summary": "Offer architecture built with 2 primary value pillars.",
+      "handoff": "BrandStrategist",
+      "metrics": {
+        "pillarCount": 2
+      },
+      "output": {
+        "primaryOffer": "Localized AI marketing orchestration",
+        "valuePillars": [
+          "Localized AI marketing orchestration",
+          "Research, rank, and reengage high-intent B2B marketing and revenue teams with localized trust-first outreach."
+        ],
+        "riskReversal": "No explicit risk-reversal captured."
+      }
+    },
+    {
+      "id": "52511952-f428-407a-b19b-3b1627d1c737",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "BrandStrategist",
+      "stage": "Strategy",
+      "outcome": "Consistent narrative",
+      "status": "completed",
+      "summary": "Brand narrative and proof points aligned to the brief.",
+      "handoff": "CreativeDirector",
+      "metrics": {},
+      "output": {
+        "voice": "direct, credible, evidence-led",
+        "messagePillars": [
+          "Localized AI marketing orchestration",
+          "94% of B2B marketers say trust is key to success.",
+          "78% of B2B marketers use video.",
+          "82% of B2B buyers say creator content influences buying decisions."
+        ],
+        "antiPatterns": []
+      }
+    },
+    {
+      "id": "b55e4568-5a6f-4ec3-b262-f757be3b6dca",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "CreativeDirector",
+      "stage": "Design",
+      "outcome": "Creative cohesion",
+      "status": "completed",
+      "summary": "Creative direction synchronized across 0 generated variants.",
+      "handoff": "LandingPageArchitect",
+      "metrics": {},
+      "output": {
+        "conceptAngles": [
+          "Localized AI marketing orchestration"
+        ],
+        "localizedVariants": []
+      }
+    },
+    {
+      "id": "9e735a79-b963-4ad6-a841-f51b14882c3f",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "LandingPageArchitect",
+      "stage": "Design",
+      "outcome": "Conversion-ready pages",
+      "status": "completed",
+      "summary": "Landing page structure generated for the current brief.",
+      "handoff": "SeoMapper",
+      "metrics": {},
+      "output": {
+        "sections": [
+          "Hero promise",
+          "Proof and differentiation",
+          "Pain and urgency",
+          "Offer breakdown",
+          "FAQ and objections",
+          "Final CTA"
+        ],
+        "hero": {
+          "headline": "Localized AI marketing orchestration",
+          "cta": "Book a call"
+        }
+      }
+    },
+    {
+      "id": "dc37cb97-77f3-4604-833c-aad609b42cf7",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "SeoMapper",
+      "stage": "Acquisition",
+      "outcome": "Search coverage",
+      "status": "completed",
+      "summary": "SEO map built from 10 research-derived keywords.",
+      "handoff": "AudienceResearch",
+      "metrics": {},
+      "output": {
+        "keywords": [
+          {
+            "term": "global",
+            "score": 7
+          },
+          {
+            "term": "buyers",
+            "score": 6
+          },
+          {
+            "term": "marketing",
+            "score": 5
+          },
+          {
+            "term": "creator",
+            "score": 4
+          },
+          {
+            "term": "leaders",
+            "score": 3
+          },
+          {
+            "term": "content",
+            "score": 3
+          },
+          {
+            "term": "least",
+            "score": 3
+          },
+          {
+            "term": "brazil",
+            "score": 3
+          },
+          {
+            "term": "software",
+            "score": 3
+          },
+          {
+            "term": "product",
+            "score": 3
+          }
+        ],
+        "markets": [
+          "en-US",
+          "de-DE",
+          "pt-BR"
+        ]
+      }
+    },
+    {
+      "id": "accc6c9a-1c3b-44ce-9b2b-aa7ce2d2cd9c",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "AudienceResearch",
+      "stage": "Research",
+      "outcome": "Audience model",
+      "status": "completed",
+      "summary": "Audience research identified 6 active segment clusters.",
+      "handoff": "IntentMiner",
+      "metrics": {
+        "segmentCount": 6
+      },
+      "output": {
+        "clusters": [
+          {
+            "segment": "ai-personalization",
+            "region": "global",
+            "targets": 1
+          },
+          {
+            "segment": "b2b-tech-saas",
+            "region": "dach",
+            "targets": 1
+          },
+          {
+            "segment": "b2b-tech-saas",
+            "region": "brazil",
+            "targets": 1
+          },
+          {
+            "segment": "enterprise-shortlist",
+            "region": "global",
+            "targets": 1
+          },
+          {
+            "segment": "review-intent",
+            "region": "global",
+            "targets": 1
+          },
+          {
+            "segment": "localization-opportunity",
+            "region": "global",
+            "targets": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "66355d83-8366-40a3-8aa4-0f3cac8dcff0",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "IntentMiner",
+      "stage": "Research",
+      "outcome": "Demand signals",
+      "status": "completed",
+      "summary": "Intent miner surfaced 5 high-priority targets.",
+      "handoff": "DataEnrichment",
+      "metrics": {},
+      "output": {
+        "topTargets": [
+          {
+            "targetId": "segment-ai-personalization-ready-marketers",
+            "company": "AI-adopting marketing teams with personalization pressure",
+            "score": 0.9113,
+            "reasons": [
+              "fit 93%",
+              "intent 94%",
+              "recency 86%"
+            ]
+          },
+          {
+            "targetId": "segment-dach-b2b-tech-trust-video",
+            "company": "DACH B2B tech and SaaS decision-makers",
+            "score": 0.85,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ]
+          },
+          {
+            "targetId": "segment-brazil-b2b-tech-trust-video",
+            "company": "Brazil B2B tech and SaaS decision-makers",
+            "score": 0.85,
+            "reasons": [
+              "fit 94%",
+              "intent 82%",
+              "recency 79%"
+            ]
+          },
+          {
+            "targetId": "segment-enterprise-shortlist-mindshare",
+            "company": "Enterprise software buyers before shortlist formation",
+            "score": 0.81,
+            "reasons": [
+              "fit 89%",
+              "intent 82%",
+              "recency 72%"
+            ]
+          },
+          {
+            "targetId": "segment-global-review-comparison-intent",
+            "company": "Global B2B software buyers in active review/comparison mode",
+            "score": 0.61,
+            "reasons": [
+              "fit 73%",
+              "intent 56%",
+              "recency 54%"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "6da4ed12-8dec-4ec7-930d-789dcfa47f61",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "DataEnrichment",
+      "stage": "Research",
+      "outcome": "Enriched records",
+      "status": "completed",
+      "summary": "Data enrichment coverage is 83% across research records.",
+      "handoff": "SegmentScorer",
+      "metrics": {
+        "avgCompleteness": 0.8333333333333334
+      },
+      "output": {
+        "records": 6,
+        "avgCompleteness": 0.8333333333333334,
+        "missingChannels": []
+      }
+    },
+    {
+      "id": "8c10acc2-29ba-43ab-a624-fa013a0fe58c",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "SegmentScorer",
+      "stage": "Research",
+      "outcome": "Prioritized segments",
+      "status": "completed",
+      "summary": "Segment scorer prioritized 5 targets with 81% average score.",
+      "handoff": "ChannelPlanner",
+      "metrics": {
+        "averageScore": 0.80626
+      },
+      "output": {
+        "rankedTargets": [
+          {
+            "targetId": "segment-ai-personalization-ready-marketers",
+            "segment": "ai-personalization",
+            "region": "global",
+            "recommendation": "initial_outreach",
+            "score": 0.9113
+          },
+          {
+            "targetId": "segment-dach-b2b-tech-trust-video",
+            "segment": "b2b-tech-saas",
+            "region": "dach",
+            "recommendation": "initial_outreach",
+            "score": 0.85
+          },
+          {
+            "targetId": "segment-brazil-b2b-tech-trust-video",
+            "segment": "b2b-tech-saas",
+            "region": "brazil",
+            "recommendation": "initial_outreach",
+            "score": 0.85
+          },
+          {
+            "targetId": "segment-enterprise-shortlist-mindshare",
+            "segment": "enterprise-shortlist",
+            "region": "global",
+            "recommendation": "initial_outreach",
+            "score": 0.81
+          },
+          {
+            "targetId": "segment-global-review-comparison-intent",
+            "segment": "review-intent",
+            "region": "global",
+            "recommendation": "initial_outreach",
+            "score": 0.61
+          }
+        ]
+      }
+    },
+    {
+      "id": "0b3aad21-219d-4e25-8acb-091c3dd6c9be",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "ChannelPlanner",
+      "stage": "Planning",
+      "outcome": "Channel mix",
+      "status": "completed",
+      "summary": "Channel plan recommends 10 primary distribution rails.",
+      "handoff": "ListHygiene",
+      "metrics": {},
+      "output": {
+        "primaryChannel": "linkedin",
+        "recommendedChannels": [
+          "email",
+          "linkedin",
+          "webinar",
+          "video",
+          "creator",
+          "search",
+          "website",
+          "reviews",
+          "youtube",
+          "comparison-pages"
+        ],
+        "locales": [
+          "en-US",
+          "de-DE",
+          "pt-BR"
+        ]
+      }
+    },
+    {
+      "id": "cf5bf39d-3f11-4faf-994d-9ef4f7e13b26",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "ListHygiene",
+      "stage": "Planning",
+      "outcome": "Clean pipeline",
+      "status": "completed",
+      "summary": "List hygiene cleared 6 actionable targets and suppressed 0.",
+      "handoff": "Copywriter",
+      "metrics": {},
+      "output": {
+        "actionable": 6,
+        "suppressed": 0,
+        "blockedTargetIds": []
+      }
+    },
+    {
+      "id": "13ff4ff6-3da2-438c-909f-07e13c2f103d",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "Copywriter",
+      "stage": "Outreach",
+      "outcome": "Execution-ready copy",
+      "status": "attention",
+      "summary": "Copywriter has brief context but no generated localized variants yet.",
+      "handoff": "Personalization",
+      "metrics": {},
+      "output": {
+        "subjectLines": [],
+        "headlines": []
+      }
+    },
+    {
+      "id": "96af5c10-a2c4-44ca-858a-2339b77bf576",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "Personalization",
+      "stage": "Outreach",
+      "outcome": "Higher relevance",
+      "status": "completed",
+      "summary": "Personalization built cues for 3 high-priority targets.",
+      "handoff": "OutboundOrchestrator",
+      "metrics": {},
+      "output": {
+        "cues": [
+          {
+            "targetId": "segment-ai-personalization-ready-marketers",
+            "company": "AI-adopting marketing teams with personalization pressure",
+            "segment": "ai-personalization",
+            "angle": "fit 93%; intent 94%"
+          },
+          {
+            "targetId": "segment-dach-b2b-tech-trust-video",
+            "company": "DACH B2B tech and SaaS decision-makers",
+            "segment": "b2b-tech-saas",
+            "angle": "fit 94%; intent 82%"
+          },
+          {
+            "targetId": "segment-brazil-b2b-tech-trust-video",
+            "company": "Brazil B2B tech and SaaS decision-makers",
+            "segment": "b2b-tech-saas",
+            "angle": "fit 94%; intent 82%"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3b1afe15-5f87-4588-9236-7b2ea205bb7b",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "OutboundOrchestrator",
+      "stage": "Outreach",
+      "outcome": "Coordinated campaigns",
+      "status": "completed",
+      "summary": "Outbound orchestration queued 5 targets for action.",
+      "handoff": "AdOperator",
+      "metrics": {
+        "queueSize": 5
+      },
+      "output": {
+        "queue": [
+          {
+            "targetId": "segment-ai-personalization-ready-marketers",
+            "company": "AI-adopting marketing teams with personalization pressure",
+            "action": "initial_outreach",
+            "channel": "email",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z"
+          },
+          {
+            "targetId": "segment-dach-b2b-tech-trust-video",
+            "company": "DACH B2B tech and SaaS decision-makers",
+            "action": "initial_outreach",
+            "channel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z"
+          },
+          {
+            "targetId": "segment-brazil-b2b-tech-trust-video",
+            "company": "Brazil B2B tech and SaaS decision-makers",
+            "action": "initial_outreach",
+            "channel": "linkedin",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z"
+          },
+          {
+            "targetId": "segment-enterprise-shortlist-mindshare",
+            "company": "Enterprise software buyers before shortlist formation",
+            "action": "initial_outreach",
+            "channel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z"
+          },
+          {
+            "targetId": "segment-global-review-comparison-intent",
+            "company": "Global B2B software buyers in active review/comparison mode",
+            "action": "initial_outreach",
+            "channel": "search",
+            "nextEligibleAt": "2026-05-23T00:31:54.987Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "4a45a65c-52f5-4beb-98d6-378e05f363a7",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "AdOperator",
+      "stage": "Acquisition",
+      "outcome": "Paid activation",
+      "status": "completed",
+      "summary": "Ad operator is aligned to current paid posture.",
+      "handoff": "SocialPublisher",
+      "metrics": {},
+      "output": {
+        "action": null,
+        "budget": null,
+        "roas": 0
+      }
+    },
+    {
+      "id": "9f96297a-c545-4748-9d02-477d433d7849",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "SocialPublisher",
+      "stage": "Acquisition",
+      "outcome": "Social throughput",
+      "status": "attention",
+      "summary": "Social publisher has no creative variants to schedule yet.",
+      "handoff": "SalesHandoff",
+      "metrics": {},
+      "output": {
+        "queue": []
+      }
+    },
+    {
+      "id": "245ef57f-eb22-4116-83d0-8f93c563cc47",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "SalesHandoff",
+      "stage": "Sales",
+      "outcome": "Faster conversion",
+      "status": "completed",
+      "summary": "Sales handoff prepared 0 hot leads.",
+      "handoff": "PipelineManager",
+      "metrics": {},
+      "output": {
+        "leads": []
+      }
+    },
+    {
+      "id": "d6558677-1b65-4233-8059-a50d5bc77826",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "PipelineManager",
+      "stage": "Sales",
+      "outcome": "Deal momentum",
+      "status": "completed",
+      "summary": "Pipeline manager updated 0 outreach events across the funnel.",
+      "handoff": "OnboardingGuide",
+      "metrics": {},
+      "output": {
+        "counts": {},
+        "meetingsBooked": 0,
+        "positiveReplies": 0
+      }
+    },
+    {
+      "id": "c9799096-8dc7-41ad-b100-94f69f4305b8",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "OnboardingGuide",
+      "stage": "Retention",
+      "outcome": "Adoption velocity",
+      "status": "completed",
+      "summary": "Onboarding guide created the first-value checklist.",
+      "handoff": "RetentionOperator",
+      "metrics": {},
+      "output": {
+        "milestones": [
+          "Confirm implementation owner",
+          "Deliver first-value workflow",
+          "Capture baseline metrics"
+        ]
+      }
+    },
+    {
+      "id": "1d75799d-283b-40f7-986c-40489d731941",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "RetentionOperator",
+      "stage": "Retention",
+      "outcome": "Lower churn",
+      "status": "completed",
+      "summary": "Retention operator detected 0 negative signals requiring follow-up.",
+      "handoff": "ExpansionPlanner",
+      "metrics": {},
+      "output": {
+        "negativeSignals": 0,
+        "reengagementQueue": []
+      }
+    },
+    {
+      "id": "ceb6c0ed-76fd-48b9-9569-3fa4b392faee",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "ExpansionPlanner",
+      "stage": "Retention",
+      "outcome": "Revenue expansion",
+      "status": "completed",
+      "summary": "Expansion planner found 0 expansion-ready relationships.",
+      "handoff": "AnalyticsWatch",
+      "metrics": {},
+      "output": {
+        "expansionCandidates": 0,
+        "triggers": [
+          "Localized AI marketing orchestration",
+          "Introduce higher-tier outcome package"
+        ]
+      }
+    },
+    {
+      "id": "37fcedaa-3bfa-4db6-b2b1-d5b1106b8a9e",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "AnalyticsWatch",
+      "stage": "Measurement",
+      "outcome": "Reliable telemetry",
+      "status": "completed",
+      "summary": "Analytics watch processed 0 analytics events.",
+      "handoff": "ExperimentLab",
+      "metrics": {},
+      "output": {
+        "eventCount": 0,
+        "derived": {
+          "ctr": 0,
+          "cvr": 0,
+          "replyRate": 0,
+          "positiveReplyRate": 0,
+          "unsubscribeRate": 0,
+          "cpa": 0,
+          "roas": 0
+        },
+        "totals": {
+          "impression": 0,
+          "click": 0,
+          "conversion": 0,
+          "reply": 0,
+          "positive_reply": 0,
+          "unsubscribe": 0,
+          "bounce": 0,
+          "spend": 0,
+          "revenue": 0
+        }
+      }
+    },
+    {
+      "id": "8d11f582-0c83-4bbd-9cf0-71265fd15a0e",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "ExperimentLab",
+      "stage": "Measurement",
+      "outcome": "Learning loops",
+      "status": "completed",
+      "summary": "Experiment lab prepared a launch_test_batch testing backlog.",
+      "handoff": "ComplianceSentinel",
+      "metrics": {},
+      "output": {
+        "backlog": [
+          "Test CTA framing for Localized AI marketing orchestration",
+          "Compare best locale variants across 1 creative lines",
+          "Validate channel mix for linkedin"
+        ]
+      }
+    },
+    {
+      "id": "2c8033f9-108d-430d-b5e2-b77349d97150",
+      "campaignId": "main-campaign",
+      "automationRunId": "87dae2dd-fe6c-4ce4-8e7d-f6ac0ec491ab",
+      "decisionId": "ae4d48f5-7cfe-410f-bf56-0433afa8c626",
+      "contentPackId": null,
+      "createdAt": "2026-05-23T00:31:54.998Z",
+      "agentId": "ComplianceSentinel",
+      "stage": "Governance",
+      "outcome": "Safer execution",
+      "status": "completed",
+      "summary": "Compliance sentinel found no explicit constraints in the brief.",
+      "handoff": "Automation run complete.",
+      "metrics": {},
+      "output": {
+        "constraints": [],
+        "dryRun": true,
+        "requiresOperatorReview": false
+      }
+    }
+  ],
+  "prospectingRuns": [
+    {
+      "id": "e2e89cad-a497-426c-b196-bbe813c44e64",
+      "campaignId": "main-campaign",
+      "createdAt": "2026-05-24T03:29:17.738Z",
+      "reason": "verification",
+      "generatedCandidates": 12,
+      "plan": {
+        "campaignId": "main-campaign",
+        "generatedAt": "2026-05-24T03:29:17.736Z",
+        "objective": "Research, rank, and reengage high-intent B2B marketing and revenue teams with localized trust-first outreach.",
+        "audience": "B2B marketing, revenue, and GTM leaders evaluating AI, localization, and workflow automation.",
+        "offer": "Localized AI marketing orchestration",
+        "channel": "linkedin",
+        "topAccounts": [
+          {
+            "targetId": "segment-dach-b2b-tech-trust-video",
+            "company": "DACH B2B tech and SaaS decision-makers",
+            "segment": "b2b-tech-saas",
+            "region": "dach",
+            "sourceMix": [
+              "linkedin-sales-navigator",
+              "crm-or-customer-data",
+              "enrichment-platform",
+              "linkedin-company-page"
+            ],
+            "roleClusters": [
+              "Marketing and revenue leaders",
+              "B2B marketing",
+              "revenue",
+              "GTM leaders evaluating AI",
+              "localization"
+            ],
+            "preferredChannel": "linkedin",
+            "evidence": [
+              "94% of B2B marketers say trust is key to success.",
+              "78% of B2B marketers use video.",
+              "82% of B2B buyers say creator content influences buying decisions."
+            ]
+          },
+          {
+            "targetId": "segment-brazil-b2b-tech-trust-video",
+            "company": "Brazil B2B tech and SaaS decision-makers",
+            "segment": "b2b-tech-saas",
+            "region": "brazil",
+            "sourceMix": [
+              "linkedin-sales-navigator",
+              "crm-or-customer-data",
+              "enrichment-platform",
+              "linkedin-company-page"
+            ],
+            "roleClusters": [
+              "Marketing and revenue leaders",
+              "B2B marketing",
+              "revenue",
+              "GTM leaders evaluating AI",
+              "localization"
+            ],
+            "preferredChannel": "linkedin",
+            "evidence": [
+              "Benchmark sample included Brazil and Germany.",
+              "94% trust priority.",
+              "82% creator influence on purchase."
+            ]
+          },
+          {
+            "targetId": "segment-ai-personalization-ready-marketers",
+            "company": "AI-adopting marketing teams with personalization pressure",
+            "segment": "ai-personalization",
+            "region": "global",
+            "sourceMix": [
+              "linkedin-sales-navigator",
+              "crm-or-customer-data",
+              "enrichment-platform",
+              "email-verification-provider",
+              "linkedin-company-page"
+            ],
+            "roleClusters": [
+              "Marketing operations and demand generation leaders",
+              "B2B marketing",
+              "revenue",
+              "GTM leaders evaluating AI",
+              "localization"
+            ],
+            "preferredChannel": "email",
+            "evidence": [
+              "93.2% say personalized or segmented experiences led to more leads and purchases.",
+              "Only 65% say they have high-quality audience data.",
+              "Only 12.6% use hyper-personalization."
+            ]
+          },
+          {
+            "targetId": "segment-enterprise-shortlist-mindshare",
+            "company": "Enterprise software buyers before shortlist formation",
+            "segment": "enterprise-shortlist",
+            "region": "global",
+            "sourceMix": [
+              "linkedin-sales-navigator",
+              "crm-or-customer-data",
+              "enrichment-platform",
+              "linkedin-company-page"
+            ],
+            "roleClusters": [
+              "Enterprise buying committees",
+              "B2B marketing",
+              "revenue",
+              "GTM leaders evaluating AI",
+              "localization"
+            ],
+            "preferredChannel": "search",
+            "evidence": [
+              "Average shortlist size was 2.6 products.",
+              "79% knew the product before research.",
+              "89% for enterprise buyers."
+            ]
+          },
+          {
+            "targetId": "segment-global-review-comparison-intent",
+            "company": "Global B2B software buyers in active review/comparison mode",
+            "segment": "review-intent",
+            "region": "global",
+            "sourceMix": [
+              "linkedin-sales-navigator",
+              "crm-or-customer-data",
+              "enrichment-platform",
+              "email-verification-provider",
+              "linkedin-company-page"
+            ],
+            "roleClusters": [
+              "High-intent software evaluators",
+              "B2B marketing",
+              "revenue",
+              "GTM leaders evaluating AI",
+              "localization"
+            ],
+            "preferredChannel": "search",
+            "evidence": [
+              "73% of organic traffic visited reviews, pricing details, and competitive comparisons.",
+              "56% of buyers planned to make a purchase within the next three months.",
+              "Top three buyer resources: product demos, prior experience, and user reviews."
+            ]
+          },
+          {
+            "targetId": "segment-language-priority-global",
+            "company": "Language-priority global expansion opportunities",
+            "segment": "localization-opportunity",
+            "region": "global",
+            "sourceMix": [
+              "linkedin-sales-navigator",
+              "crm-or-customer-data",
+              "enrichment-platform",
+              "linkedin-company-page"
+            ],
+            "roleClusters": [
+              "Localization and expansion planners",
+              "B2B marketing",
+              "revenue",
+              "GTM leaders evaluating AI",
+              "localization"
+            ],
+            "preferredChannel": "web",
+            "evidence": [
+              "17 languages each control at least 1% of global online GDP."
+            ]
+          }
+        ],
+        "sourcingWorkflow": [
+          "Pick the highest-fit accounts and attach 2-5 likely buyer roles.",
+          "Use LinkedIn Sales Navigator or CRM to confirm real people at the account.",
+          "Enrich against company domain, LinkedIn URL, and professional email sources.",
+          "Verify deliverability and deduplicate before outreach.",
+          "Push validated contacts into sequencing only after suppression checks."
+        ],
+        "enrichmentChecklist": [
+          "Start from known accounts and roles instead of broad scraping.",
+          "Capture company domain, LinkedIn URL, title, and source evidence before enrichment.",
+          "Run enrichment/verification before sending any cold sequence.",
+          "Deduplicate against CRM, suppression, and prior outreach history.",
+          "Respect opt-out, suppression, and region-specific direct marketing rules."
+        ],
+        "proceduralSignals": [],
+        "targetSummary": {
+          "totalTargets": 6,
+          "actionableTargets": 6
+        }
+      }
+    }
+  ],
+  "sourcedContacts": [
+    {
+      "id": "b05faa06-7b52-4872-8ca3-ca9a88b572e9",
+      "campaignId": "main-campaign",
+      "targetId": "segment-ai-personalization-ready-marketers",
+      "company": "AI-adopting marketing teams with personalization pressure",
+      "region": "global",
+      "segment": "ai-personalization",
+      "role": "Marketing operations and demand generation leaders",
+      "seniority": "practitioner",
+      "preferredChannel": "email",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "email-verification-provider",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "Marketing operations and demand generation leaders | AI-adopting marketing teams with personalization pressure | global | ai-personalization | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "93.2% say personalized or segmented experiences led to more leads and purchases.",
+        "Only 65% say they have high-quality audience data.",
+        "Only 12.6% use hyper-personalization."
+      ],
+      "sourceUrl": "https://blog.hubspot.com/marketing/hubspot-blog-marketing-industry-trends-report",
+      "score": 0.9313,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "0ac98048-82c5-4f7b-87e0-0688104249e7",
+      "campaignId": "main-campaign",
+      "targetId": "segment-ai-personalization-ready-marketers",
+      "company": "AI-adopting marketing teams with personalization pressure",
+      "region": "global",
+      "segment": "ai-personalization",
+      "role": "B2B marketing",
+      "seniority": "practitioner",
+      "preferredChannel": "email",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "email-verification-provider",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "B2B marketing | AI-adopting marketing teams with personalization pressure | global | ai-personalization | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "93.2% say personalized or segmented experiences led to more leads and purchases.",
+        "Only 65% say they have high-quality audience data.",
+        "Only 12.6% use hyper-personalization."
+      ],
+      "sourceUrl": "https://blog.hubspot.com/marketing/hubspot-blog-marketing-industry-trends-report",
+      "score": 0.9313,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "098c174e-d43a-4287-8091-61e3f6d78fb2",
+      "campaignId": "main-campaign",
+      "targetId": "segment-ai-personalization-ready-marketers",
+      "company": "AI-adopting marketing teams with personalization pressure",
+      "region": "global",
+      "segment": "ai-personalization",
+      "role": "revenue",
+      "seniority": "practitioner",
+      "preferredChannel": "email",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "email-verification-provider",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "revenue | AI-adopting marketing teams with personalization pressure | global | ai-personalization | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "93.2% say personalized or segmented experiences led to more leads and purchases.",
+        "Only 65% say they have high-quality audience data.",
+        "Only 12.6% use hyper-personalization."
+      ],
+      "sourceUrl": "https://blog.hubspot.com/marketing/hubspot-blog-marketing-industry-trends-report",
+      "score": 0.9313,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "d6d9ec5a-ad79-42ec-8147-a0044a092fed",
+      "campaignId": "main-campaign",
+      "targetId": "segment-ai-personalization-ready-marketers",
+      "company": "AI-adopting marketing teams with personalization pressure",
+      "region": "global",
+      "segment": "ai-personalization",
+      "role": "GTM leaders evaluating AI",
+      "seniority": "practitioner",
+      "preferredChannel": "email",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "email-verification-provider",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "GTM leaders evaluating AI | AI-adopting marketing teams with personalization pressure | global | ai-personalization | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "93.2% say personalized or segmented experiences led to more leads and purchases.",
+        "Only 65% say they have high-quality audience data.",
+        "Only 12.6% use hyper-personalization."
+      ],
+      "sourceUrl": "https://blog.hubspot.com/marketing/hubspot-blog-marketing-industry-trends-report",
+      "score": 0.9313,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "919548e0-80c3-409b-8fc5-3825777ea0e8",
+      "campaignId": "main-campaign",
+      "targetId": "segment-ai-personalization-ready-marketers",
+      "company": "AI-adopting marketing teams with personalization pressure",
+      "region": "global",
+      "segment": "ai-personalization",
+      "role": "localization",
+      "seniority": "practitioner",
+      "preferredChannel": "email",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "email-verification-provider",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "localization | AI-adopting marketing teams with personalization pressure | global | ai-personalization | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "93.2% say personalized or segmented experiences led to more leads and purchases.",
+        "Only 65% say they have high-quality audience data.",
+        "Only 12.6% use hyper-personalization."
+      ],
+      "sourceUrl": "https://blog.hubspot.com/marketing/hubspot-blog-marketing-industry-trends-report",
+      "score": 0.9313,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "96cfcd25-f88e-4c62-afae-2fece1ae82dc",
+      "campaignId": "main-campaign",
+      "targetId": "segment-dach-b2b-tech-trust-video",
+      "company": "DACH B2B tech and SaaS decision-makers",
+      "region": "dach",
+      "segment": "b2b-tech-saas",
+      "role": "Marketing and revenue leaders",
+      "seniority": "practitioner",
+      "preferredChannel": "linkedin",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "Marketing and revenue leaders | DACH B2B tech and SaaS decision-makers | dach | b2b-tech-saas | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "94% of B2B marketers say trust is key to success.",
+        "78% of B2B marketers use video.",
+        "82% of B2B buyers say creator content influences buying decisions."
+      ],
+      "sourceUrl": "https://www.linkedin.com/business/marketing/blog/marketing-collective/2025-b2b-marketing-benchmar-the-video-influence-effect-starts-with-trust",
+      "score": 0.87,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "0bf4e3d8-28f0-4e06-ad74-92c4fd6234e4",
+      "campaignId": "main-campaign",
+      "targetId": "segment-dach-b2b-tech-trust-video",
+      "company": "DACH B2B tech and SaaS decision-makers",
+      "region": "dach",
+      "segment": "b2b-tech-saas",
+      "role": "B2B marketing",
+      "seniority": "practitioner",
+      "preferredChannel": "linkedin",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "B2B marketing | DACH B2B tech and SaaS decision-makers | dach | b2b-tech-saas | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "94% of B2B marketers say trust is key to success.",
+        "78% of B2B marketers use video.",
+        "82% of B2B buyers say creator content influences buying decisions."
+      ],
+      "sourceUrl": "https://www.linkedin.com/business/marketing/blog/marketing-collective/2025-b2b-marketing-benchmar-the-video-influence-effect-starts-with-trust",
+      "score": 0.87,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "538411b4-efe0-4b37-83a6-f6cbbdd4dda6",
+      "campaignId": "main-campaign",
+      "targetId": "segment-dach-b2b-tech-trust-video",
+      "company": "DACH B2B tech and SaaS decision-makers",
+      "region": "dach",
+      "segment": "b2b-tech-saas",
+      "role": "revenue",
+      "seniority": "practitioner",
+      "preferredChannel": "linkedin",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "revenue | DACH B2B tech and SaaS decision-makers | dach | b2b-tech-saas | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "94% of B2B marketers say trust is key to success.",
+        "78% of B2B marketers use video.",
+        "82% of B2B buyers say creator content influences buying decisions."
+      ],
+      "sourceUrl": "https://www.linkedin.com/business/marketing/blog/marketing-collective/2025-b2b-marketing-benchmar-the-video-influence-effect-starts-with-trust",
+      "score": 0.87,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "7d4787ed-bd6a-4c04-b31c-b9504e72c8b5",
+      "campaignId": "main-campaign",
+      "targetId": "segment-dach-b2b-tech-trust-video",
+      "company": "DACH B2B tech and SaaS decision-makers",
+      "region": "dach",
+      "segment": "b2b-tech-saas",
+      "role": "GTM leaders evaluating AI",
+      "seniority": "practitioner",
+      "preferredChannel": "linkedin",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "GTM leaders evaluating AI | DACH B2B tech and SaaS decision-makers | dach | b2b-tech-saas | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "94% of B2B marketers say trust is key to success.",
+        "78% of B2B marketers use video.",
+        "82% of B2B buyers say creator content influences buying decisions."
+      ],
+      "sourceUrl": "https://www.linkedin.com/business/marketing/blog/marketing-collective/2025-b2b-marketing-benchmar-the-video-influence-effect-starts-with-trust",
+      "score": 0.87,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "2eb4181a-0dc5-4d8d-bba5-d3566c7f8e2c",
+      "campaignId": "main-campaign",
+      "targetId": "segment-dach-b2b-tech-trust-video",
+      "company": "DACH B2B tech and SaaS decision-makers",
+      "region": "dach",
+      "segment": "b2b-tech-saas",
+      "role": "localization",
+      "seniority": "practitioner",
+      "preferredChannel": "linkedin",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "localization | DACH B2B tech and SaaS decision-makers | dach | b2b-tech-saas | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "94% of B2B marketers say trust is key to success.",
+        "78% of B2B marketers use video.",
+        "82% of B2B buyers say creator content influences buying decisions."
+      ],
+      "sourceUrl": "https://www.linkedin.com/business/marketing/blog/marketing-collective/2025-b2b-marketing-benchmar-the-video-influence-effect-starts-with-trust",
+      "score": 0.87,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "e4f930ee-b973-4938-a91e-3dc5342a7b46",
+      "campaignId": "main-campaign",
+      "targetId": "segment-brazil-b2b-tech-trust-video",
+      "company": "Brazil B2B tech and SaaS decision-makers",
+      "region": "brazil",
+      "segment": "b2b-tech-saas",
+      "role": "Marketing and revenue leaders",
+      "seniority": "practitioner",
+      "preferredChannel": "linkedin",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "Marketing and revenue leaders | Brazil B2B tech and SaaS decision-makers | brazil | b2b-tech-saas | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "Benchmark sample included Brazil and Germany.",
+        "94% trust priority.",
+        "82% creator influence on purchase."
+      ],
+      "sourceUrl": "https://www.linkedin.com/business/marketing/blog/marketing-collective/2025-b2b-marketing-benchmar-the-video-influence-effect-starts-with-trust",
+      "score": 0.87,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
+    },
+    {
+      "id": "b9b14f81-d4e0-4d98-aad1-9bc7717fe1db",
+      "campaignId": "main-campaign",
+      "targetId": "segment-brazil-b2b-tech-trust-video",
+      "company": "Brazil B2B tech and SaaS decision-makers",
+      "region": "brazil",
+      "segment": "b2b-tech-saas",
+      "role": "B2B marketing",
+      "seniority": "practitioner",
+      "preferredChannel": "linkedin",
+      "sourceMix": [
+        "linkedin-sales-navigator",
+        "crm-or-customer-data",
+        "enrichment-platform",
+        "linkedin-company-page"
+      ],
+      "searchQuery": "B2B marketing | Brazil B2B tech and SaaS decision-makers | brazil | b2b-tech-saas | Localized AI marketing orchestration",
+      "contactStatus": "needs-enrichment",
+      "evidence": [
+        "Benchmark sample included Brazil and Germany.",
+        "94% trust priority.",
+        "82% creator influence on purchase."
+      ],
+      "sourceUrl": "https://www.linkedin.com/business/marketing/blog/marketing-collective/2025-b2b-marketing-benchmar-the-video-influence-effect-starts-with-trust",
+      "score": 0.87,
+      "complianceStatus": "pending-review",
+      "createdAt": "2026-05-24T03:29:17.738Z"
     }
   ]
 }

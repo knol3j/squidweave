@@ -11,6 +11,14 @@ Live connector credentials:
 - `CLAWDBOT_BASE_URL`
 - `CLAWDBOT_TOKEN`
 
+Optional persistent memory backend:
+
+- `HERMES_BASE_URL`
+- `HERMES_TOKEN`
+- `HERMES_HEALTH_PATH`
+- `HERMES_MEMORY_UPSERT_PATH`
+- `HERMES_MEMORY_RECALL_PATH`
+
 Legacy compatibility aliases:
 
 - `MOLTBOT_BASE_URL`

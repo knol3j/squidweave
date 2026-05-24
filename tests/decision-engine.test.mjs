@@ -76,7 +76,7 @@ test("DecisionEngine executes across all configured campaign connectors", async 
       },
     },
     memoryEngine: {
-      buildDecisionContext() {
+      async buildDecisionContext() {
         return { recalled: true };
       },
     },

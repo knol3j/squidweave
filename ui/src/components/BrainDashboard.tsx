@@ -11,7 +11,6 @@ import {
 } from 'recharts';
 import {
   Activity,
-  Bot,
   BrainCircuit,
   Cable,
   ClipboardList,
@@ -28,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useCollaboration } from './CollaborationProvider';
 import { ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, OpenClawDiagnostic, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
+import { AGENT_SYSTEM } from '../lib/agentSystem';
 
 type BrainState = {
   campaigns?: Record<string, any>;
@@ -229,13 +229,12 @@ export default function BrainDashboard() {
   }, [state]);
 
   const cards = useMemo(() => {
-    const latestPack = state.contentPacks?.at(-1);
     return [
       {
-        label: 'Agent Studio',
-        value: `${state.contentPacks?.length || 0} packs`,
-        detail: latestPack?.sourceLocale || campaignState.sourceLocale || 'No live source locale',
-        icon: FolderKanban,
+        label: 'Agent Mesh',
+        value: `${campaignState.enabledModules?.length || 0}/${AGENT_SYSTEM.length} online`,
+        detail: campaignState.clientNeed || campaignState.activePrompt || 'No mission brief captured',
+        icon: BrainCircuit,
       },
       {
         label: 'Memory Layer',
@@ -302,19 +301,19 @@ export default function BrainDashboard() {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-5 custom-scrollbar bg-[#f7f4fb] text-slate-900">
+    <div className="h-full overflow-y-auto bg-[#08111f] px-6 py-5 text-slate-100 custom-scrollbar">
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Brain</div>
-            <h2 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Agent Platform</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {campaignState.locales?.join(' • ') || 'No locales configured'} · {campaignState.channel || 'No channel configured'} · persistent memory recall with live reengagement timing
+            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Brain</div>
+            <h2 className="mt-1 text-3xl font-semibold tracking-tight text-white">Agent Platform</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              {campaignState.markets?.join(' • ') || campaignState.locales?.join(' • ') || 'No markets configured'} · {campaignState.channel || 'No channel configured'} · persistent memory recall with live reengagement timing
             </p>
           </div>
           <button
             onClick={() => dataService.runAutomation(campaignState.id || 'main-campaign', 'brain-dashboard')}
-            className="inline-flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700 shadow-sm hover:bg-violet-100"
+            className="inline-flex items-center gap-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm hover:bg-indigo-500/15"
           >
             <Play className="h-4 w-4" />
             Trigger Brain
@@ -323,30 +322,30 @@ export default function BrainDashboard() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {cards.map(card => (
-            <div key={card.label} className="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-[0_8px_30px_rgba(102,70,170,0.06)]">
-              <div className="flex items-center gap-2 text-violet-500">
-                <div className="rounded-full bg-violet-50 p-1.5">
+            <div key={card.label} className="rounded-3xl border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
+              <div className="flex items-center gap-2 text-indigo-400">
+                <div className="rounded-full bg-indigo-500/10 p-1.5">
                   <card.icon className="h-4 w-4" />
                 </div>
-                <span className="text-xs font-semibold text-slate-500">{card.label}</span>
+                <span className="text-xs font-semibold text-slate-400">{card.label}</span>
               </div>
-              <div className="mt-4 text-xl font-semibold text-slate-900">{card.value}</div>
-              <div className="mt-1 text-xs text-slate-400">{card.detail}</div>
+              <div className="mt-4 text-xl font-semibold text-white">{card.value}</div>
+              <div className="mt-1 text-xs text-slate-500">{card.detail}</div>
             </div>
           ))}
         </div>
 
-        <div className="rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-[0_8px_30px_rgba(102,70,170,0.06)]">
+        <div className="rounded-[28px] border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
           <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Sparkles className="h-4 w-4 text-violet-500" />
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
+              <Sparkles className="h-4 w-4 text-indigo-400" />
               Weekly Activity
             </div>
-            <div className="text-xs text-slate-400">{state.decisions?.length || 0} decisions</div>
+            <div className="text-xs text-slate-500">{state.decisions?.length || 0} decisions</div>
           </div>
           <div className="h-28">
             {decisionSeries.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-xs text-slate-400">
+              <div className="flex h-full items-center justify-center text-xs text-slate-500">
                 No live decision history yet.
               </div>
             ) : (
@@ -362,10 +361,10 @@ export default function BrainDashboard() {
                       <stop offset="95%" stopColor="#c4b5fd" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid vertical={false} stroke="#efeaf8" />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#9a90ab' }} />
+                  <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
                   <YAxis hide />
-                  <Tooltip contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #ede7f8', borderRadius: '16px', fontSize: '12px' }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', fontSize: '12px', color: '#e2e8f0' }} />
                   <Area type="monotone" dataKey="variants" stroke="#ddd6fe" fill="url(#brain-variants)" strokeWidth={1.5} />
                   <Area type="monotone" dataKey="activity" stroke="#8b5cf6" fill="url(#brain-activity)" strokeWidth={2} />
                 </AreaChart>
@@ -374,8 +373,8 @@ export default function BrainDashboard() {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-slate-200 bg-white shadow-[0_8px_30px_rgba(102,70,170,0.06)]">
-          <div className="border-b border-slate-100 px-5 pt-4">
+        <div className="rounded-[28px] border border-white/10 bg-white/[0.04] shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
+          <div className="border-b border-white/10 px-5 pt-4">
             <div className="flex gap-6 text-sm">
               {TABS.map(tab => (
                 <button

@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 @theme {
+  --color-night-950: #020617;
+  --color-night-900: #08111f;
+  --color-night-850: #0d1727;
+  --color-night-800: #132033;
+  --color-night-700: #1c2d45;
   --color-indigo-400: #818cf8;
   --color-indigo-500: #6366f1;
   --color-indigo-600: #4f46e5;
@@ -16,8 +21,16 @@
 }
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-[#f4f1f9] text-slate-900 antialiased selection:bg-violet-200;
+    @apply bg-[#020617] text-slate-100 antialiased selection:bg-indigo-500/40;
+    background-image:
+      radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 32%),
+      radial-gradient(circle at top right, rgba(244, 114, 182, 0.1), transparent 24%),
+      linear-gradient(180deg, #020617 0%, #08111f 55%, #020617 100%);
   }
   
   .custom-scrollbar::-webkit-scrollbar {
@@ -36,9 +49,9 @@
 }
 
 .glass-panel {
-  @apply bg-white border border-slate-200 rounded-[28px] shadow-[0_8px_30px_rgba(102,70,170,0.06)];
+  @apply rounded-[28px] border border-white/10 bg-[#08111f]/88 shadow-[0_16px_60px_rgba(2,6,23,0.45)] backdrop-blur-xl;
 }
 
 .glass-card {
-  @apply bg-white border border-slate-200 rounded-[24px] p-6 transition-all hover:bg-slate-50 shadow-[0_8px_30px_rgba(102,70,170,0.05)];
+  @apply rounded-[24px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_14px_40px_rgba(2,6,23,0.3)] transition-all hover:bg-white/[0.06];
 }

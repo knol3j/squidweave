@@ -49,4 +49,11 @@ export const config = {
       token: process.env.CLAWDBOT_TOKEN || "",
     },
   },
+  hermes: {
+    baseUrl: process.env.HERMES_BASE_URL || "",
+    token: process.env.HERMES_TOKEN || "",
+    healthPath: process.env.HERMES_HEALTH_PATH || "/health",
+    upsertPath: process.env.HERMES_MEMORY_UPSERT_PATH || "/v1/memory/upsert",
+    recallPath: process.env.HERMES_MEMORY_RECALL_PATH || "/v1/memory/recall",
+  },
 };
