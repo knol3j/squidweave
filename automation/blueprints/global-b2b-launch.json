@@ -1,0 +1,109 @@
+{
+  "campaign": {
+    "id": "main-campaign",
+    "name": "Global B2B Demand Engine",
+    "clientName": "Your Client",
+    "clientNeed": "Generate qualified pipeline from multilingual outbound and content",
+    "objective": "Increase SQL volume while protecting reply quality",
+    "audience": "VP Marketing, Head of Growth, RevOps Leaders",
+    "offer": "20-minute growth systems audit",
+    "channel": "linkedin",
+    "locales": ["en-US", "de-DE", "fr-FR"],
+    "markets": ["US", "DACH", "France"],
+    "brandVoice": "Direct, specific, strategic, no fluff",
+    "successDefinition": "30 SQLs/month with positive reply rate >= 8%",
+    "successMetrics": ["sql_count", "positive_reply_rate", "cost_per_sql"],
+    "researchObjectives": [
+      "Prioritize high-intent accounts by segment and recency",
+      "Map role clusters that respond to operational pain narratives",
+      "Collect source-backed evidence for every outreach target"
+    ],
+    "designTheme": "Midnight Signal",
+    "designPalette": ["#08111f", "#4f46e5", "#14b8a6", "#f59e0b", "#e2e8f0"],
+    "designGuidelines": [
+      "Dark foundation with high-contrast cards",
+      "One primary CTA color per screen",
+      "Evidence-forward cards with source links visible",
+      "Compact metric typography for dashboard density"
+    ],
+    "contentAngles": [
+      "Revenue leakage from weak re-engagement",
+      "Localized messaging that still feels native",
+      "Proof-backed performance loops"
+    ]
+  },
+  "researchRecords": [
+    {
+      "targetId": "acct-001",
+      "source": "manual-ingest",
+      "company": "Acme Cloud",
+      "contactName": "Jordan Patel",
+      "title": "VP Marketing",
+      "segment": "B2B SaaS",
+      "region": "US",
+      "preferredChannel": "linkedin",
+      "channels": ["linkedin", "email"],
+      "fitScore": 0.92,
+      "intentScore": 0.86,
+      "recencyScore": 0.82,
+      "estimatedReach": 120000,
+      "notes": "Recent hiring surge in demand gen and lifecycle.",
+      "metadata": {
+        "sourceUrl": "https://example.com/acme-cloud",
+        "evidence": [
+          "3 senior growth hires in last 45 days",
+          "Active paid social expansion to EMEA"
+        ]
+      }
+    },
+    {
+      "targetId": "acct-002",
+      "source": "manual-ingest",
+      "company": "Nordic Ledger",
+      "contactName": "Mina Vogt",
+      "title": "Head of Growth",
+      "segment": "Fintech",
+      "region": "DACH",
+      "preferredChannel": "email",
+      "channels": ["email", "linkedin"],
+      "fitScore": 0.88,
+      "intentScore": 0.84,
+      "recencyScore": 0.79,
+      "estimatedReach": 85000,
+      "notes": "Scaling outbound motion for enterprise demos.",
+      "metadata": {
+        "sourceUrl": "https://example.com/nordic-ledger",
+        "evidence": [
+          "Publicly stated expansion target in Germany",
+          "New RevOps tooling rollout"
+        ]
+      }
+    }
+  ],
+  "prospects": [
+    {
+      "targetId": "acct-001",
+      "company": "Acme Cloud",
+      "fullName": "Jordan Patel",
+      "title": "VP Marketing",
+      "email": "jordan.patel@acmecloud.example",
+      "linkedinUrl": "https://linkedin.com/in/jordan-patel",
+      "region": "US",
+      "segment": "B2B SaaS",
+      "preferredChannel": "linkedin",
+      "source": "manual-import"
+    },
+    {
+      "targetId": "acct-002",
+      "company": "Nordic Ledger",
+      "fullName": "Mina Vogt",
+      "title": "Head of Growth",
+      "email": "mina.vogt@nordicledger.example",
+      "linkedinUrl": "https://linkedin.com/in/mina-vogt",
+      "region": "DACH",
+      "segment": "Fintech",
+      "preferredChannel": "email",
+      "source": "manual-import"
+    }
+  ]
+}

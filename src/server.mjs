@@ -305,6 +305,10 @@ function buildCampaignInput(body) {
     markets: Array.isArray(body.markets) ? body.markets.map(value => String(value).trim()).filter(Boolean) : [],
     researchObjectives: Array.isArray(body.researchObjectives) ? body.researchObjectives.map(value => String(value).trim()).filter(Boolean) : [],
     successMetrics: Array.isArray(body.successMetrics) ? body.successMetrics.map(value => String(value).trim()).filter(Boolean) : [],
+    designTheme: body.designTheme || "",
+    designPalette: Array.isArray(body.designPalette) ? body.designPalette.map(value => String(value).trim()).filter(Boolean) : [],
+    designGuidelines: Array.isArray(body.designGuidelines) ? body.designGuidelines.map(value => String(value).trim()).filter(Boolean) : [],
+    contentAngles: Array.isArray(body.contentAngles) ? body.contentAngles.map(value => String(value).trim()).filter(Boolean) : [],
   };
 }
 
