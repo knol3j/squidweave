@@ -325,6 +325,67 @@ export interface ActivationRun {
   connectorResults?: any[];
 }
 
+export interface FundingInvestor {
+  id: string;
+  campaignId: string;
+  createdAt: string;
+  updatedAt: string;
+  fundName: string;
+  partnerName: string | null;
+  stageFocus: string[];
+  geoFocus: string[];
+  sectors: string[];
+  checkSize: string | null;
+  thesis: string;
+  warmIntroPath: string;
+  thesisMatch: number;
+  stageMatch: number;
+  checkSizeMatch: number;
+  warmPath: number;
+  status: string;
+  notes: string;
+  lastContactAt: string | null;
+  nextActionAt: string | null;
+  sequenceStep: number;
+}
+
+export interface FundingPipeline {
+  campaignId: string;
+  generatedAt: string;
+  counts: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+  prioritized: Array<FundingInvestor & {
+    score: number;
+    reasons: string[];
+    campaignStage: string | null;
+  }>;
+}
+
+export interface FundingOutreachEvent {
+  id: string;
+  campaignId: string;
+  investorId: string;
+  type: string;
+  channel: string;
+  timestamp: string;
+  sequenceStep: number;
+  metadata?: {
+    score?: number;
+    reasons?: string[];
+  };
+}
+
+export interface FundingRun {
+  id: string;
+  campaignId: string;
+  createdAt: string;
+  type: string;
+  processedInvestors: number;
+  status: string;
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { 'content-type': 'application/json' },
@@ -503,6 +564,43 @@ export const dataService = {
 
   async getActivationRuns(campaignId: string) {
     return api<ActivationRun[]>(`/prospects/activation-runs?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async importFundingInvestors(campaignId: string, records: Array<Partial<FundingInvestor>>) {
+    return api<FundingInvestor[]>('/funding/investors', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, records }),
+    });
+  },
+
+  async getFundingInvestors(campaignId: string) {
+    return api<FundingInvestor[]>(`/funding/investors?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async getFundingPipeline(campaignId: string) {
+    return api<FundingPipeline>(`/funding/pipeline?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async runFundingSequence(campaignId: string, payload?: { limit?: number }) {
+    return api<{ run: FundingRun; events: FundingOutreachEvent[]; pipeline: FundingPipeline }>('/funding/sequence', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, ...payload }),
+    });
+  },
+
+  async runFundingCampaign(campaignId: string, payload?: { limit?: number }) {
+    return api<{ campaignId: string; pipeline: FundingPipeline; sequence: { run: FundingRun; events: FundingOutreachEvent[]; pipeline: FundingPipeline } }>('/funding/run', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, ...payload }),
+    });
+  },
+
+  async getFundingRuns(campaignId: string) {
+    return api<FundingRun[]>(`/funding/runs?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async getFundingOutreachEvents(campaignId: string) {
+    return api<FundingOutreachEvent[]>(`/funding/outreach-events?campaignId=${encodeURIComponent(campaignId)}`);
   },
 
   async addResearchRecord(record: Partial<ResearchRecord> & { campaignId: string; targetId: string }) {

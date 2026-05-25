@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const API_BASE = process.env.SQUIDWEAVE_API_BASE || 'http://127.0.0.1:4010';
+const API_KEY = process.env.SQUIDWEAVE_API_KEY || '';
 const BLUEPRINTS_DIR = join(__dirname, '..', 'automation', 'blueprints');
 
 const args = process.argv.slice(2);
@@ -27,9 +28,14 @@ const SINGLE_CAMPAIGN = args.find(a => a.startsWith('--campaign='))?.split('=')[
 // API helpers
 // ---------------------------------------------------------------------------
 async function api(path, init = {}) {
+  const headers = {
+    'content-type': 'application/json',
+    ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+    ...(init.headers || {}),
+  };
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: { 'content-type': 'application/json' },
     ...init,
+    headers,
   });
   const text = await response.text();
   if (!response.ok) {
@@ -147,6 +153,24 @@ async function runEnrichment(campaignId) {
   };
 }
 
+async function runFunding(campaignId) {
+  try {
+    const result = await api('/funding/run', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, limit: 20 }),
+    });
+    return {
+      fundingProcessed: result?.sequence?.run?.processedInvestors || 0,
+      fundingError: null,
+    };
+  } catch (err) {
+    return {
+      fundingProcessed: 0,
+      fundingError: err.message,
+    };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Get pipeline summary
 // ---------------------------------------------------------------------------
@@ -222,6 +246,7 @@ async function main() {
     process.stdout.write(`  → ${bp.campaignId}... `);
     try {
       const result = await runEnrichment(bp.campaignId);
+      const funding = await runFunding(bp.campaignId);
       const p = await pipelineSummary(bp.campaignId);
       results.push({
         campaignId: bp.campaignId,
@@ -229,13 +254,15 @@ async function main() {
         designTheme: bp.designTheme,
         enriched: result.processedCount || 0,
         sequenced: result.sequencedCount || 0,
-        error: result.enrichError || result.sequenceError || null,
+        fundingProcessed: funding.fundingProcessed || 0,
+        error: result.enrichError || result.sequenceError || funding.fundingError || null,
         pipelineCounts: p,
       });
       const enrichedStr = `${result.processedCount || 0} enriched`;
       const seqStr = result.sequencedCount ? `, ${result.sequencedCount} sequenced` : '';
-      const errStr = result.enrichError || result.sequenceError ? `, ERROR: ${result.enrichError || result.sequenceError}` : '';
-      console.log(`✓ (${enrichedStr}${seqStr})${errStr}`);
+      const fundingStr = `, ${funding.fundingProcessed || 0} investor steps`;
+      const errStr = result.enrichError || result.sequenceError || funding.fundingError ? `, ERROR: ${result.enrichError || result.sequenceError || funding.fundingError}` : '';
+      console.log(`✓ (${enrichedStr}${seqStr}${fundingStr})${errStr}`);
     } catch (err) {
       results.push({ campaignId: bp.campaignId, error: err.message });
       console.log(`✗ ${err.message}`);
@@ -248,21 +275,23 @@ async function main() {
   console.log('  ORCHESTRATION SUMMARY');
   console.log('═'.repeat(80));
 
-  const header = `  ${'Campaign'.padEnd(30)} ${'Design Theme'.padEnd(22)} ${'Enriched'.padEnd(10)} ${'Sequenced'.padEnd(10)}  Notes`;
+  const header = `  ${'Campaign'.padEnd(30)} ${'Design Theme'.padEnd(22)} ${'Enriched'.padEnd(10)} ${'Sequenced'.padEnd(10)} ${'Funding'.padEnd(9)}  Notes`;
   console.log(`\n${header}`);
-  console.log(`  ${'─'.repeat(28)}  ${'─'.repeat(20)}  ${'─'.repeat(8)}  ${'─'.repeat(8)}  ──────────────────`);
+  console.log(`  ${'─'.repeat(28)}  ${'─'.repeat(20)}  ${'─'.repeat(8)}  ${'─'.repeat(8)}  ${'─'.repeat(7)}  ──────────────────`);
 
   let totalEnriched = 0;
   let totalSequenced = 0;
+  let totalFunding = 0;
   for (const r of results) {
     const note = r.error ? `⚠ ${r.error}` : (r.pipelineCounts ? `${r.pipelineCounts.total || 0} total contacts` : '');
-    console.log(`  ${r.campaignId.padEnd(30)} ${(r.designTheme || '—').padEnd(22)} ${String(r.enriched || '—').padEnd(10)} ${String(r.sequenced || '—').padEnd(10)} ${note}`);
+    console.log(`  ${r.campaignId.padEnd(30)} ${(r.designTheme || '—').padEnd(22)} ${String(r.enriched || '—').padEnd(10)} ${String(r.sequenced || '—').padEnd(10)} ${String(r.fundingProcessed || '—').padEnd(9)} ${note}`);
     totalEnriched += r.enriched || 0;
     totalSequenced += r.sequenced || 0;
+    totalFunding += r.fundingProcessed || 0;
   }
 
-  console.log(`\n  ${'─'.repeat(28)}  ${'─'.repeat(20)}  ${'─'.repeat(8)}  ${'─'.repeat(8)}`);
-  console.log(`  ${'TOTAL'.padEnd(30)} ${''.padEnd(22)} ${String(totalEnriched).padEnd(10)} ${String(totalSequenced).padEnd(10)}`);
+  console.log(`\n  ${'─'.repeat(28)}  ${'─'.repeat(20)}  ${'─'.repeat(8)}  ${'─'.repeat(8)}  ${'─'.repeat(7)}`);
+  console.log(`  ${'TOTAL'.padEnd(30)} ${''.padEnd(22)} ${String(totalEnriched).padEnd(10)} ${String(totalSequenced).padEnd(10)} ${String(totalFunding).padEnd(9)}`);
   console.log(`\n  Completed in ${elapsed}s`);
   console.log('═'.repeat(80));
 }

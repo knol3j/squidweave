@@ -32,6 +32,7 @@ import { AgentOrchestrator } from "./lib/agent-orchestrator.mjs";
 import { HermesMemoryClient } from "./lib/hermes-memory.mjs";
 import { ContactSourcingEngine } from "./lib/contact-sourcing-engine.mjs";
 import { ProspectActivationEngine } from "./lib/prospect-activation-engine.mjs";
+import { FundingEngine } from "./lib/funding-engine.mjs";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -178,6 +179,15 @@ function buildSetupRequirements() {
       "bounce",
       "spend",
       "revenue",
+    ],
+    fundingOutreachEventTypes: [
+      "intro_queued",
+      "follow_up_queued",
+      "sent",
+      "replied",
+      "meeting_booked",
+      "term_sheet",
+      "passed",
     ],
     requiredResearchFields: ["campaignId", "targetId"],
     recommendedResearchFields: [
@@ -359,6 +369,7 @@ async function createApp() {
   const agentOrchestrator = new AgentOrchestrator({ store });
   const contactSourcingEngine = new ContactSourcingEngine({ store, targetingEngine, memoryEngine });
   const prospectActivationEngine = new ProspectActivationEngine({ store, connectors, config });
+  const fundingEngine = new FundingEngine({ store });
   const decisionEngine = new DecisionEngine({ store, planner, connectors, config, targetingEngine, memoryEngine });
   const automationEngine = new AutomationEngine({ store, decisionEngine, planner, memoryEngine, agentOrchestrator });
   const scheduler = new AutomationScheduler({
@@ -739,6 +750,81 @@ async function createApp() {
         return;
       }
       sendJson(request, response, 200, store.listActivationRuns(campaignId));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/funding/investors") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      const records = Array.isArray(body.records) ? body.records : [body];
+      const imported = fundingEngine.importInvestors(body.campaignId, records);
+      await store.addInvestorRecords(imported);
+      sendJson(request, response, 201, imported);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/funding/investors") {
+      const campaignId = url.searchParams.get("campaignId");
+      if (!campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      sendJson(request, response, 200, store.listInvestorRecords(campaignId));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/funding/pipeline") {
+      const campaignId = url.searchParams.get("campaignId");
+      if (!campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      sendJson(request, response, 200, fundingEngine.buildPipeline(campaignId));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/funding/sequence") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      const result = await fundingEngine.sequenceOutreach(body.campaignId, { limit: body.limit });
+      sendJson(request, response, 201, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/funding/run") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      const result = await fundingEngine.runCampaign(body.campaignId, { limit: body.limit });
+      sendJson(request, response, 201, result);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/funding/runs") {
+      const campaignId = url.searchParams.get("campaignId");
+      if (!campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      sendJson(request, response, 200, store.listFundingRuns(campaignId));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/funding/outreach-events") {
+      const campaignId = url.searchParams.get("campaignId");
+      if (!campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      sendJson(request, response, 200, store.listFundingOutreachEvents(campaignId));
       return;
     }
 
