@@ -55,6 +55,13 @@ Useful endpoints:
 - `POST /content/generate`
 - `POST /automation/run`
 - `POST /automation/start`
+- `POST /funding/investors`
+- `GET /funding/investors?campaignId=...`
+- `GET /funding/pipeline?campaignId=...`
+- `POST /funding/sequence`
+- `POST /funding/run`
+- `GET /funding/runs?campaignId=...`
+- `GET /funding/outreach-events?campaignId=...`
 - `GET /state`
 
 ## UI Run
@@ -113,8 +120,8 @@ npm run ui:lint
 
 ## Setup Files
 
-- Copy [.env.example](C:/Users/Nweec/.lmstudio/projects/marketing-autopilot/.env.example) into your real environment configuration and populate only the values you actually have.
-- Use [docs/integration-blueprint.md](C:/Users/Nweec/.lmstudio/projects/marketing-autopilot/docs/integration-blueprint.md) for required env vars, accepted event types, and upstream system mapping.
+- Copy `.env.example` into your real environment configuration and populate only the values you actually have.
+- Use `docs/integration-blueprint.md` for required env vars, accepted event types, and upstream system mapping.
 - Query `GET /setup/requirements` if you want the same setup contract programmatically.
 
 ## Example Campaign

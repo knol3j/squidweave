@@ -6,7 +6,7 @@
   "main": "electron/main.mjs",
   "scripts": {
     "start": "node src/server.mjs",
-    "dev": "powershell -ExecutionPolicy Bypass -File scripts/dev.ps1",
+    "dev": "node scripts/dev.mjs",
     "test": "node --test",
     "ui:dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",
@@ -16,6 +16,7 @@
     "automation:bootstrap": "node scripts/bootstrap-automation.mjs",
     "automation:orchestrate": "node scripts/orchestrate-blueprints.mjs",
     "automation:enrich": "node scripts/orchestrate-blueprints.mjs --enrich-only",
+    "automation:funding": "node scripts/orchestrate-blueprints.mjs --enrich-only",
     "automation:cron": "node scripts/orchestrate-blueprints.mjs --enrich-only"
   },
   "devDependencies": {

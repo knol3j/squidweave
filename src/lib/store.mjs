@@ -20,6 +20,9 @@ const defaultState = () => ({
   prospectingRuns: [],
   sourcedContacts: [],
   activationRuns: [],
+  investorRecords: [],
+  fundingOutreachEvents: [],
+  fundingRuns: [],
 });
 
 export class Store {
@@ -418,6 +421,48 @@ export class Store {
       return [...this.state.activationRuns];
     }
     return this.state.activationRuns.filter(run => run.campaignId === campaignId);
+  }
+
+  listInvestorRecords(campaignId) {
+    if (!campaignId) {
+      return [...this.state.investorRecords];
+    }
+    return this.state.investorRecords.filter(record => record.campaignId === campaignId);
+  }
+
+  async addInvestorRecords(records = []) {
+    this.state.investorRecords.push(...records);
+    await this.persist();
+    this.emitChange("investorRecords", "insertMany", { count: records.length, items: records });
+    return records;
+  }
+
+  listFundingOutreachEvents(campaignId) {
+    if (!campaignId) {
+      return [...this.state.fundingOutreachEvents];
+    }
+    return this.state.fundingOutreachEvents.filter(event => event.campaignId === campaignId);
+  }
+
+  async addFundingOutreachEvents(events = []) {
+    this.state.fundingOutreachEvents.push(...events);
+    await this.persist();
+    this.emitChange("fundingOutreachEvents", "insertMany", { count: events.length, items: events });
+    return events;
+  }
+
+  listFundingRuns(campaignId) {
+    if (!campaignId) {
+      return [...this.state.fundingRuns];
+    }
+    return this.state.fundingRuns.filter(run => run.campaignId === campaignId);
+  }
+
+  async addFundingRun(run) {
+    this.state.fundingRuns.push(run);
+    await this.persist();
+    this.emitChange("fundingRuns", "insert", { item: run });
+    return run;
   }
 
   snapshot() {
