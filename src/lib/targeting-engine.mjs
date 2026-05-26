@@ -35,6 +35,21 @@ function buildReason(label, score) {
   return `${label} ${Math.round(score * 100)}%`;
 }
 
+function sourceReliability(record = {}) {
+  const explicit = Number(record?.metadata?.sourceReliability);
+  if (Number.isFinite(explicit)) {
+    return Math.max(0, Math.min(1, explicit));
+  }
+  const source = String(record?.source || "").toLowerCase();
+  if (source.includes("sec")) return 0.88;
+  if (source.includes("wikidata")) return 0.77;
+  if (source.includes("github")) return 0.71;
+  if (source.includes("hn")) return 0.62;
+  if (source.includes("reddit")) return 0.58;
+  if (source.includes("gdelt") || source.includes("rss")) return 0.66;
+  return 0.5;
+}
+
 export function normalizeResearchRecord(input) {
   if (!input?.campaignId) {
     throw new Error("campaignId is required");
@@ -194,7 +209,9 @@ export class TargetingEngine {
           .at(0) || matchingPlaybooks[0] || null;
         const nextEligibleAt = computeNextEligibleAt(targetEvents, bestPlaybook?.cadenceDays || 3);
 
+        const srcReliability = sourceReliability(record);
         let score = average([record.fitScore, record.intentScore, record.recencyScore]) || 0;
+        score += (srcReliability - 0.5) * 0.12;
         if (click) {
           score += 0.08;
         }
@@ -219,6 +236,7 @@ export class TargetingEngine {
           buildReason("fit", record.fitScore),
           buildReason("intent", record.intentScore),
           buildReason("recency", record.recencyScore),
+          `source reliability ${Math.round(srcReliability * 100)}%`,
           click ? "recent click detected" : null,
           positiveReply ? "positive reply detected" : null,
           bestPlaybook ? `playbook boost via ${bestPlaybook.recommendedChannel}` : null,
@@ -237,6 +255,7 @@ export class TargetingEngine {
           fitScore: record.fitScore,
           intentScore: record.intentScore,
           recencyScore: record.recencyScore,
+          sourceReliability: Number(srcReliability.toFixed(2)),
           score: Number(normalizedScore.toFixed(4)),
           status,
           recommendation: computeRecommendation(status, nextEligibleAt),
