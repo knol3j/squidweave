@@ -3,6 +3,185 @@ import { EventEmitter } from "node:events";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+/**
+ * Entity classes modeled after GHL's Firestore entity model.
+ * Provides structured data with relationships, timestamps, and validation.
+ */
+class Entity {
+  constructor(data = {}) {
+    this.id = data.id || crypto.randomUUID();
+    this.createdAt = data.createdAt || new Date().toISOString();
+    this.updatedAt = data.updatedAt || this.createdAt;
+    Object.assign(this, data);
+  }
+
+  toJSON() {
+    const obj = { ...this };
+    return obj;
+  }
+
+  patch(data) {
+    Object.assign(this, data);
+    this.updatedAt = new Date().toISOString();
+  }
+}
+
+export class Contact extends Entity {
+  static collection = "contacts";
+
+  constructor(data = {}) {
+    super(data);
+    this.locationId = data.locationId || "";
+    this.companyName = data.companyName || "";
+    this.fullName = data.fullName || "";
+    this.firstName = data.firstName || "";
+    this.lastName = data.lastName || "";
+    this.email = (data.email || "").toLowerCase();
+    this.phone = data.phone || "";
+    this.website = data.website || "";
+    this.linkedinUrl = data.linkedinUrl || "";
+    this.city = data.city || "";
+    this.state = data.state || "";
+    this.country = data.country || "";
+    this.tags = data.tags || [];
+    this.customFields = data.customFields || {};
+    this.dnd = data.dnd || false;
+    this.campaignIds = data.campaignIds || [];
+    this.enrichmentStatus = data.enrichmentStatus || "pending";
+    this.verificationStatus = data.verificationStatus || "pending";
+    this.sequenceStatus = data.sequenceStatus || "unplanned";
+  }
+}
+
+export class Pipeline extends Entity {
+  static collection = "pipelines";
+
+  constructor(data = {}) {
+    super(data);
+    this.locationId = data.locationId || "";
+    this.name = data.name || "";
+    this.stages = data.stages || [];
+    this.showInFunnel = data.showInFunnel !== false;
+  }
+
+  addStage(stage) {
+    this.stages.push({ id: crypto.randomUUID(), ...stage, order: this.stages.length });
+    this.updatedAt = new Date().toISOString();
+  }
+}
+
+export class Opportunity extends Entity {
+  static collection = "opportunities";
+
+  constructor(data = {}) {
+    super(data);
+    this.locationId = data.locationId || "";
+    this.pipelineId = data.pipelineId || "";
+    this.pipelineStageId = data.pipelineStageId || "";
+    this.contactId = data.contactId || "";
+    this.campaignId = data.campaignId || "";
+    this.name = data.name || "";
+    this.status = data.status || "open";
+    this.monetaryValue = data.monetaryValue || 0;
+    this.currency = data.currency || "USD";
+    this.source = data.source || "";
+    this.customFields = data.customFields || {};
+    this.assignedTo = data.assignedTo || "";
+    this.notes = data.notes || "";
+    this.lostReason = data.lostReason || "";
+  }
+}
+
+export class WorkflowStep extends Entity {
+  static collection = "workflowSteps";
+
+  constructor(data = {}) {
+    super(data);
+    this.workflowId = data.workflowId || "";
+    this.type = data.type || "delay";
+    this.order = data.order || 0;
+    this.config = data.config || {};
+    this.branches = data.branches || [];
+    this.parentStepId = data.parentStepId || null;
+  }
+}
+
+export class Workflow extends Entity {
+  static collection = "workflows";
+
+  constructor(data = {}) {
+    super(data);
+    this.locationId = data.locationId || "";
+    this.name = data.name || "";
+    this.description = data.description || "";
+    this.status = data.status || "draft";
+    this.triggerType = data.triggerType || "manual";
+    this.triggerConfig = data.triggerConfig || {};
+    this.stepIds = data.stepIds || [];
+    this.publishedVersion = data.publishedVersion || null;
+    this.campaignId = data.campaignId || "";
+  }
+}
+
+export class Note extends Entity {
+  static collection = "notes";
+
+  constructor(data = {}) {
+    super(data);
+    this.contactId = data.contactId || "";
+    this.campaignId = data.campaignId || "";
+    this.body = data.body || "";
+    this.author = data.author || "";
+    this.pinned = data.pinned || false;
+  }
+}
+
+export class Task extends Entity {
+  static collection = "tasks";
+
+  constructor(data = {}) {
+    super(data);
+    this.contactId = data.contactId || "";
+    this.campaignId = data.campaignId || "";
+    this.title = data.title || "";
+    this.body = data.body || "";
+    this.status = data.status || "pending";
+    this.priority = data.priority || "medium";
+    this.dueDate = data.dueDate || null;
+    this.assignedTo = data.assignedTo || "";
+    this.completedAt = data.completedAt || null;
+  }
+}
+
+export class CalendarEvent extends Entity {
+  static collection = "calendarEvents";
+
+  constructor(data = {}) {
+    super(data);
+    this.contactId = data.contactId || "";
+    this.campaignId = data.campaignId || "";
+    this.title = data.title || "";
+    this.description = data.description || "";
+    this.startTime = data.startTime || "";
+    this.endTime = data.endTime || "";
+    this.status = data.status || "scheduled";
+    this.location = data.location || "";
+    this.meetingLink = data.meetingLink || "";
+  }
+}
+
+export class Tag extends Entity {
+  static collection = "tags";
+
+  constructor(data = {}) {
+    super(data);
+    this.locationId = data.locationId || "";
+    this.name = data.name || "";
+    this.color = data.color || "#6366f1";
+    this.contactCount = data.contactCount || 0;
+  }
+}
+
 const defaultState = () => ({
   campaigns: {},
   connectorConfigs: {},
@@ -23,6 +202,22 @@ const defaultState = () => ({
   investorRecords: [],
   fundingOutreachEvents: [],
   fundingRuns: [],
+  /** Collection-based entity storage (mirrors GHL Firestore collections) */
+  collections: {
+    contacts: {},
+    pipelines: {},
+    opportunities: {},
+    workflows: {},
+    workflowSteps: {},
+    workflowVersions: {},
+    workflowExecutions: {},
+    triggers: {},
+    triggerStatus: {},
+    notes: {},
+    tasks: {},
+    calendarEvents: {},
+    tags: {},
+  },
 });
 
 export class Store {
@@ -36,6 +231,7 @@ export class Store {
     this._persistPromise = null;
     this._persistDebounceMs = options.persistDebounceMs ?? 500;
     this._maxEventsPerCollection = options.maxEventsPerCollection ?? 50_000;
+    this._indexes = new Map();
   }
 
   async init() {
@@ -463,6 +659,286 @@ export class Store {
     await this.persist();
     this.emitChange("fundingRuns", "insert", { item: run });
     return run;
+  }
+
+  // ── Collection-based entity methods (inspired by GHL Firestore model) ──
+
+  /**
+   * Get a document from a named collection.
+   */
+  getDocument(collectionName, docId) {
+    const col = this.state.collections[collectionName];
+    if (!col) return null;
+    return col[docId] ? structuredClone(col[docId]) : null;
+  }
+
+  /**
+   * List all documents in a collection, optionally filtered.
+   */
+  listDocuments(collectionName, filterFn) {
+    const col = this.state.collections[collectionName];
+    if (!col) return [];
+    const docs = Object.values(col);
+    return filterFn ? docs.filter(filterFn) : docs;
+  }
+
+  /**
+   * Upsert a document in a named collection.
+   */
+  async upsertDocument(collectionName, docId, data) {
+    if (!this.state.collections[collectionName]) {
+      this.state.collections[collectionName] = {};
+    }
+    const existing = this.state.collections[collectionName][docId];
+    const now = new Date().toISOString();
+    const doc = {
+      ...(existing || {}),
+      ...data,
+      id: docId,
+      updatedAt: now,
+      createdAt: existing?.createdAt || now,
+    };
+    this.state.collections[collectionName][docId] = doc;
+    await this.persist();
+    this.emitChange(collectionName, existing ? "update" : "insert", { key: docId, item: doc });
+    this._reindex(collectionName);
+    return doc;
+  }
+
+  /**
+   * Delete a document from a named collection.
+   */
+  async deleteDocument(collectionName, docId) {
+    const col = this.state.collections[collectionName];
+    if (!col || !col[docId]) return false;
+    const doc = col[docId];
+    delete col[docId];
+    await this.persist();
+    this.emitChange(collectionName, "delete", { key: docId, item: doc });
+    this._reindex(collectionName);
+    return true;
+  }
+
+  /**
+   * Query documents in a collection by field/value equality (simple index).
+   */
+  queryDocuments(collectionName, field, value) {
+    const col = this.state.collections[collectionName];
+    if (!col) return [];
+    const indexKey = `${collectionName}:${field}`;
+    if (this._indexes.has(indexKey)) {
+      const idx = this._indexes.get(indexKey);
+      const ids = idx.get(String(value));
+      if (!ids) return [];
+      return ids.map(id => col[id]).filter(Boolean);
+    }
+    // Fallback: scan
+    return Object.values(col).filter(doc => doc[field] === value);
+  }
+
+  /**
+   * Build index for a collection field for fast queries.
+   */
+  _ensureIndex(collectionName, field) {
+    const indexKey = `${collectionName}:${field}`;
+    if (this._indexes.has(indexKey)) return;
+    const idx = new Map();
+    const col = this.state.collections[collectionName];
+    if (col) {
+      for (const [id, doc] of Object.entries(col)) {
+        const val = doc[field];
+        const key = String(val);
+        if (!idx.has(key)) idx.set(key, []);
+        idx.get(key).push(id);
+      }
+    }
+    this._indexes.set(indexKey, idx);
+  }
+
+  _reindex(collectionName) {
+    for (const [key] of this._indexes) {
+      if (key.startsWith(`${collectionName}:`)) {
+        this._indexes.delete(key);
+      }
+    }
+  }
+
+  // ── Entity-specific convenience methods ──
+
+  async upsertContact(contactData) {
+    const id = contactData.id || contactData.contactId || `contact-${crypto.randomUUID()}`;
+    const contact = new Contact(contactData);
+    contact.id = id;
+    return this.upsertDocument("contacts", id, contact.toJSON());
+  }
+
+  listContacts(locationId, campaignId) {
+    let docs = this.listDocuments("contacts");
+    if (locationId) docs = docs.filter(c => c.locationId === locationId);
+    if (campaignId) docs = docs.filter(c => c.campaignIds?.includes(campaignId));
+    return docs;
+  }
+
+  async upsertPipeline(pipelineData) {
+    const id = pipelineData.id || `pipeline-${crypto.randomUUID()}`;
+    const pipeline = new Pipeline(pipelineData);
+    pipeline.id = id;
+    return this.upsertDocument("pipelines", id, pipeline.toJSON());
+  }
+
+  listPipelines(locationId) {
+    let docs = this.listDocuments("pipelines");
+    if (locationId) docs = docs.filter(p => p.locationId === locationId);
+    return docs;
+  }
+
+  async upsertOpportunity(oppData) {
+    const id = oppData.id || `opp-${crypto.randomUUID()}`;
+    const opp = new Opportunity(oppData);
+    opp.id = id;
+    return this.upsertDocument("opportunities", id, opp.toJSON());
+  }
+
+  listOpportunities(campaignId, pipelineId) {
+    let docs = this.listDocuments("opportunities");
+    if (campaignId) docs = docs.filter(o => o.campaignId === campaignId);
+    if (pipelineId) docs = docs.filter(o => o.pipelineId === pipelineId);
+    return docs;
+  }
+
+  async upsertWorkflow(wfData) {
+    const id = wfData.id || `workflow-${crypto.randomUUID()}`;
+    const wf = new Workflow(wfData);
+    wf.id = id;
+    return this.upsertDocument("workflows", id, wf.toJSON());
+  }
+
+  listWorkflows(locationId, campaignId) {
+    let docs = this.listDocuments("workflows");
+    if (locationId) docs = docs.filter(w => w.locationId === locationId);
+    if (campaignId) docs = docs.filter(w => w.campaignId === campaignId);
+    return docs;
+  }
+
+  async upsertWorkflowStep(stepData) {
+    const id = stepData.id || `step-${crypto.randomUUID()}`;
+    const step = new WorkflowStep(stepData);
+    step.id = id;
+    return this.upsertDocument("workflowSteps", id, step.toJSON());
+  }
+
+  listWorkflowSteps(workflowId) {
+    return this.queryDocuments("workflowSteps", "workflowId", workflowId)
+      .sort((a, b) => a.order - b.order);
+  }
+
+  async upsertNote(noteData) {
+    const id = noteData.id || `note-${crypto.randomUUID()}`;
+    const note = new Note(noteData);
+    note.id = id;
+    return this.upsertDocument("notes", id, note.toJSON());
+  }
+
+  listNotes(contactId, campaignId) {
+    let docs = this.listDocuments("notes");
+    if (contactId) docs = docs.filter(n => n.contactId === contactId);
+    if (campaignId) docs = docs.filter(n => n.campaignId === campaignId);
+    return docs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  async upsertTask(taskData) {
+    const id = taskData.id || `task-${crypto.randomUUID()}`;
+    const task = new Task(taskData);
+    task.id = id;
+    return this.upsertDocument("tasks", id, task.toJSON());
+  }
+
+  listTasks(contactId, campaignId, status) {
+    let docs = this.listDocuments("tasks");
+    if (contactId) docs = docs.filter(t => t.contactId === contactId);
+    if (campaignId) docs = docs.filter(t => t.campaignId === campaignId);
+    if (status) docs = docs.filter(t => t.status === status);
+    return docs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  async upsertCalendarEvent(eventData) {
+    const id = eventData.id || `event-${crypto.randomUUID()}`;
+    const event = new CalendarEvent(eventData);
+    event.id = id;
+    return this.upsertDocument("calendarEvents", id, event.toJSON());
+  }
+
+  listCalendarEvents(contactId, campaignId, status) {
+    let docs = this.listDocuments("calendarEvents");
+    if (contactId) docs = docs.filter(e => e.contactId === contactId);
+    if (campaignId) docs = docs.filter(e => e.campaignId === campaignId);
+    if (status) docs = docs.filter(e => e.status === status);
+    return docs.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+  }
+
+  async upsertTag(tagData) {
+    const id = tagData.id || `tag-${crypto.randomUUID()}`;
+    const tag = new Tag(tagData);
+    tag.id = id;
+    return this.upsertDocument("tags", id, tag.toJSON());
+  }
+
+  listTags(locationId) {
+    let docs = this.listDocuments("tags");
+    if (locationId) docs = docs.filter(t => t.locationId === locationId);
+    return docs;
+  }
+
+  // ── Relationship traversal methods ──
+
+  getContactOpportunities(contactId) {
+    return this.queryDocuments("opportunities", "contactId", contactId);
+  }
+
+  getPipelineOpportunities(pipelineId) {
+    return this.queryDocuments("opportunities", "pipelineId", pipelineId);
+  }
+
+  getWorkflowSteps(workflowId) {
+    return this.listWorkflowSteps(workflowId);
+  }
+
+  getContactNotes(contactId) {
+    return this.listNotes(contactId);
+  }
+
+  getContactTasks(contactId) {
+    return this.listTasks(contactId);
+  }
+
+  // ── Data migration helper ──
+
+  /**
+   * Migrate flat sourcedContacts into collection-based contacts.
+   */
+  async migrateSourcedContacts() {
+    const contacts = this.state.sourcedContacts || [];
+    for (const c of contacts) {
+      if (!c.id) continue;
+      if (this.state.collections.contacts[c.id]) continue;
+      await this.upsertContact({
+        id: c.id,
+        companyName: c.company || "",
+        fullName: c.fullName || "",
+        email: c.email || "",
+        phone: c.phone || "",
+        linkedinUrl: c.linkedinUrl || "",
+        website: c.companyWebsite || "",
+        city: c.city || "",
+        state: c.state || "",
+        tags: c.segment ? c.segment.split(", ") : [],
+        campaignIds: c.campaignId ? [c.campaignId] : [],
+        enrichmentStatus: c.enrichmentStatus || "pending",
+        verificationStatus: c.verificationStatus || "pending",
+        sequenceStatus: c.sequenceStatus || "unplanned",
+      });
+    }
+    return { migrated: contacts.length };
   }
 
   snapshot() {

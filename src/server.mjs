@@ -31,6 +31,8 @@ import { SchemaRegistry } from "./lib/schema-registry.mjs";
 import { AgentOrchestrator } from "./lib/agent-orchestrator.mjs";
 import { HermesMemoryClient } from "./lib/hermes-memory.mjs";
 import { ContactSourcingEngine } from "./lib/contact-sourcing-engine.mjs";
+import { PipelineEngine } from "./lib/pipeline-engine.mjs";
+import { WorkflowEngine } from "./lib/workflow-engine.mjs";
 import { ProspectActivationEngine } from "./lib/prospect-activation-engine.mjs";
 import { FundingEngine } from "./lib/funding-engine.mjs";
 import { buildAutopilotPolicy } from "./lib/autopilot-policy.mjs";
@@ -417,6 +419,8 @@ async function createApp() {
   const jobManager = new JobManager();
   const agentOrchestrator = new AgentOrchestrator({ store });
   const contactSourcingEngine = new ContactSourcingEngine({ store, targetingEngine, memoryEngine });
+  const pipelineEngine = new PipelineEngine({ store });
+  const workflowEngine = new WorkflowEngine({ store });
   const prospectActivationEngine = new ProspectActivationEngine({ store, connectors, config });
   const fundingEngine = new FundingEngine({ store });
   const paidExecutionEngine = new PaidExecutionEngine({ dryRun: config.dryRun });
@@ -1381,6 +1385,392 @@ async function createApp() {
       }
       const result = await ghlBridge.pullOpportunities(body.campaignId, body.options || {});
       sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/pipelines") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured" });
+        return;
+      }
+      const result = await ghlBridge.pullPipelines(body.campaignId, body.options || {});
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/workflows") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured" });
+        return;
+      }
+      const result = await ghlBridge.pullWorkflows(body.campaignId, body.options || {});
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/forms") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured" });
+        return;
+      }
+      const result = await ghlBridge.pullForms(body.campaignId, body.options || {});
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/calendars") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured" });
+        return;
+      }
+      const result = await ghlBridge.pullCalendars(body.campaignId, body.options || {});
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/full") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured" });
+        return;
+      }
+      const result = await ghlBridge.fullSync(body.campaignId, body.options || {});
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/push/contact") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured" });
+        return;
+      }
+      const result = await ghlBridge.pushContact(body.contact, body.campaignId);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/push/opportunity") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured" });
+        return;
+      }
+      const result = await ghlBridge.pushOpportunity(body.opportunity, body.campaignId);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/push/note") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured" });
+        return;
+      }
+      const result = await ghlBridge.pushNote(body.note, body.campaignId);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/push/task") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured" });
+        return;
+      }
+      const result = await ghlBridge.pushTask(body.task, body.campaignId);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    // ── Entity CRUD API ────────────────────────────────────────────
+    if (request.method === "GET" && parts.length === 2 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags"].includes(parts[0])) {
+      const [collection, id] = parts;
+      const doc = store.getDocument(collection, id);
+      if (!doc) { sendJson(request, response, 404, { error: "Not found" }); return; }
+      sendJson(request, response, 200, doc);
+      return;
+    }
+
+    if (request.method === "GET" && parts.length === 1 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags"].includes(parts[0])) {
+      const collection = parts[0];
+      const locationId = url.searchParams.get("locationId");
+      const campaignId = url.searchParams.get("campaignId");
+      const contactId = url.searchParams.get("contactId");
+      let docs = store.listDocuments(collection);
+      if (locationId) docs = docs.filter(d => d.locationId === locationId);
+      if (campaignId) docs = docs.filter(d => d.campaignId === campaignId);
+      if (contactId) docs = docs.filter(d => d.contactId === contactId);
+      sendJson(request, response, 200, docs);
+      return;
+    }
+
+    if (request.method === "POST" && parts.length === 1 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags"].includes(parts[0])) {
+      const body = await readBody(request);
+      const collection = parts[0];
+      const id = body.id || null;
+      const result = await store.upsertDocument(collection, id, body);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "DELETE" && parts.length === 2 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags"].includes(parts[0])) {
+      const [collection, id] = parts;
+      await store.deleteDocument(collection, id);
+      sendJson(request, response, 200, { deleted: true, id });
+      return;
+    }
+
+    // ── Relationship queries ───────────────────────────────────────
+    if (request.method === "GET" && parts[0] === "contacts" && parts[1] && parts[2] === "opportunities") {
+      const docs = store.getContactOpportunities(parts[1]);
+      sendJson(request, response, 200, docs);
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "contacts" && parts[1] && parts[2] === "notes") {
+      const docs = store.getContactNotes(parts[1]);
+      sendJson(request, response, 200, docs);
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "contacts" && parts[1] && parts[2] === "tasks") {
+      const docs = store.getContactTasks(parts[1]);
+      sendJson(request, response, 200, docs);
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "pipelines" && parts[1] && parts[2] === "opportunities") {
+      const docs = store.getPipelineOpportunities(parts[1]);
+      sendJson(request, response, 200, docs);
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "workflows" && parts[1] && parts[2] === "steps") {
+      const docs = store.getWorkflowSteps(parts[1]);
+      sendJson(request, response, 200, docs);
+      return;
+    }
+
+    // ── Pipeline engine routes ────────────────────────────────────
+    if (request.method === "POST" && parts[0] === "pipelines" && parts[1] && parts[2] === "stages" && parts.length === 3) {
+      const body = await readBody(request);
+      const stage = pipelineEngine.addStage(parts[1], body);
+      sendJson(request, response, 200, stage);
+      return;
+    }
+
+    if (request.method === "DELETE" && parts[0] === "pipelines" && parts[1] && parts[2] === "stages" && parts[3]) {
+      const result = pipelineEngine.removeStage(parts[1], parts[3]);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "PUT" && parts[0] === "pipelines" && parts[1] && parts[2] === "stages" && parts[3] === "reorder") {
+      const body = await readBody(request);
+      const stages = pipelineEngine.reorderStages(parts[1], body.stageIds);
+      sendJson(request, response, 200, { stages });
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "pipelines" && parts[1] && parts[2] === "stats") {
+      const stats = pipelineEngine.getPipelineStats(parts[1]);
+      sendJson(request, response, 200, stats);
+      return;
+    }
+
+    if (request.method === "POST" && parts[0] === "opportunities" && parts[1] && parts[2] === "transition") {
+      const body = await readBody(request);
+      try {
+        const opp = await pipelineEngine.transitionOpportunity(parts[1], body.toStatus, body);
+        sendJson(request, response, 200, opp);
+      } catch (err) {
+        sendJson(request, response, 400, { error: err.message });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/opportunities/bulk-transition") {
+      const body = await readBody(request);
+      const results = await pipelineEngine.bulkTransition(body.opportunityIds, body.toStatus, body);
+      sendJson(request, response, 200, { results });
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "contacts" && parts[1] && parts[2] === "pipeline-summary") {
+      const summary = await pipelineEngine.getContactPipelineSummary(parts[1]);
+      sendJson(request, response, 200, summary);
+      return;
+    }
+
+    // ── Workflow engine routes ──────────────────────────────────
+    if (request.method === "GET" && parts[0] === "workflows" && parts[1] && parts[2] === "versions") {
+      const versions = await workflowEngine.getWorkflowVersions(parts[1]);
+      sendJson(request, response, 200, versions);
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "workflows" && parts[1] && parts[2] === "latest-version") {
+      const version = await workflowEngine.getLatestVersion(parts[1]);
+      sendJson(request, response, 200, version || {});
+      return;
+    }
+
+    if (request.method === "POST" && parts[0] === "workflows" && parts[1] && parts[2] === "publish") {
+      try {
+        const result = await workflowEngine.publishWorkflow(parts[1]);
+        sendJson(request, response, 200, result);
+      } catch (err) {
+        sendJson(request, response, 400, { error: err.message });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && parts[0] === "workflows" && parts[1] && parts[2] === "draft") {
+      const wf = await workflowEngine.draftWorkflow(parts[1]);
+      sendJson(request, response, 200, wf);
+      return;
+    }
+
+    if (request.method === "POST" && parts[0] === "workflows" && parts[1] && parts[2] === "steps" && parts.length === 3) {
+      const body = await readBody(request);
+      try {
+        const step = workflowEngine.addStep(parts[1], body, body.afterIndex);
+        sendJson(request, response, 200, step);
+      } catch (err) {
+        sendJson(request, response, 400, { error: err.message });
+      }
+      return;
+    }
+
+    if (request.method === "DELETE" && parts[0] === "workflows" && parts[1] && parts[2] === "steps" && parts[3]) {
+      try {
+        const result = workflowEngine.removeStep(parts[1], parts[3]);
+        sendJson(request, response, 200, result);
+      } catch (err) {
+        sendJson(request, response, 400, { error: err.message });
+      }
+      return;
+    }
+
+    if (request.method === "PUT" && parts[0] === "workflows" && parts[1] && parts[2] === "steps" && parts[3] === "reorder") {
+      const body = await readBody(request);
+      try {
+        const steps = workflowEngine.reorderSteps(parts[1], body.stepIds);
+        sendJson(request, response, 200, { steps });
+      } catch (err) {
+        sendJson(request, response, 400, { error: err.message });
+      }
+      return;
+    }
+
+    if (request.method === "PUT" && parts[0] === "workflows" && parts[1] && parts[2] === "steps" && parts[3]) {
+      const body = await readBody(request);
+      try {
+        const step = workflowEngine.updateStep(parts[1], parts[3], body);
+        sendJson(request, response, 200, step);
+      } catch (err) {
+        sendJson(request, response, 400, { error: err.message });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && parts[0] === "workflows" && parts[1] && parts[2] === "execute") {
+      const body = await readBody(request);
+      try {
+        const result = await workflowEngine.executeWorkflowForContact(parts[1], body.contactId, body);
+        sendJson(request, response, 200, result);
+      } catch (err) {
+        sendJson(request, response, 400, { error: err.message });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/workflows/stop-execution") {
+      const body = await readBody(request);
+      const result = await workflowEngine.stopWorkflowExecution(body.contactId, body.locationId, body.workflowId, body.userId, body.source);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "contacts" && parts[1] && parts[2] === "workflow-statuses") {
+      const locationId = url.searchParams.get("locationId") || "";
+      const statuses = workflowEngine.getWorkflowStatusesForContact(parts[1], locationId);
+      sendJson(request, response, 200, statuses);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/step-templates") {
+      const templates = workflowEngine.getStepTemplates();
+      sendJson(request, response, 200, templates);
+      return;
+    }
+
+    if (request.method === "POST" && parts[0] === "workflows" && parts[1] && parts[2] === "validate") {
+      const result = workflowEngine.validateWorkflow(parts[1]);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    // ── Trigger routes ────────────────────────────────────────────
+    if (request.method === "POST" && url.pathname === "/triggers") {
+      const body = await readBody(request);
+      const trigger = await workflowEngine.createTrigger(body);
+      sendJson(request, response, 200, trigger);
+      return;
+    }
+
+    if (request.method === "PUT" && parts[0] === "triggers" && parts[1]) {
+      const body = await readBody(request);
+      try {
+        const trigger = await workflowEngine.updateTrigger(parts[1], body);
+        sendJson(request, response, 200, trigger);
+      } catch (err) {
+        sendJson(request, response, 400, { error: err.message });
+      }
+      return;
+    }
+
+    if (request.method === "DELETE" && parts[0] === "triggers" && parts[1]) {
+      const result = await workflowEngine.deleteTrigger(parts[1]);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && parts[0] === "triggers" && parts[1] && parts[2] === "toggle") {
+      const trigger = workflowEngine.toggleTrigger(parts[1]);
+      sendJson(request, response, 200, trigger);
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "triggers" && parts[1] && parts[2] === "for-workflow") {
+      const triggers = workflowEngine.getTriggersForWorkflow(parts[1]);
+      sendJson(request, response, 200, triggers);
+      return;
+    }
+
+    if (request.method === "GET" && parts[0] === "triggers") {
+      const locationId = url.searchParams.get("locationId") || "";
+      const type = url.searchParams.get("type") || null;
+      let triggers;
+      if (locationId && type) {
+        triggers = workflowEngine.getActiveTriggersByType(locationId, type);
+      } else if (locationId) {
+        triggers = workflowEngine.getTriggersByLocation(locationId);
+      } else {
+        triggers = workflowEngine.store.listDocuments("triggers").filter(t => !t.deleted);
+      }
+      sendJson(request, response, 200, triggers);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/migration/migrate-sourced") {
+      const count = await store.migrateSourcedContacts();
+      sendJson(request, response, 200, { migrated: count });
       return;
     }
 
