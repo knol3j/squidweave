@@ -56,4 +56,10 @@ export const config = {
     upsertPath: process.env.HERMES_MEMORY_UPSERT_PATH || "/v1/memory/upsert",
     recallPath: process.env.HERMES_MEMORY_RECALL_PATH || "/v1/memory/recall",
   },
+  ghl: {
+    apiKey: process.env.GHL_API_KEY || "",
+    locationId: process.env.GHL_LOCATION_ID || "",
+    webhookSecret: process.env.GHL_WEBHOOK_SECRET || "",
+    defaultCampaignId: process.env.GHL_DEFAULT_CAMPAIGN_ID || "",
+  },
 };

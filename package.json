@@ -17,7 +17,8 @@
     "automation:orchestrate": "node scripts/orchestrate-blueprints.mjs",
     "automation:enrich": "node scripts/orchestrate-blueprints.mjs --enrich-only",
     "automation:funding": "node scripts/orchestrate-blueprints.mjs --enrich-only",
-    "automation:cron": "node scripts/orchestrate-blueprints.mjs --enrich-only"
+    "automation:cron": "node scripts/orchestrate-blueprints.mjs --enrich-only",
+    "automation:smoke": "node scripts/automation-smoke.mjs"
   },
   "devDependencies": {
     "electron": "^41.7.0",

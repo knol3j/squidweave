@@ -46,10 +46,12 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
   }, [campaignState.id]);
 
   const buildAssistantReport = (prompt: string, result: any) => {
-    const campaign = result?.decision?.execution?.payload?.context?.campaign || result?.decision?.execution?.context?.campaign || campaignState;
-    const decision = result?.decision;
-    const contentPack = result?.contentPack;
+    const campaign = result?.campaign || result?.automation?.decision?.execution?.payload?.context?.campaign || result?.automation?.decision?.execution?.context?.campaign || result?.decision?.execution?.payload?.context?.campaign || result?.decision?.execution?.context?.campaign || campaignState;
+    const decision = result?.automation?.decision || result?.decision;
+    const contentPack = result?.automation?.contentPack || result?.contentPack;
     const action = decision?.plan?.recommendedAction;
+    const policy = result?.policy;
+    const executionLog = Array.isArray(result?.executionLog) ? result.executionLog : [];
     const variants = contentPack?.variants || [];
     const firstVariant = variants[0];
     const liveKeywords = keywords.map((keyword) => `- ${keyword.term}`).join('\n');
@@ -62,6 +64,12 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
       `Prompt: ${prompt}`,
       `Primary action: ${action?.type || 'No live action'}${action?.reason ? ` because ${action.reason}` : ''}.`,
       `Locales targeted: ${(campaign?.locales || []).join(', ') || 'No locales configured'}.`,
+      `Autopilot policy: objective=${policy?.classification?.objectiveMode || 'n/a'}, budget=${policy?.classification?.budgetMode || 'n/a'}${policy?.classification?.budgetAmount != null ? ` (${policy.classification.budgetAmount})` : ''}.`,
+      '',
+      '[Autopilot Execution Log]:',
+      executionLog.length
+        ? executionLog.map((entry: any) => `- ${entry.stage}: ${entry.status}${entry.reason ? ` (${entry.reason})` : ''}${entry.processedContacts != null ? ` contacts=${entry.processedContacts}` : ''}${entry.processedInvestors != null ? ` investors=${entry.processedInvestors}` : ''}${entry.channels ? ` channels=${entry.channels.join(',')}` : ''}`).join('\n')
+        : '- No execution log available.',
       '',
       '#### Market Realities',
       `Current decision status: ${decision?.policyResult?.status || 'No live status'}.`,
@@ -109,7 +117,11 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
         baseBody: currentInput,
       });
 
-      const result = await dataService.runAutomation(campaignState.id || 'main-campaign', currentImage ? 'asset-assisted-ui-request' : 'ui-request');
+      const result = await dataService.runPromptAutopilot(currentInput, {
+        campaignId: campaignState.id || 'main-campaign',
+        reason: currentImage ? 'asset-assisted-ui-request' : 'ui-request',
+        locales: campaignState.locales,
+      });
       const responseText = buildAssistantReport(currentInput, result);
       await syncMessage('assistant', responseText);
     } catch (error) {

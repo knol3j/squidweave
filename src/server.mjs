@@ -33,6 +33,13 @@ import { HermesMemoryClient } from "./lib/hermes-memory.mjs";
 import { ContactSourcingEngine } from "./lib/contact-sourcing-engine.mjs";
 import { ProspectActivationEngine } from "./lib/prospect-activation-engine.mjs";
 import { FundingEngine } from "./lib/funding-engine.mjs";
+import { buildAutopilotPolicy } from "./lib/autopilot-policy.mjs";
+import { PaidExecutionEngine } from "./lib/paid-execution-engine.mjs";
+import { SocialPublishingEngine } from "./lib/social-publishing-engine.mjs";
+import { FundingDeckEngine } from "./lib/funding-deck-engine.mjs";
+import { SourceIngestionEngine } from "./lib/source-ingestion-engine.mjs";
+import { createFreeSourceConnectors } from "./connectors/free-sources.mjs";
+import { GhlBridge } from "./integrations/ghl-bridge.mjs";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -334,6 +341,48 @@ function buildCampaignInput(body) {
   };
 }
 
+function resolveCampaignId(store, requestedId) {
+  if (requestedId && store.getCampaign(requestedId)) {
+    return requestedId;
+  }
+  if (store.getCampaign("main-campaign")) {
+    return "main-campaign";
+  }
+  const first = store.listCampaigns()[0];
+  return first?.id || "main-campaign";
+}
+
+async function ensurePromptCampaign({ store, memoryEngine, prompt, campaignId, reason }) {
+  const resolvedId = resolveCampaignId(store, campaignId);
+  const existing = store.getCampaign(resolvedId);
+  const normalizedPrompt = String(prompt || "").trim();
+  const draft = buildCampaignInput({
+    ...(existing || {}),
+    id: resolvedId,
+    name: existing?.name || "Autopilot Campaign",
+    automationEnabled: true,
+    objective: normalizedPrompt || existing?.objective || "Autonomous growth campaign",
+    audience: existing?.audience || "Decision-makers with active purchase intent",
+    offer: existing?.offer || config.defaultOffer,
+    channel: existing?.channel || "omnichannel",
+    brandVoice: existing?.brandVoice || config.defaultBrandVoice,
+    activePrompt: normalizedPrompt || existing?.activePrompt || "",
+    baseBody: normalizedPrompt || existing?.baseBody || "",
+    baseHeadline: existing?.baseHeadline || "Outcome-focused value proposition",
+    baseSubject: existing?.baseSubject || "Priority growth opportunity",
+    basePreheader: existing?.basePreheader || "Autonomous campaign run in progress",
+    baseCta: existing?.baseCta || "Book strategy review",
+    intakeStatus: "active",
+    activeTab: "engine",
+  });
+  const campaign = await store.upsertCampaign(draft);
+  await memoryEngine.consolidateCampaign(campaign.id);
+  return {
+    campaign,
+    reason: reason || "prompt-autopilot",
+  };
+}
+
 async function createApp() {
   const store = await new Store(config.dataFile, { seedFileUrl: config.seedDataFile }).init();
   const planner = new LocalPlanner(config.localizationModel, {
@@ -370,8 +419,21 @@ async function createApp() {
   const contactSourcingEngine = new ContactSourcingEngine({ store, targetingEngine, memoryEngine });
   const prospectActivationEngine = new ProspectActivationEngine({ store, connectors, config });
   const fundingEngine = new FundingEngine({ store });
+  const paidExecutionEngine = new PaidExecutionEngine({ dryRun: config.dryRun });
+  const socialPublishingEngine = new SocialPublishingEngine({ dryRun: config.dryRun });
+  const fundingDeckEngine = new FundingDeckEngine({ dryRun: config.dryRun });
+  const sourceIngestionEngine = new SourceIngestionEngine({
+    store,
+    connectors: createFreeSourceConnectors(),
+  });
   const decisionEngine = new DecisionEngine({ store, planner, connectors, config, targetingEngine, memoryEngine });
   const automationEngine = new AutomationEngine({ store, decisionEngine, planner, memoryEngine, agentOrchestrator });
+  const ghlBridge = new GhlBridge({
+    store,
+    contactSourcingEngine,
+    memoryEngine,
+    config: config.ghl,
+  });
   const scheduler = new AutomationScheduler({
     store,
     automationEngine,
@@ -804,7 +866,24 @@ async function createApp() {
         return;
       }
       const result = await fundingEngine.runCampaign(body.campaignId, { limit: body.limit });
-      sendJson(request, response, 201, result);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/sources/health") {
+      const result = await sourceIngestionEngine.health();
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/sources/ingest") {
+      const body = await readBody(request);
+      const campaignId = resolveCampaignId(store, body.campaignId);
+      const result = await sourceIngestionEngine.ingestCampaign(campaignId, {
+        query: String(body.query || body.prompt || store.getCampaign(campaignId)?.objective || "market intelligence"),
+        limit: Number.isFinite(Number(body.limit)) ? Number(body.limit) : 5,
+      });
+      sendJson(request, response, 200, result);
       return;
     }
 
@@ -994,14 +1073,11 @@ async function createApp() {
 
     if (request.method === "POST" && url.pathname === "/automation/run") {
       const body = await readBody(request);
-      if (!body.campaignId) {
-        sendJson(request, response, 400, { error: "campaignId is required." });
-        return;
-      }
-      const job = jobManager.createJob("automation", { campaignId: body.campaignId, reason: body.reason || "manual" });
+      const campaignId = resolveCampaignId(store, body.campaignId);
+      const job = jobManager.createJob("automation", { campaignId, reason: body.reason || "manual" });
       try {
         jobManager.push(job.id, "running", "Automation run started.");
-        const result = await automationEngine.runCampaign(body.campaignId, {
+        const result = await automationEngine.runCampaign(campaignId, {
           locales: body.locales,
           reason: body.reason || "manual",
         });
@@ -1009,6 +1085,168 @@ async function createApp() {
         sendJson(request, response, 200, {
           job: jobManager.getJob(job.id),
           ...result,
+        });
+      } catch (error) {
+        jobManager.fail(job.id, error);
+        throw error;
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/automation/prompt-run") {
+      const body = await readBody(request);
+      if (!body.prompt || !String(body.prompt).trim()) {
+        sendJson(request, response, 400, { error: "prompt is required." });
+        return;
+      }
+
+      const { campaign, reason } = await ensurePromptCampaign({
+        store,
+        memoryEngine,
+        prompt: body.prompt,
+        campaignId: body.campaignId,
+        reason: body.reason,
+      });
+
+      const policy = buildAutopilotPolicy({ prompt: body.prompt, campaign });
+      const job = jobManager.createJob("autopilot", { campaignId: campaign.id, reason, policy: policy.classification });
+      try {
+        const executionLog = [];
+        const mark = (stage, status, detail = {}) => {
+          executionLog.push({ stage, status, timestamp: new Date().toISOString(), ...detail });
+        };
+
+        jobManager.push(job.id, "running", "Autopilot orchestration started from prompt.");
+        mark("policy", "completed", { classification: policy.classification });
+
+        const sourceIngestion = await sourceIngestionEngine.ingestCampaign(campaign.id, {
+          query: String(body.prompt || campaign.objective || "market intelligence"),
+          limit: Number.isFinite(Number(body.sourceLimit)) ? Number(body.sourceLimit) : 5,
+        });
+        mark("free_source_ingestion", "completed", {
+          ingestedResearch: sourceIngestion?.researchRecords?.length || 0,
+          ingestedInvestors: sourceIngestion?.investorRecords?.length || 0,
+        });
+
+        const automation = await automationEngine.runCampaign(campaign.id, {
+          locales: body.locales,
+          reason,
+        });
+        mark("automation", "completed", { reason, agentRuns: automation?.agentRuns?.length || 0 });
+
+        let prospecting = null;
+        let enrichment = null;
+        let sequencing = null;
+        if (policy.stages.organicOutreach.enabled) {
+          prospecting = await contactSourcingEngine.generateAndPersist(campaign.id, {
+            reason: "prompt-autopilot",
+            limit: Number.isFinite(Number(body.prospectLimit)) ? Number(body.prospectLimit) : 30,
+          });
+          mark("organic_prospecting", "completed", {
+            generatedContacts: Array.isArray(prospecting?.candidates) ? prospecting.candidates.length : 0,
+          });
+
+          enrichment = await prospectActivationEngine.enrichContacts(campaign.id, {
+            provider: "internal-waterfall",
+            limit: Number.isFinite(Number(body.enrichLimit)) ? Number(body.enrichLimit) : 24,
+            dispatch: true,
+          });
+          mark("organic_enrichment", "completed", { processedContacts: enrichment?.run?.processedContacts || 0 });
+
+          sequencing = await prospectActivationEngine.sequenceContacts(campaign.id, {
+            limit: Number.isFinite(Number(body.sequenceLimit)) ? Number(body.sequenceLimit) : 24,
+            dispatch: true,
+          });
+          mark("organic_sequencing", "completed", { processedContacts: sequencing?.run?.processedContacts || 0 });
+        } else {
+          mark("organic_workflow", "skipped", { reason: "policy-disabled" });
+        }
+
+        let funding = null;
+        let fundingDeck = null;
+        if (policy.stages.funding.enabled) {
+          funding = await fundingEngine.runCampaign(campaign.id, {
+            limit: Number.isFinite(Number(body.fundingLimit)) ? Number(body.fundingLimit) : 20,
+          });
+          mark("funding", "completed", { processedInvestors: funding?.sequence?.run?.processedInvestors || 0 });
+
+          fundingDeck = await fundingDeckEngine.prepareAndSend({
+            campaign,
+            investors: funding?.pipeline?.prioritized || [],
+          });
+          mark("funding_deck_outreach", "completed", {
+            sent: fundingDeck?.outreach?.sent || 0,
+            failed: fundingDeck?.outreach?.failed || 0,
+          });
+        } else {
+          mark("funding", "skipped", { reason: "objective-not-funding" });
+        }
+
+        let paidExecution = null;
+        if (policy.stages.paidAds.enabled) {
+          paidExecution = await paidExecutionEngine.launchCampaigns({
+            campaignId: campaign.id,
+            channels: policy.stages.paidAds.channels,
+            creativeSummary: `${automation?.contentPack?.variants?.length || 0} localized variants`,
+            budgetAmount: policy.classification.budgetAmount,
+          });
+          mark("paid_distribution", paidExecution.summary.failed ? "partial" : "completed", {
+            channels: policy.stages.paidAds.channels,
+            launched: paidExecution.summary.launched,
+            failed: paidExecution.summary.failed,
+          });
+        } else {
+          mark("paid_distribution", "skipped", { reason: "budget-policy" });
+        }
+
+        let socialPublishing = null;
+        if (policy.stages.organicOutreach.enabled) {
+          socialPublishing = await socialPublishingEngine.publishVariants({
+            campaignId: campaign.id,
+            variants: automation?.contentPack?.variants || [],
+            channels: ["linkedin", "twitter", "telegram"],
+          });
+          mark("social_publishing", socialPublishing.summary.failed ? "partial" : "completed", {
+            published: socialPublishing.summary.published,
+            failed: socialPublishing.summary.failed,
+          });
+        }
+
+        const slaPolicy = {
+          maxAttempts: 3,
+          retryStrategy: "exponential_backoff",
+          escalationThreshold: 1,
+          status: [
+            paidExecution?.summary?.failed,
+            socialPublishing?.summary?.failed,
+            fundingDeck?.outreach?.failed,
+          ].some(value => Number(value || 0) > 0)
+            ? "attention_required"
+            : "within_sla",
+        };
+
+        const payload = {
+          campaign,
+          reason,
+          policy,
+          executionLog,
+          sourceIngestion,
+          automation,
+          prospecting,
+          enrichment,
+          sequencing,
+          funding,
+          fundingDeck,
+          paidExecution,
+          socialPublishing,
+          slaPolicy,
+          pipeline: prospectActivationEngine.buildPipeline(campaign.id),
+          fundingPipeline: fundingEngine.buildPipeline(campaign.id),
+        };
+        jobManager.complete(job.id, payload);
+        sendJson(request, response, 200, {
+          job: jobManager.getJob(job.id),
+          ...payload,
         });
       } catch (error) {
         jobManager.fail(job.id, error);
@@ -1105,6 +1343,44 @@ async function createApp() {
           note: "Use /jobs/:id/status or /jobs/:id/stream for runtime job state.",
         },
       });
+      return;
+    }
+
+    // ── GHL Bridge ────────────────────────────────────────────────
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/webhook") {
+      const rawChunks = [];
+      for await (const chunk of request) rawChunks.push(chunk);
+      const rawBody = Buffer.concat(rawChunks).toString("utf8");
+      if (!ghlBridge.verifySignature(request.headers["x-hub-signature-256"] || request.headers["x-signature"], rawBody)) {
+        sendJson(request, response, 401, { error: "Invalid webhook signature" });
+        return;
+      }
+      const body = JSON.parse(rawBody);
+      const campaignId = url.searchParams.get("campaignId") || "";
+      const result = await ghlBridge.ingestWebhook(body, { campaignId });
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/contacts") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured: set GHL_API_KEY and GHL_LOCATION_ID" });
+        return;
+      }
+      const result = await ghlBridge.pullContacts(body.campaignId, body.options || {});
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/opportunities") {
+      const body = await readBody(request);
+      if (!ghlBridge.isConfigured()) {
+        sendJson(request, response, 400, { error: "GHL not configured: set GHL_API_KEY and GHL_LOCATION_ID" });
+        return;
+      }
+      const result = await ghlBridge.pullOpportunities(body.campaignId, body.options || {});
+      sendJson(request, response, 200, result);
       return;
     }
 

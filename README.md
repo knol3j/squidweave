@@ -116,6 +116,22 @@ npm test
 npm run ui:dev
 npm run ui:build
 npm run ui:lint
+npm run automation:smoke
+```
+
+## One-command Automation Validation
+
+Run a realistic end-to-end automation check (health, campaign creation, free-source ingestion, prompt autopilot run, and datastore verification):
+
+```bash
+npm run automation:smoke
+```
+
+Optional env:
+
+```bash
+SQUIDWEAVE_BASE_URL=http://127.0.0.1:4010
+SQUIDWEAVE_API_KEY=... # only if your server enforces x-api-key
 ```
 
 ## Setup Files

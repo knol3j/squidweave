@@ -135,3 +135,35 @@ test("TargetingEngine uses learned cadence days for sent-only outreach", () => {
   assert.equal(rankings[0].nextEligibleAt, expectedNextEligibleAt);
   assert.equal(rankings[0].recommendation, "wait");
 });
+
+test("TargetingEngine boosts records with higher source reliability", () => {
+  const base = {
+    campaignId: "c1",
+    fitScore: 0.7,
+    intentScore: 0.7,
+    recencyScore: 0.7,
+    capturedAt: "2026-05-07T12:00:00.000Z",
+  };
+  const records = [
+    normalizeResearchRecord({
+      ...base,
+      targetId: "hi",
+      company: "Reliable Co",
+      source: "sec",
+      metadata: { sourceReliability: 0.9 },
+    }),
+    normalizeResearchRecord({
+      ...base,
+      targetId: "lo",
+      company: "Noisy Co",
+      source: "reddit",
+      metadata: { sourceReliability: 0.45 },
+    }),
+  ];
+  const engine = new TargetingEngine({ store: createStore(records, []) });
+  const rankings = engine.rankTargets("c1");
+
+  assert.equal(rankings[0].targetId, "hi");
+  assert.ok(rankings[0].score > rankings[1].score);
+  assert.equal(rankings[0].sourceReliability, 0.9);
+});

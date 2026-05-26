@@ -13,7 +13,7 @@ You extract automation architecture from JavaScript bundles and marketing pages.
 Identify and download the application's main JS bundle(s):
 
 1. **Find the SPA entry point**: Fetch the page HTML, extract all `<script src="...">` tags, size them via `Content-Length`. The largest JS file (usually >500KB) is the main bundle.
-2. **Find the CDN base**: Bundles are often served from a separate CDN domain (e.g., `stcdn.leadconnectorhq.com`, `cdn.polsia.com`). Note the base URL for chunk resolution.
+2. **Find the CDN base**: Bundles are often served from a separate CDN domain (e.g., `stcdn.leadconnectorhq.com`). Note the base URL for chunk resolution.
 3. **Download the bundle**: Use `curl -sL <URL> -o /tmp/<name>.js`. For 3MB+ files, use background download (`&`).
 4. **Resolve dynamic chunks**: Vite/Rollup bundles embed a dependency map. Extract chunk paths with:
    ```
@@ -98,7 +98,7 @@ Build a structured map of the automation system:
 
 ### Business Entity Model
 ```
-Platform: [polsia / gohighlevel / other]
+Platform: [gohighlevel / other]
 Core Entity: [Contact / Lead / Deal / Company / Agent]
 ├── Properties: [name, email, phone, status, tags, customFields]
 ├── Automation:

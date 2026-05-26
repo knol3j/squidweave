@@ -745,10 +745,32 @@ export const dataService = {
     return poll(async () => buildMetrics(await this.getState()), callback);
   },
 
-  async runAutomation(campaignId: string, reason = 'ui-request') {
+  async runAutomation(campaignId?: string, reason = 'ui-request') {
     return api<any>('/automation/run', {
       method: 'POST',
       body: JSON.stringify({ campaignId, reason }),
+    });
+  },
+
+  async runPromptAutopilot(prompt: string, options?: {
+    campaignId?: string;
+    reason?: string;
+    locales?: string[];
+    enrichLimit?: number;
+    sequenceLimit?: number;
+    fundingLimit?: number;
+  }) {
+    return api<any>('/automation/prompt-run', {
+      method: 'POST',
+      body: JSON.stringify({
+        prompt,
+        campaignId: options?.campaignId,
+        reason: options?.reason || 'ui-prompt-autopilot',
+        locales: options?.locales,
+        enrichLimit: options?.enrichLimit,
+        sequenceLimit: options?.sequenceLimit,
+        fundingLimit: options?.fundingLimit,
+      }),
     });
   },
 
