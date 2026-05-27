@@ -18,6 +18,7 @@ import Performance from './components/Performance';
 import { CollaborationProvider, useCollaboration } from './components/CollaborationProvider';
 import { jsPDF } from 'jspdf';
 import BrainDashboard from './components/BrainDashboard';
+import FundingDashboard from './components/FundingDashboard';
 import { dataService } from './services/dataService';
 import { SquidCompatProvider } from './lib/squid';
 
@@ -339,6 +340,16 @@ function AppContent() {
                   className="absolute inset-0 overflow-hidden rounded-[28px]"
                 >
                   <Performance />
+                </motion.div>
+              ) : activeTab === 'funding' ? (
+                <motion.div 
+                  key="funding"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute inset-0 overflow-hidden rounded-[28px] border border-white/10 bg-[#08111f]/92 shadow-[0_14px_40px_rgba(2,6,23,0.35)]"
+                >
+                  <FundingDashboard />
                 </motion.div>
               ) : (
                 <motion.div 

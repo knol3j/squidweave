@@ -1,202 +1,22 @@
 [
-  {
-    "fundName": "a16z",
-    "partnerName": "Marc Andreessen",
-    "stageFocus": ["seed", "series-a"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["fintech", "ai", "crypto", "enterprise"],
-    "checkSize": "$500K-$50M",
-    "thesis": "Software is eating the world — backing technical founders with bold visions.",
-    "email": ""
-  },
-  {
-    "fundName": "Sequoia Capital",
-    "partnerName": "Roelof Botha",
-    "stageFocus": ["seed", "series-a", "growth"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["enterprise", "fintech", "ai", "consumer"],
-    "checkSize": "$500K-$100M",
-    "thesis": "Backing daring founders who identify a market discontinuity.",
-    "email": ""
-  },
-  {
-    "fundName": "Y Combinator",
-    "partnerName": "Garry Tan",
-    "stageFocus": ["seed"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["enterprise", "consumer", "ai", "fintech", "health", "climate"],
-    "checkSize": "$125K-$500K",
-    "thesis": "Make something people want — the world's best early-stage startup accelerator.",
-    "email": ""
-  },
-  {
-    "fundName": "Accel",
-    "partnerName": "Miles Clements",
-    "stageFocus": ["seed", "series-a", "series-b"],
-    "geoFocus": ["us", "europe", "global"],
-    "sectors": ["enterprise", "ai", "security", "fintech"],
-    "checkSize": "$2M-$50M",
-    "thesis": "Partner with exceptional founders building category-defining companies.",
-    "email": ""
-  },
-  {
-    "fundName": "Lightspeed Venture Partners",
-    "partnerName": "Raviraj Jain",
-    "stageFocus": ["seed", "series-a", "series-b"],
-    "geoFocus": ["us", "india", "southeast-asia", "global"],
-    "sectors": ["enterprise", "ai", "fintech", "consumer", "health"],
-    "checkSize": "$1M-$30M",
-    "thesis": "Backing disruptive innovations across enterprise tech, AI, and consumer.",
-    "email": ""
-  },
-  {
-    "fundName": "Andreessen Horowitz",
-    "partnerName": "Martin Casado",
-    "stageFocus": ["seed", "series-a", "growth"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["ai", "infrastructure", "enterprise", "crypto", "bio"],
-    "checkSize": "$500K-$100M",
-    "thesis": "Software-driven disruption across every sector of the economy.",
-    "email": ""
-  },
-  {
-    "fundName": "Index Ventures",
-    "partnerName": "Mike Volpi",
-    "stageFocus": ["seed", "series-a", "series-b"],
-    "geoFocus": ["us", "europe", "global"],
-    "sectors": ["enterprise", "fintech", "ai", "commerce", "infrastructure"],
-    "checkSize": "$500K-$50M",
-    "thesis": "Backing ambitious founders building generational technology companies.",
-    "email": ""
-  },
-  {
-    "fundName": "Madrona Venture Group",
-    "partnerName": "Matt McIlwain",
-    "stageFocus": ["seed", "series-a"],
-    "geoFocus": ["us", "pacific-northwest"],
-    "sectors": ["ai", "cloud", "developer-tools", "enterprise"],
-    "checkSize": "$1M-$15M",
-    "thesis": "Foundational AI and cloud infrastructure companies from the Pacific Northwest.",
-    "email": ""
-  },
-  {
-    "fundName": "Social Capital",
-    "partnerName": "Jay Zaveri",
-    "stageFocus": ["seed", "series-a"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["ai", "health", "fintech", "education"],
-    "checkSize": "$500K-$10M",
-    "thesis": "Technology solving hard, systemic problems in health, finance, and governance.",
-    "email": ""
-  },
-  {
-    "fundName": "Felix Capital",
-    "partnerName": "Frederic Court",
-    "stageFocus": ["seed", "series-a"],
-    "geoFocus": ["europe", "us"],
-    "sectors": ["consumer", "fintech", "health", "enterprise"],
-    "checkSize": "$1M-$20M",
-    "thesis": "The digital lifestyle — backing creators of the modern economy.",
-    "email": ""
-  },
-  {
-    "fundName": "LocalGlobe",
-    "partnerName": "Saurabh Gupta",
-    "stageFocus": ["seed", "series-a"],
-    "geoFocus": ["europe", "uk", "global"],
-    "sectors": ["enterprise", "fintech", "health", "ai"],
-    "checkSize": "$500K-$15M",
-    "thesis": "Backing transformative companies from seed to scale across Europe.",
-    "email": ""
-  },
-  {
-    "fundName": "Bessemer Venture Partners",
-    "partnerName": "Byron Deeter",
-    "stageFocus": ["seed", "series-a", "growth"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["cloud", "ai", "health", "security", "developer-tools"],
-    "checkSize": "$1M-$100M",
-    "thesis": "Investing in the cloud, cybersecurity, and AI infrastructure of tomorrow.",
-    "email": ""
-  },
-  {
-    "fundName": "General Catalyst",
-    "partnerName": "Hemant Taneja",
-    "stageFocus": ["seed", "series-a", "series-b", "growth"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["enterprise", "fintech", "health", "ai", "climate"],
-    "checkSize": "$2M-$100M",
-    "thesis": "Backing powerful, positive change through courageous innovation.",
-    "email": ""
-  },
-  {
-    "fundName": "Founders Fund",
-    "partnerName": "Keith Rabois",
-    "stageFocus": ["seed", "series-a"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["ai", "enterprise", "fintech", "defense", "crypto"],
-    "checkSize": "$1M-$50M",
-    "thesis": "Funding the bleeding edge — companies other investors find too bold.",
-    "email": ""
-  },
-  {
-    "fundName": "Kleiner Perkins",
-    "partnerName": "Mamoon Hamid",
-    "stageFocus": ["seed", "series-a", "growth"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["enterprise", "ai", "fintech", "health", "climate"],
-    "checkSize": "$500K-$50M",
-    "thesis": "Backing founders who reimagine how industries work.",
-    "email": ""
-  },
-  {
-    "fundName": "Greylock Partners",
-    "partnerName": "Reid Hoffman",
-    "stageFocus": ["seed", "series-a", "series-b"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["enterprise", "ai", "developer-tools", "fintech"],
-    "checkSize": "$1M-$30M",
-    "thesis": "Backing founders who reimagine how the world works through technology.",
-    "email": ""
-  },
-  {
-    "fundName": "GV (Google Ventures)",
-    "partnerName": "MG Siegler",
-    "stageFocus": ["seed", "series-a", "series-b", "growth"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["ai", "enterprise", "health", "climate", "consumer"],
-    "checkSize": "$1M-$50M",
-    "thesis": "Backing founders reimagining the next decade of technology.",
-    "email": ""
-  },
-  {
-    "fundName": "NEA",
-    "partnerName": "Scott Sandell",
-    "stageFocus": ["seed", "series-a", "series-b", "growth"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["enterprise", "ai", "health", "fintech", "consumer"],
-    "checkSize": "$2M-$100M",
-    "thesis": "Large-scale venture capital backing technology and healthcare innovation.",
-    "email": ""
-  },
-  {
-    "fundName": "Insight Partners",
-    "partnerName": "Jeff Horing",
-    "stageFocus": ["series-a", "series-b", "growth"],
-    "geoFocus": ["us", "europe", "global"],
-    "sectors": ["enterprise", "ai", "fintech", "security", "data"],
-    "checkSize": "$5M-$100M+",
-    "thesis": "Scale-up software companies with proven product-market fit.",
-    "email": ""
-  },
-  {
-    "fundName": "Coatue Management",
-    "partnerName": "David Cahn",
-    "stageFocus": ["series-a", "series-b", "growth"],
-    "geoFocus": ["us", "global"],
-    "sectors": ["enterprise", "ai", "fintech", "consumer", "mobility"],
-    "checkSize": "$10M-$100M+",
-    "thesis": "Identifying structural technology shifts and backing the teams driving them.",
-    "email": ""
-  }
+  { "fundName": "a16z", "partnerName": "Marc Andreessen", "website": "https://a16z.com", "domain": "a16z.com", "stageFocus": ["seed", "series-a"], "geoFocus": ["us", "global"], "sectors": ["fintech", "ai", "crypto", "enterprise"], "checkSize": "$500K-$50M", "thesis": "Software is eating the world — backing technical founders with bold visions.", "email": "marc@a16z.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Sequoia Capital", "partnerName": "Roelof Botha", "website": "https://sequoiacap.com", "domain": "sequoiacap.com", "stageFocus": ["seed", "series-a", "growth"], "geoFocus": ["us", "global"], "sectors": ["enterprise", "fintech", "ai", "consumer"], "checkSize": "$500K-$100M", "thesis": "Backing daring founders who identify a market discontinuity.", "email": "roelof@sequoiacap.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Y Combinator", "partnerName": "Garry Tan", "website": "https://ycombinator.com", "domain": "ycombinator.com", "stageFocus": ["seed"], "geoFocus": ["us", "global"], "sectors": ["enterprise", "consumer", "ai", "fintech", "health", "climate"], "checkSize": "$125K-$500K", "thesis": "Make something people want — the world's best early-stage startup accelerator.", "email": "garry@ycombinator.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Accel", "partnerName": "Miles Clements", "website": "https://accel.com", "domain": "accel.com", "stageFocus": ["seed", "series-a", "series-b"], "geoFocus": ["us", "europe", "global"], "sectors": ["enterprise", "ai", "security", "fintech"], "checkSize": "$2M-$50M", "thesis": "Partner with exceptional founders building category-defining companies.", "email": "miles@accel.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Lightspeed Venture Partners", "partnerName": "Raviraj Jain", "website": "https://lsvp.com", "domain": "lsvp.com", "stageFocus": ["seed", "series-a", "series-b"], "geoFocus": ["us", "india", "southeast-asia", "global"], "sectors": ["enterprise", "ai", "fintech", "consumer", "health"], "checkSize": "$1M-$30M", "thesis": "Backing disruptive innovations across enterprise tech, AI, and consumer.", "email": "raviraj@lsvp.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Andreessen Horowitz", "partnerName": "Martin Casado", "website": "https://a16z.com", "domain": "a16z.com", "stageFocus": ["seed", "series-a", "growth"], "geoFocus": ["us", "global"], "sectors": ["ai", "infrastructure", "enterprise", "crypto", "bio"], "checkSize": "$500K-$100M", "thesis": "Software-driven disruption across every sector of the economy.", "email": "martin@a16z.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Index Ventures", "partnerName": "Mike Volpi", "website": "https://indexventures.com", "domain": "indexventures.com", "stageFocus": ["seed", "series-a", "series-b"], "geoFocus": ["us", "europe", "global"], "sectors": ["enterprise", "fintech", "ai", "commerce", "infrastructure"], "checkSize": "$500K-$50M", "thesis": "Backing ambitious founders building generational technology companies.", "email": "mike@indexventures.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Madrona Venture Group", "partnerName": "Matt McIlwain", "website": "https://madrona.com", "domain": "madrona.com", "stageFocus": ["seed", "series-a"], "geoFocus": ["us", "pacific-northwest"], "sectors": ["ai", "cloud", "developer-tools", "enterprise"], "checkSize": "$1M-$15M", "thesis": "Foundational AI and cloud infrastructure companies from the Pacific Northwest.", "email": "matt@madrona.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Social Capital", "partnerName": "Jay Zaveri", "website": "https://socialcapital.com", "domain": "socialcapital.com", "stageFocus": ["seed", "series-a"], "geoFocus": ["us", "global"], "sectors": ["ai", "health", "fintech", "education"], "checkSize": "$500K-$10M", "thesis": "Technology solving hard, systemic problems in health, finance, and governance.", "email": "jay@socialcapital.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Felix Capital", "partnerName": "Frederic Court", "website": "https://felixcapital.com", "domain": "felixcapital.com", "stageFocus": ["seed", "series-a"], "geoFocus": ["europe", "us"], "sectors": ["consumer", "fintech", "health", "enterprise"], "checkSize": "$1M-$20M", "thesis": "The digital lifestyle — backing creators of the modern economy.", "email": "frederic@felixcapital.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "LocalGlobe", "partnerName": "Saurabh Gupta", "website": "https://localglobe.vc", "domain": "localglobe.vc", "stageFocus": ["seed", "series-a"], "geoFocus": ["europe", "uk", "global"], "sectors": ["enterprise", "fintech", "health", "ai"], "checkSize": "$500K-$15M", "thesis": "Backing transformative companies from seed to scale across Europe.", "email": "saurabh@localglobe.vc", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Bessemer Venture Partners", "partnerName": "Byron Deeter", "website": "https://bvp.com", "domain": "bvp.com", "stageFocus": ["seed", "series-a", "growth"], "geoFocus": ["us", "global"], "sectors": ["cloud", "ai", "health", "security", "developer-tools"], "checkSize": "$1M-$100M", "thesis": "Investing in the cloud, cybersecurity, and AI infrastructure of tomorrow.", "email": "byron@bvp.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "General Catalyst", "partnerName": "Hemant Taneja", "website": "https://generalcatalyst.com", "domain": "generalcatalyst.com", "stageFocus": ["seed", "series-a", "series-b", "growth"], "geoFocus": ["us", "global"], "sectors": ["enterprise", "fintech", "health", "ai", "climate"], "checkSize": "$2M-$100M", "thesis": "Backing powerful, positive change through courageous innovation.", "email": "hemant@generalcatalyst.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Founders Fund", "partnerName": "Keith Rabois", "website": "https://foundersfund.com", "domain": "foundersfund.com", "stageFocus": ["seed", "series-a"], "geoFocus": ["us", "global"], "sectors": ["ai", "enterprise", "fintech", "defense", "crypto"], "checkSize": "$1M-$50M", "thesis": "Funding the bleeding edge — companies other investors find too bold.", "email": "keith@foundersfund.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Kleiner Perkins", "partnerName": "Mamoon Hamid", "website": "https://kleinerperkins.com", "domain": "kleinerperkins.com", "stageFocus": ["seed", "series-a", "growth"], "geoFocus": ["us", "global"], "sectors": ["enterprise", "ai", "fintech", "health", "climate"], "checkSize": "$500K-$50M", "thesis": "Backing founders who reimagine how industries work.", "email": "mamoon@kleinerperkins.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Greylock Partners", "partnerName": "Reid Hoffman", "website": "https://greylock.com", "domain": "greylock.com", "stageFocus": ["seed", "series-a", "series-b"], "geoFocus": ["us", "global"], "sectors": ["enterprise", "ai", "developer-tools", "fintech"], "checkSize": "$1M-$30M", "thesis": "Backing founders who reimagine how the world works through technology.", "email": "reid@greylock.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "GV (Google Ventures)", "partnerName": "MG Siegler", "website": "https://gv.com", "domain": "gv.com", "stageFocus": ["seed", "series-a", "series-b", "growth"], "geoFocus": ["us", "global"], "sectors": ["ai", "enterprise", "health", "climate", "consumer"], "checkSize": "$1M-$50M", "thesis": "Backing founders reimagining the next decade of technology.", "email": "mg@gv.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "NEA", "partnerName": "Scott Sandell", "website": "https://nea.com", "domain": "nea.com", "stageFocus": ["seed", "series-a", "series-b", "growth"], "geoFocus": ["us", "global"], "sectors": ["enterprise", "ai", "health", "fintech", "consumer"], "checkSize": "$2M-$100M", "thesis": "Large-scale venture capital backing technology and healthcare innovation.", "email": "scott@nea.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Insight Partners", "partnerName": "Jeff Horing", "website": "https://insightpartners.com", "domain": "insightpartners.com", "stageFocus": ["series-a", "series-b", "growth"], "geoFocus": ["us", "europe", "global"], "sectors": ["enterprise", "ai", "fintech", "security", "data"], "checkSize": "$5M-$100M+", "thesis": "Scale-up software companies with proven product-market fit.", "email": "jeff@insightpartners.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 },
+  { "fundName": "Coatue Management", "partnerName": "David Cahn", "website": "https://coatue.com", "domain": "coatue.com", "stageFocus": ["series-a", "series-b", "growth"], "geoFocus": ["us", "global"], "sectors": ["enterprise", "ai", "fintech", "consumer", "mobility"], "checkSize": "$10M-$100M+", "thesis": "Identifying structural technology shifts and backing the teams driving them.", "email": "david@coatue.com", "enrichmentSource": "pattern-guess", "enrichmentConfidence": 0.3 }
 ]

@@ -22,6 +22,12 @@ export const config = {
   defaultConnector: process.env.DEFAULT_CONNECTOR || "openclaw",
   defaultLocale: process.env.DEFAULT_LOCALE || "en-US",
   localizationModel: process.env.LOCALIZATION_MODEL || process.env.LMSTUDIO_MODEL || "google/gemma-3n-e4b",
+  llm: {
+    baseUrl: process.env.LLM_BASE_URL || "",
+    apiKey: process.env.LLM_API_KEY || "",
+    model: process.env.LLM_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+    timeoutMs: toNumber(process.env.LLM_TIMEOUT_MS, 60000),
+  },
   schedulerIntervalSeconds: toNumber(process.env.SCHEDULER_INTERVAL_SECONDS, 120),
   maxDailyBudgetDelta: toNumber(process.env.MAX_DAILY_BUDGET_DELTA, 0.2),
   maxOutreachBatch: toNumber(process.env.MAX_OUTREACH_BATCH, 50),

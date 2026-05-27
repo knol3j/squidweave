@@ -13,6 +13,7 @@ import {
   Save,
   Sparkles,
   Target,
+  Wallet,
   Workflow,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -62,6 +63,7 @@ export default function Sidebar({ onSelectTemplate, activeTab, onSelectTab }: Si
   const menuItems = [
     { id: 'engine', icon: Workflow, label: 'Brain' },
     { id: 'campaigns', icon: Eye, label: 'Intake' },
+    { id: 'funding', icon: Wallet, label: 'Funding' },
     { id: 'ab-test', icon: Columns, label: 'Experiments' },
     { id: 'audience', icon: Target, label: 'Segments' },
     { id: 'performance', icon: BarChart3, label: 'Performance' },

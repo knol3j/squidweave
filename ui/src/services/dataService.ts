@@ -595,12 +595,42 @@ export const dataService = {
     });
   },
 
+  /** Alias: runFunding */
+  async runFunding(campaignId: string) {
+    return this.runFundingCampaign(campaignId);
+  },
+
   async getFundingRuns(campaignId: string) {
     return api<FundingRun[]>(`/funding/runs?campaignId=${encodeURIComponent(campaignId)}`);
   },
 
   async getFundingOutreachEvents(campaignId: string) {
     return api<FundingOutreachEvent[]>(`/funding/outreach-events?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async getEnrichmentProvidersStatus() {
+    return api<{ hunter: { configured: boolean; keyPrefix: string | null }; apollo: { configured: boolean; keyPrefix: string | null } }>('/funding/enrichment-status');
+  },
+
+  async runEnrichment(campaignId: string) {
+    return api<{ enriched: number; skipped: number; errors: number }>('/funding/enrich', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId }),
+    });
+  },
+
+  async sendInvestorDeck(campaignId: string, investorId: string) {
+    return api<FundingOutreachEvent>('/funding/send-deck', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, investorId }),
+    });
+  },
+
+  async logInvestorEvent(campaignId: string, investorId: string, payload: { type: string; channel: string; notes?: string }) {
+    return api<FundingOutreachEvent>('/funding/log-event', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, investorId, ...payload }),
+    });
   },
 
   async addResearchRecord(record: Partial<ResearchRecord> & { campaignId: string; targetId: string }) {

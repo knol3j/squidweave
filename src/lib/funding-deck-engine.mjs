@@ -71,11 +71,46 @@ function buildEmailBody(deck, investor, campaign) {
   return { html, text };
 }
 
+/** Cached generated decks keyed by deckId for the /decks/:id route */
+const deckCache = new Map();
+
 export class FundingDeckEngine {
   constructor({ dryRun = true, sendEmailFn = null, retryPolicy = {} } = {}) {
     this.dryRun = dryRun;
     this.sendEmailFn = sendEmailFn;
     this.retryPolicy = { maxAttempts: 3, initialDelayMs: 200, ...retryPolicy };
+  }
+
+  /** Return cached deck HTML for serving */
+  static getCachedDeck(deckId) {
+    return deckCache.get(deckId) || null;
+  }
+
+  /**
+   * Generate a shareable deck URL (hosted via the server's /decks/ route).
+   * Returns an object with the URL, deck metadata, and rendered HTML body.
+   */
+  async generateDeckUrl({ fundName, partnerName, campaignId, campaign } = {}) {
+    const resolvedCampaign = campaign || { id: campaignId };
+    const deck = {
+      id: `deck-${resolvedCampaign.id || campaignId || crypto.randomUUID()}`,
+      createdAt: new Date().toISOString(),
+      markdown: buildDeckMarkdown(resolvedCampaign),
+      title: `${resolvedCampaign?.name || resolvedCampaign?.clientName || 'Company'} Fundraising Deck`,
+      investor: { fundName, partnerName },
+    };
+
+    // Build a rich HTML preview (same styling as the email body)
+    const emailBody = buildEmailBody(deck, { fundName, partnerName }, resolvedCampaign);
+    deck.htmlBody = emailBody.html;
+
+    // Return a URL that the server's /decks/:id route will resolve.
+    // Cache so GET /decks/:id can serve it.
+    deckCache.set(deck.id, deck);
+    return {
+      url: `/decks/${deck.id}`,
+      deck,
+    };
   }
 
   async prepareAndSend({ campaign, investors = [] }) {
@@ -85,6 +120,7 @@ export class FundingDeckEngine {
       markdown: buildDeckMarkdown(campaign),
       title: `${campaign?.name || campaign?.clientName || "Campaign"} Fundraising Deck`,
     };
+    deckCache.set(deck.id, deck);
 
     const shortlisted = [...investors]
       .filter(item => Number(item.score || 0) >= 0.7)

@@ -21,25 +21,35 @@ function getConfig() {
 
 /**
  * Low-level SMTP conversation helper.
+ * Sends a command, waits for the final (non-continuation) response line.
  */
 function smtpDialog(socket, expectedCode, command) {
   return new Promise((resolve, reject) => {
     let buf = '';
+    const timeout = setTimeout(() => {
+      socket.removeListener('data', onData);
+      reject(new Error(`SMTP timeout waiting for ${expectedCode} after: ${command || '(greeting)'}`));
+    }, 15000);
     const onData = (data) => {
       buf += data.toString();
-      // SMTP responses may be multi-line; check for code at end
-      if (buf.includes('\r\n') && /^\d{3} .+\r\n$/.test(buf.slice(-5))) {
-        socket.removeListener('data', onData);
-        const code = parseInt(buf.slice(0, 3), 10);
-        if (expectedCode && code !== expectedCode) {
-          reject(new Error(`SMTP expected ${expectedCode} got ${code}: ${buf.trim()}`));
-        } else {
-          resolve(buf.trim());
+      // SMTP final response line looks like: NNN <text>\r\n (space, not hyphen)
+      const lines = buf.split('\r\n');
+      for (const line of lines) {
+        if (/^\d{3} .+/.test(line)) {
+          clearTimeout(timeout);
+          socket.removeListener('data', onData);
+          const code = parseInt(line.slice(0, 3), 10);
+          if (expectedCode && code !== expectedCode) {
+            reject(new Error(`SMTP expected ${expectedCode} got ${code}: ${line}`));
+          } else {
+            resolve(line);
+          }
+          return;
         }
       }
     };
     socket.on('data', onData);
-    socket.on('error', reject);
+    socket.on('error', (err) => { clearTimeout(timeout); reject(err); });
     if (command) {
       socket.write(command + '\r\n');
     }
