@@ -1,3 +1,6 @@
+import { enrichInvestorEmail, batchEnrichInvestors, extractDomain } from "./email-enrichment-engine.mjs";
+import { enrichCompanyDomain, enrichPersonEmail, isSerperConfigured } from "./serper-enrichment.mjs";
+
 function unique(values = []) {
   return [...new Set(values.map(value => String(value || "").trim()).filter(Boolean))];
 }
@@ -89,6 +92,109 @@ export class FundingEngine {
     }
   }
 
+  /**
+   * Enrich investor records with email addresses and missing domains.
+   * Uses email-enrichment-engine (Hunter.io / Apollo / pattern guess) and
+   * serper-enrichment (Serper.dev Google Search) as a secondary source.
+   *
+   * @param {string} campaignId
+   * @param {object[]} investors - Array of investor records
+   * @returns {Promise<{enriched: number, errors: string[]}>}
+   */
+  async enrichInvestorEmails(campaignId, investors) {
+    const errors = [];
+    let enriched = 0;
+
+    // Filter to investors without email
+    const needEmail = investors.filter(inv => !inv.email);
+    if (needEmail.length === 0) {
+      return { enriched: 0, errors: [] };
+    }
+
+    const serperAvailable = isSerperConfigured();
+    const batchSize = 3; // concurrency limit for API calls
+
+    for (let i = 0; i < needEmail.length; i += batchSize) {
+      const batch = needEmail.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(async (investor) => {
+          const patch = {};
+          let domain = investor.domain;
+
+          // Step 1: Extract domain from website if missing
+          if (!domain && investor.website) {
+            domain = extractDomain(investor.website);
+            if (domain) {
+              patch.domain = domain;
+            }
+          }
+
+          // Step 2: If still no domain and serper is available, try serper lookup
+          if (!domain && serperAvailable && investor.fundName) {
+            try {
+              const serperResult = await enrichCompanyDomain(investor.fundName, investor.website);
+              if (serperResult?.domain) {
+                domain = serperResult.domain;
+                patch.domain = domain;
+              }
+            } catch (err) {
+              errors.push(`[${investor.fundName}] Serper domain lookup: ${err.message}`);
+            }
+          }
+
+          // Step 3: Enrich email using email-enrichment-engine
+          try {
+            const enrichedResult = await enrichInvestorEmail({
+              ...investor,
+              domain: domain || investor.domain,
+            });
+            if (enrichedResult?.email) {
+              patch.email = enrichedResult.email;
+              patch.enrichmentSource = enrichedResult.source;
+              patch.enrichmentConfidence = enrichedResult.confidence;
+              patch.enrichedAt = new Date().toISOString();
+            }
+          } catch (err) {
+            errors.push(`[${investor.fundName}] Email enrichment: ${err.message}`);
+          }
+
+          // Step 4: If email still not found and serper is available, try serper email search
+          if (!patch.email && serperAvailable && investor.partnerName) {
+            try {
+              const serperEmailResult = await enrichPersonEmail(
+                investor.partnerName,
+                investor.fundName,
+                patch.domain || domain
+              ).catch(() => null);
+              // enrichPersonEmail is async import from serper-enrichment
+              // (already imported above)
+              if (serperEmailResult?.email) {
+                patch.email = serperEmailResult.email;
+                patch.enrichmentSource = serperEmailResult.source;
+                patch.enrichmentConfidence = serperEmailResult.confidence;
+                patch.enrichedAt = new Date().toISOString();
+              }
+            } catch (err) {
+              errors.push(`[${investor.fundName}] Serper email search: ${err.message}`);
+            }
+          }
+
+          return { investorId: investor.id, patch };
+        })
+      );
+
+      // Update store for all results that have changes
+      for (const result of results) {
+        if (Object.keys(result.patch).length > 0) {
+          await this.store.updateInvestorRecord(campaignId, result.investorId, result.patch);
+          enriched++;
+        }
+      }
+    }
+
+    return { enriched, errors };
+  }
+
   buildPipeline(campaignId, options = {}) {
     const { prioritizedLimit = 200 } = options;
     const campaign = this.store.getCampaign(campaignId);
@@ -177,6 +283,10 @@ export class FundingEngine {
         limit: options.sourceLimit || 50,
       });
     }
+
+    // Step 1b: Enrich investor emails + domains before building pipeline
+    const currentInvestors = this.store.listInvestorRecords(campaignId);
+    const enrichmentResult = await this.enrichInvestorEmails(campaignId, currentInvestors);
 
     // Step 2: Build pipeline (no hardcoded limit — use options)
     const pipeline = this.buildPipeline(campaignId, { prioritizedLimit: options.prioritizedLimit || 200 });

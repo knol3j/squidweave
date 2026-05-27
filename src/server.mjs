@@ -1317,6 +1317,45 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       return;
     }
 
+    // ── Cal.com (free Calendly alternative) ────────────────────
+    if (request.method === "GET" && url.pathname === "/funding/calcom-status") {
+      const { listCalComEvents, getCalComStatus } = await import("./adapters/index.mjs");
+      sendJson(request, response, 200, getCalComStatus());
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/funding/calcom-event-types") {
+      const { listCalComEvents } = await import("./adapters/index.mjs");
+      const result = await listCalComEvents();
+      if (result.ok) {
+        sendJson(request, response, 200, result.eventTypes);
+      } else {
+        sendJson(request, response, 502, { error: result.error });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/funding/calcom-schedule") {
+      const body = await readBody(request);
+      const { scheduleCalComEvent, getFirstCalComEventTypeUri } = await import("./adapters/index.mjs");
+      const eventTypeUri = body.eventTypeUri || (await getFirstCalComEventTypeUri()).uri;
+      const result = await scheduleCalComEvent({
+        eventTypeUri,
+        inviteeEmail: body.inviteeEmail || "",
+        inviteeName: body.inviteeName || "Investor",
+        startTime: body.startTime || new Date(Date.now() + 86400000).toISOString(),
+        timezone: body.timezone || "America/New_York",
+        location: body.location || "",
+        notes: body.notes || "",
+      });
+      if (result.ok) {
+        sendJson(request, response, 201, { success: true, event: result.event, calcomResult: result });
+      } else {
+        sendJson(request, response, 502, { error: `Cal.com booking failed: ${result.error}` });
+      }
+      return;
+    }
+
     // ── Enrich investor emails (pattern fallback) ─────────────
     if (request.method === "POST" && url.pathname === "/funding/enrich-investor-emails") {
       const body = await readBody(request);
