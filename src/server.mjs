@@ -23,6 +23,8 @@ import { DecisionEngine } from "./lib/decision-engine.mjs";
 import { LocalPlanner } from "./lib/lmstudio-client.mjs";
 import { MemoryEngine } from "./lib/memory-engine.mjs";
 import { AutomationScheduler } from "./lib/scheduler.mjs";
+import { SocialDispatchEngine } from "./lib/social-dispatch-engine.mjs";
+import { CampaignAnalyticsEngine } from "./lib/campaign-analytics-engine.mjs";
 import { Store } from "./lib/store.mjs";
 import { normalizeOutreachEvent, normalizeResearchRecord, TargetingEngine } from "./lib/targeting-engine.mjs";
 import { QueryEngine } from "./lib/query-engine.mjs";
@@ -425,7 +427,6 @@ async function createApp() {
   const pipelineEngine = new PipelineEngine({ store });
   const workflowEngine = new WorkflowEngine({ store });
   const prospectActivationEngine = new ProspectActivationEngine({ store, connectors, config });
-  const fundingEngine = new FundingEngine({ store });
   const paidExecutionEngine = new PaidExecutionEngine({
     dryRun: config.dryRun,
     adapters: {
@@ -449,8 +450,12 @@ async function createApp() {
     store,
     connectors: createFreeSourceConnectors(),
   });
+  // fundingEngine must come after fundingDeckEngine
+  const fundingEngine = new FundingEngine({ store, fundingDeckEngine });
   const decisionEngine = new DecisionEngine({ store, planner, connectors, config, targetingEngine, memoryEngine });
   const automationEngine = new AutomationEngine({ store, decisionEngine, planner, memoryEngine, agentOrchestrator });
+  const socialDispatchEngine = new SocialDispatchEngine({ store, socialPublishingEngine });
+  const analyticsEngine = new CampaignAnalyticsEngine({ store });
   const ghlBridge = new GhlBridge({
     store,
     contactSourcingEngine,
@@ -462,6 +467,9 @@ async function createApp() {
   const scheduler = new AutomationScheduler({
     store,
     automationEngine,
+    socialDispatchEngine,
+    fundingEngine,
+    analyticsEngine,
     intervalSeconds: config.schedulerIntervalSeconds,
   });
 
@@ -1411,6 +1419,24 @@ async function createApp() {
       return;
     }
 
+    // ── Analytics feedback loop ─────────────────────────────────
+    if (request.method === "GET" && url.pathname.startsWith("/analytics/")) {
+      const campaignId = url.pathname.replace("/analytics/", "");
+      if (!campaignId) {
+        sendJson(request, response, 400, { error: "campaignId required" });
+        return;
+      }
+      const type = url.searchParams.get("type") || "report";
+      if (type === "insights") {
+        sendJson(request, response, 200, analyticsEngine.generateInsights(campaignId));
+      } else if (type === "refinements") {
+        sendJson(request, response, 200, analyticsEngine.recommendRefinements(campaignId));
+      } else {
+        sendJson(request, response, 200, analyticsEngine.generateReport(campaignId));
+      }
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/automation/start") {
       scheduler.start();
       await scheduler.tick();
@@ -1950,12 +1976,13 @@ async function createApp() {
 }
 
 export async function startServer({ port = config.port, host = process.env.HOST || "127.0.0.1" } = {}) {
-  const { server } = await createApp();
+  const { server, scheduler } = await createApp();
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, resolve);
   });
   console.log(`LocaleWeave listening on http://${host}:${port}`);
+  scheduler.start();
   return server;
 }
 

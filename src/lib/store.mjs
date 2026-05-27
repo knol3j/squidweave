@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
  * Entity classes modeled after GHL's Firestore entity model.
  * Provides structured data with relationships, timestamps, and validation.
  */
-class Entity {
+export class Entity {
   constructor(data = {}) {
     this.id = data.id || crypto.randomUUID();
     this.createdAt = data.createdAt || new Date().toISOString();

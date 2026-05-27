@@ -19,7 +19,12 @@
     "automation:funding": "node scripts/orchestrate-blueprints.mjs --funding-only",
     "automation:full": "node scripts/orchestrate-blueprints.mjs",
     "automation:cron": "node scripts/orchestrate-blueprints.mjs --enrich-only",
-    "automation:smoke": "node scripts/automation-smoke.mjs"
+    "automation:smoke": "node scripts/automation-smoke.mjs",
+    "systemd:install": "bash deploy/install-systemd.sh --user",
+    "systemd:status": "systemctl --user status localeWeave --no-pager -n 10",
+    "systemd:restart": "systemctl --user restart localeWeave",
+    "systemd:stop": "systemctl --user stop localeWeave",
+    "systemd:logs": "journalctl --user -u localeWeave --no-pager -n 50 -f"
   },
   "devDependencies": {
     "electron": "^41.7.0",

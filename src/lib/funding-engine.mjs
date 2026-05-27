@@ -25,8 +25,9 @@ function nowIso() {
 }
 
 export class FundingEngine {
-  constructor({ store }) {
+  constructor({ store, fundingDeckEngine }) {
     this.store = store;
+    this.fundingDeckEngine = fundingDeckEngine || null;
   }
 
   importInvestors(campaignId, records = []) {
@@ -114,7 +115,20 @@ export class FundingEngine {
       type: "funding-sequence",
       processedInvestors: events.length,
       status: "completed",
+      deckOutreach: null,
     };
+
+    // ── Wire FundingDeckEngine: send actual email decks to qualified investors ──
+    if (this.fundingDeckEngine && candidates.length > 0) {
+      const campaign = this.store.getCampaign(campaignId);
+      const deckResult = await this.fundingDeckEngine.prepareAndSend({
+        campaign,
+        investors: candidates,
+      });
+      run.deckOutreach = deckResult.outreach;
+      run.deckId = deckResult.deck?.id || null;
+    }
+
     await this.store.addFundingRun(run);
 
     return { run, events, pipeline };
