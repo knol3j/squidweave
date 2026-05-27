@@ -64,6 +64,7 @@ import { OpenclawConnector } from "./connectors/openclaw.mjs";
 import { ClawdbotConnector } from "./connectors/clawdbot.mjs";
 import { DecisionEngine } from "./lib/decision-engine.mjs";
 import { LocalPlanner } from "./lib/lmstudio-client.mjs";
+import { createLlmProvider } from "./lib/llm-provider.mjs";
 import { MemoryEngine } from "./lib/memory-engine.mjs";
 import { AutomationScheduler } from "./lib/scheduler.mjs";
 import { SocialDispatchEngine } from "./lib/social-dispatch-engine.mjs";
@@ -85,11 +86,14 @@ import { PaidExecutionEngine } from "./lib/paid-execution-engine.mjs";
 import { SocialPublishingEngine } from "./lib/social-publishing-engine.mjs";
 import { FundingDeckEngine } from "./lib/funding-deck-engine.mjs";
 import { SourceIngestionEngine } from "./lib/source-ingestion-engine.mjs";
+import { enrichInvestorEmail, batchEnrichInvestors, getEnrichmentProvidersStatus } from "./lib/email-enrichment-engine.mjs";
 import { createFreeSourceConnectors } from "./connectors/free-sources.mjs";
+import { VcSourcingConnector } from "./connectors/vc-sourcing-connector.mjs";
 import { GhlBridge } from "./integrations/ghl-bridge.mjs";
 import { registerFunnelRoutes, getFunnelCollections } from "./modules/funnel/funnel-routes.mjs";
 import { registerMessagingRoutes, getMessagingCollections } from "./modules/messaging/messaging-routes.mjs";
 import * as adapters from "./adapters/index.mjs";
+import * as calendly from "./adapters/calendly.mjs";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -435,10 +439,12 @@ async function ensurePromptCampaign({ store, memoryEngine, prompt, campaignId, r
 
 async function createApp() {
   const store = await new Store(config.dataFile, { seedFileUrl: config.seedDataFile }).init();
+  const llmProvider = createLlmProvider(config);
   const planner = new LocalPlanner(config.localizationModel, {
     defaultLocale: config.defaultLocale,
     defaultBrandVoice: config.defaultBrandVoice,
     defaultOffer: config.defaultOffer,
+    llmProvider,
   });
   const connectorAliases = {
     moltbot: "openclaw",
@@ -491,10 +497,10 @@ async function createApp() {
   });
   const sourceIngestionEngine = new SourceIngestionEngine({
     store,
-    connectors: createFreeSourceConnectors(),
+    connectors: [...createFreeSourceConnectors(), VcSourcingConnector],
   });
   // fundingEngine must come after fundingDeckEngine
-  const fundingEngine = new FundingEngine({ store, fundingDeckEngine });
+  const fundingEngine = new FundingEngine({ store, fundingDeckEngine, sourceIngestionEngine });
   const decisionEngine = new DecisionEngine({ store, planner, connectors, config, targetingEngine, memoryEngine });
   const automationEngine = new AutomationEngine({ store, decisionEngine, planner, memoryEngine, agentOrchestrator });
   const socialDispatchEngine = new SocialDispatchEngine({ store, socialPublishingEngine });
@@ -536,6 +542,11 @@ async function createApp() {
         dryRun: config.dryRun,
         model: config.lmStudioModel,
         localizationModel: config.localizationModel,
+        llmProvider: {
+          configured: Boolean(config.llm.baseUrl && config.llm.apiKey),
+          model: config.llm.model,
+          baseUrl: config.llm.baseUrl ? config.llm.baseUrl.replace(/\/\/[^@]*@/, "//***@") : null,
+        },
         scheduler: scheduler.getStatus(),
       });
       return;
@@ -914,6 +925,34 @@ async function createApp() {
       return;
     }
 
+    // Serve generated fundraising decks as rendered HTML
+    if (request.method === "GET" && parts[0] === "decks" && parts[1]) {
+      const deckId = parts[1];
+      const deck = FundingDeckEngine.getCachedDeck(deckId);
+      if (!deck) {
+        sendJson(request, response, 404, { error: "Deck not found." });
+        return;
+      }
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8", ...buildCorsHeaders(request) });
+      response.end(`
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${deck.title || 'Fundraising Deck'}</title>
+<style>
+  body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a2e; }
+  h1 { font-size: 1.8rem; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; }
+  h2 { font-size: 1.3rem; margin-top: 2rem; }
+  .meta { color: #666; font-size: 0.85rem; margin-bottom: 2rem; }
+  hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
+</style>
+</head><body>
+<h1>${deck.title}</h1>
+<div class="meta">Generated ${new Date(deck.createdAt).toLocaleDateString()} &bull; For ${deck.investor?.fundName || 'Investor'}${deck.investor?.partnerName ? ' / ' + deck.investor.partnerName : ''}</div>
+${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
+</body></html>`);
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/funding/source") {
       const body = await readBody(request);
       if (!body.campaignId) {
@@ -1032,6 +1071,394 @@ async function createApp() {
         return;
       }
       sendJson(request, response, 200, store.listFundingOutreachEvents(campaignId));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/funding/enrichment-status") {
+      sendJson(request, response, 200, getEnrichmentProvidersStatus());
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/funding/enrich") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      const investors = store.listInvestorRecords(body.campaignId);
+      const results = { enriched: 0, skipped: 0, errors: 0 };
+      const events = [];
+      for (const inv of investors) {
+        if (inv.email) {
+          results.skipped++;
+          continue;
+        }
+        try {
+          const enriched = await enrichInvestorEmail({
+            fundName: inv.fundName,
+            partnerName: inv.partnerName,
+            website: inv.website,
+            domain: inv.domain,
+          });
+          if (enriched.email) {
+            await store.updateInvestorRecord(body.campaignId, inv.id, {
+              email: enriched.email,
+              enrichmentSource: enriched.source,
+              enrichmentConfidence: enriched.confidence,
+              enrichedAt: new Date().toISOString(),
+              status: "enriched",
+            });
+            results.enriched++;
+            events.push({
+              id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+              campaignId: body.campaignId,
+              investorId: inv.id,
+              type: "email_enriched",
+              channel: "api",
+              timestamp: new Date().toISOString(),
+              metadata: { source: enriched.source, confidence: enriched.confidence },
+            });
+          } else {
+            results.skipped++;
+          }
+        } catch (err) {
+          console.error(`[funding/enrich] Error enriching ${inv.fundName}:`, err.message);
+          results.errors++;
+        }
+      }
+      if (events.length > 0) {
+        await store.addFundingOutreachEvents(events);
+      }
+      sendJson(request, response, 200, results);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/funding/send-deck") {
+      const body = await readBody(request);
+      if (!body.campaignId || !body.investorId) {
+        sendJson(request, response, 400, { error: "campaignId and investorId are required." });
+        return;
+      }
+      const investor = store.listInvestorRecords(body.campaignId).find(inv => inv.id === body.investorId);
+      if (!investor) {
+        sendJson(request, response, 404, { error: "Investor not found." });
+        return;
+      }
+      // Generate deck for this investor
+      let deckUrl = null;
+      let sendResult = null;
+      try {
+        const deckResult = await fundingDeckEngine.generateDeckUrl({
+          fundName: investor.fundName,
+          partnerName: investor.partnerName,
+          campaignId: body.campaignId,
+        });
+        deckUrl = deckResult?.url || null;
+
+        // Actually send the email if investor has an email address
+        if (investor.email && adapters.sendEmail) {
+          const subject = `Investment Opportunity: ${store.getCampaign(body.campaignId)?.name || 'LocaleWeave Proposal'}`;
+          const deck = deckResult?.deck;
+          const emailBody = deck?.htmlBody || '';
+          const textBody = `Dear ${investor.partnerName || investor.fundName},\n\nI'm reaching out regarding a company that aligns with ${investor.fundName}'s investment thesis.\n\nView the full deck here: ${config.dryRun ? '(dry-run) ' : ''}${deckUrl || '(no url)'}\n\nWarmly,\n${process.env.SMTP_FROM_NAME || 'LocaleWeave Team'}`;
+          sendResult = await adapters.sendEmail({
+            to: investor.email,
+            subject,
+            html: emailBody || undefined,
+            text: textBody,
+          });
+        }
+      } catch (err) {
+        console.error(`[funding/send-deck] Deck generation/send error:`, err.message);
+      }
+      const event = {
+        id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        campaignId: body.campaignId,
+        investorId: body.investorId,
+        type: "deck_sent",
+        channel: investor.email ? "email" : "api",
+        timestamp: new Date().toISOString(),
+        metadata: { deckUrl, email: investor.email || null, sent: sendResult?.ok || false },
+      };
+      await store.addFundingOutreachEvents([event]);
+      await store.updateInvestorRecord(body.campaignId, body.investorId, {
+        status: "contacted",
+        lastContactAt: new Date().toISOString(),
+        deckUrl,
+      });
+      sendJson(request, response, 201, event);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/funding/log-event") {
+      const body = await readBody(request);
+      if (!body.campaignId || !body.investorId || !body.type) {
+        sendJson(request, response, 400, { error: "campaignId, investorId, and type are required." });
+        return;
+      }
+      const event = {
+        id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        campaignId: body.campaignId,
+        investorId: body.investorId,
+        type: body.type,
+        channel: body.channel || "manual",
+        timestamp: new Date().toISOString(),
+        notes: body.notes || null,
+      };
+      await store.addFundingOutreachEvents([event]);
+      // Auto-advance pipeline status based on event type
+      const statusMap = {
+        meeting_scheduled: "meeting",
+        meeting_completed: "dd",
+        intro_call: "meeting",
+        termsheet: "termsheet",
+        closed: "closed",
+        follow_up: undefined, // no status change
+      };
+      const newStatus = statusMap[body.type];
+      if (newStatus) {
+        await store.updateInvestorRecord(body.campaignId, body.investorId, {
+          status: newStatus,
+          lastContactAt: new Date().toISOString(),
+        });
+      }
+      sendJson(request, response, 201, event);
+      return;
+    }
+
+    // ── Calendly Meeting Booking ────────────────────────────────
+    if (request.method === "POST" && url.pathname === "/funding/book-meeting") {
+      const body = await readBody(request);
+      if (!body.investorEmail || !body.startTime) {
+        sendJson(request, response, 400, { error: "investorEmail and startTime are required." });
+        return;
+      }
+
+      // Get first available event type, or use specific one if provided
+      let eventTypeUri = body.eventTypeUri;
+      if (!eventTypeUri) {
+        const defaultUri = await calendly.getFirstEventTypeUri();
+        if (!defaultUri) {
+          sendJson(request, response, 400, {
+            error: "No active Calendly event type found. Create one in Calendly or provide an eventTypeUri.",
+          });
+          return;
+        }
+        eventTypeUri = defaultUri;
+      }
+
+      const result = await calendly.scheduleEvent({
+        eventTypeUri,
+        inviteeEmail: body.investorEmail,
+        inviteeName: body.investorName || "Investor",
+        startTime: body.startTime,
+        timezone: body.timezone || "America/New_York",
+        notes: body.notes || `SquidWeave funding meeting — ${body.campaignId || ""}`,
+      });
+
+      if (result.ok) {
+        // Log the meeting event
+        const event = {
+          id: `cal_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          campaignId: body.campaignId || null,
+          investorId: body.investorId || null,
+          type: "meeting_scheduled",
+          channel: "calendly",
+          timestamp: new Date().toISOString(),
+          notes: `Meeting booked via Calendly for ${body.startTime} with ${body.investorEmail}`,
+          metadata: {
+            calendlyEventUri: result.data?.uri || null,
+            eventType: eventTypeUri,
+            startTime: body.startTime,
+          },
+        };
+        if (body.campaignId && store.addFundingOutreachEvents) {
+          await store.addFundingOutreachEvents([event]);
+          if (body.investorId) {
+            await store.updateInvestorRecord(body.campaignId, body.investorId, {
+              status: "meeting",
+              lastContactAt: new Date().toISOString(),
+            });
+          }
+        }
+        sendJson(request, response, 201, { success: true, event, calendlyResult: result.data });
+      } else {
+        sendJson(request, response, 502, { error: `Calendly booking failed: ${result.error}` });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/funding/calendly-status") {
+      sendJson(request, response, 200, calendly.getCalendlyStatus());
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/funding/calendly-events") {
+      const result = await calendly.listScheduledEvents({
+        minStartTime: url.searchParams.get("minStartTime") || undefined,
+        maxStartTime: url.searchParams.get("maxStartTime") || undefined,
+        status: url.searchParams.get("status") || "active",
+      });
+      if (result.ok) {
+        sendJson(request, response, 200, result.events);
+      } else {
+        sendJson(request, response, 502, { error: result.error });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/funding/calendly-event-types") {
+      const result = await calendly.listEventTypes();
+      if (result.ok) {
+        sendJson(request, response, 200, result.eventTypes);
+      } else {
+        sendJson(request, response, 502, { error: result.error });
+      }
+      return;
+    }
+
+    // ── Enrich investor emails (pattern fallback) ─────────────
+    if (request.method === "POST" && url.pathname === "/funding/enrich-investor-emails") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+
+      const investors = store.listInvestorRecords(body.campaignId) || [];
+      if (investors.length === 0) {
+        sendJson(request, response, 200, { enriched: 0, message: "No investors in pipeline", investors: [] });
+        return;
+      }
+
+      const enriched = [];
+      for (const inv of investors) {
+        if (inv.email) {
+          enriched.push(inv);
+          continue;
+        }
+        // Pattern-based email guess: partnerName@domain
+        if (inv.partnerName && inv.domain) {
+          const firstName = inv.partnerName.split(" ")[0]?.toLowerCase() || "";
+          const lastName = inv.partnerName.split(" ").slice(1).join("").toLowerCase() || "";
+          const guessed = `${firstName}.${lastName}@${inv.domain}`;
+          await store.updateInvestorRecord(body.campaignId, inv.id, {
+            email: guessed,
+            enrichmentSource: "pattern-guess",
+            enrichmentConfidence: 0.4,
+            enrichedAt: new Date().toISOString(),
+          });
+          enriched.push({ ...inv, email: guessed, enrichmentSource: "pattern-guess" });
+        } else if (inv.fundName && inv.website) {
+          // Fallback: fund info@domain
+          const domain = inv.domain || (inv.website ? inv.website.replace(/^https?:\/\//, "").split("/")[0] : null);
+          if (domain) {
+            const guessed = `info@${domain}`;
+            await store.updateInvestorRecord(body.campaignId, inv.id, {
+              email: guessed,
+              enrichmentSource: "pattern-fallback",
+              enrichmentConfidence: 0.2,
+              enrichedAt: new Date().toISOString(),
+            });
+            enriched.push({ ...inv, email: guessed, enrichmentSource: "pattern-fallback" });
+          }
+        }
+      }
+
+      sendJson(request, response, 200, {
+        enriched: enriched.length,
+        total: investors.length,
+        stillMissing: investors.filter(i => !i.email && !enriched.find(e => e.id === i.id)).length,
+        investors: enriched,
+      });
+      return;
+    }
+
+    // ── Full Funding Pipeline Execution ────────────────────────
+    if (request.method === "POST" && url.pathname === "/funding/run-full-pipeline") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+
+      // Step 1: Source investors (if sourceIngestionEngine configured)
+      let sourcingResult = null;
+      if (sourceIngestionEngine) {
+        sourcingResult = await fundingEngine.sourceVcInvestors(body.campaignId, {
+          query: body.query || "venture capital investors",
+          limit: body.sourceLimit || 50,
+        });
+      }
+
+      // Step 2: Build pipeline + scores
+      const pipeline = fundingEngine.buildPipeline(body.campaignId, {
+        prioritizedLimit: body.prioritizedLimit || 200,
+      });
+
+      // Step 3: Enrich emails (pattern fallback)
+      const enrichmentResult = await store.listInvestorRecords(body.campaignId) || [];
+      const enrichments = [];
+      for (const inv of enrichmentResult) {
+        if (inv.email) continue;
+        if (inv.partnerName && inv.domain) {
+          const first = inv.partnerName.split(" ")[0]?.toLowerCase() || "";
+          const last = inv.partnerName.split(" ").slice(1).join("").toLowerCase() || "";
+          const guess = `${first}.${last}@${inv.domain}`;
+          await store.updateInvestorRecord(body.campaignId, inv.id, {
+            email: guess,
+            enrichmentSource: "pattern-guess",
+            enrichmentConfidence: 0.4,
+            enrichedAt: new Date().toISOString(),
+          });
+          enrichments.push({ id: inv.id, email: guess });
+        }
+      }
+
+      // Step 4: Generate and send deck
+      const campaign = store.getCampaign(body.campaignId);
+      const deckInvestors = (store.listInvestorRecords(body.campaignId) || [])
+        .filter(i => i.email && ["sourced", "enriched", "ready"].includes(i.status))
+        .slice(0, body.deckLimit || 20);
+
+      let deckResult = null;
+      if (fundingDeckEngine && deckInvestors.length > 0) {
+        deckResult = await fundingDeckEngine.prepareAndSend({
+          campaign,
+          investors: deckInvestors,
+        });
+      }
+
+      // Step 5: Sequence outreach
+      const sequenceResult = await fundingEngine.sequenceOutreach(body.campaignId, {
+        limit: body.prioritizedLimit || 200,
+        maxPerRun: body.maxPerRun || 20,
+      });
+
+      sendJson(request, response, 200, {
+        campaignId: body.campaignId,
+        sourcing: sourcingResult ? {
+          imported: sourcingResult.imported,
+          records: sourcingResult.records?.length || 0,
+        } : null,
+        pipeline: {
+          total: pipeline.counts.total,
+          byStatus: pipeline.counts.byStatus,
+        },
+        enrichments: {
+          applied: enrichments.length,
+          stillMissing: enrichmentResult.filter(i => !i.email).length,
+        },
+        deck: deckResult ? {
+          deckId: deckResult.deck?.id || null,
+          sent: deckResult.outreach?.length || 0,
+          errors: deckResult.errors?.length || 0,
+        } : null,
+        sequence: {
+          processedInvestors: sequenceResult.run?.processedInvestors || 0,
+          runId: sequenceResult.run?.id || null,
+        },
+      });
       return;
     }
 
@@ -1526,123 +1953,100 @@ async function createApp() {
       return;
     }
 
+    // ── GHL Bridge Sync/Push (graceful fallback to built-in store) ──
+    const GHL_NOT_CONFIGURED_RESPONSE = {
+      ok: true,
+      note: "GHL not configured — built-in store is active. Use the entity API at POST /{collection} instead.",
+      alternative: "POST /contacts, /opportunities, /pipelines, /workflows, /notes, /tasks, /calendarEvents",
+    };
+
+    async function handleGhlRoute(body, methodName) {
+      if (ghlBridge.isConfigured()) {
+        return await ghlBridge[methodName](body.campaignId, body.options || {});
+      }
+      return GHL_NOT_CONFIGURED_RESPONSE;
+    }
+
     if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/contacts") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured: set GHL_API_KEY and GHL_LOCATION_ID" });
-        return;
-      }
-      const result = await ghlBridge.pullContacts(body.campaignId, body.options || {});
+      const result = await handleGhlRoute(body, "pullContacts");
       sendJson(request, response, 200, result);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/opportunities") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured: set GHL_API_KEY and GHL_LOCATION_ID" });
-        return;
-      }
-      const result = await ghlBridge.pullOpportunities(body.campaignId, body.options || {});
+      const result = await handleGhlRoute(body, "pullOpportunities");
       sendJson(request, response, 200, result);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/pipelines") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured" });
-        return;
-      }
-      const result = await ghlBridge.pullPipelines(body.campaignId, body.options || {});
+      const result = await handleGhlRoute(body, "pullPipelines");
       sendJson(request, response, 200, result);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/workflows") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured" });
-        return;
-      }
-      const result = await ghlBridge.pullWorkflows(body.campaignId, body.options || {});
+      const result = await handleGhlRoute(body, "pullWorkflows");
       sendJson(request, response, 200, result);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/forms") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured" });
-        return;
-      }
-      const result = await ghlBridge.pullForms(body.campaignId, body.options || {});
+      const result = await handleGhlRoute(body, "pullForms");
       sendJson(request, response, 200, result);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/calendars") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured" });
-        return;
-      }
-      const result = await ghlBridge.pullCalendars(body.campaignId, body.options || {});
+      const result = await handleGhlRoute(body, "pullCalendars");
       sendJson(request, response, 200, result);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/integrations/ghl/sync/full") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured" });
-        return;
-      }
-      const result = await ghlBridge.fullSync(body.campaignId, body.options || {});
+      const result = await handleGhlRoute(body, "fullSync");
       sendJson(request, response, 200, result);
       return;
     }
 
+    async function handleGhlPush(body, methodName) {
+      if (ghlBridge.isConfigured()) {
+        return await ghlBridge[methodName](body.contact || body.opportunity || body.note || body.task, body.campaignId);
+      }
+      return GHL_NOT_CONFIGURED_RESPONSE;
+    }
+
     if (request.method === "POST" && url.pathname === "/integrations/ghl/push/contact") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured" });
-        return;
-      }
-      const result = await ghlBridge.pushContact(body.contact, body.campaignId);
+      const result = await handleGhlPush(body, "pushContact");
       sendJson(request, response, 200, result);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/integrations/ghl/push/opportunity") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured" });
-        return;
-      }
-      const result = await ghlBridge.pushOpportunity(body.opportunity, body.campaignId);
+      const result = await handleGhlPush(body, "pushOpportunity");
       sendJson(request, response, 200, result);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/integrations/ghl/push/note") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured" });
-        return;
-      }
-      const result = await ghlBridge.pushNote(body.note, body.campaignId);
+      const result = await handleGhlPush(body, "pushNote");
       sendJson(request, response, 200, result);
       return;
     }
 
     if (request.method === "POST" && url.pathname === "/integrations/ghl/push/task") {
       const body = await readBody(request);
-      if (!ghlBridge.isConfigured()) {
-        sendJson(request, response, 400, { error: "GHL not configured" });
-        return;
-      }
-      const result = await ghlBridge.pushTask(body.task, body.campaignId);
+      const result = await handleGhlPush(body, "pushTask");
       sendJson(request, response, 200, result);
       return;
     }

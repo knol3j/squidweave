@@ -638,6 +638,16 @@ export class Store {
     return records;
   }
 
+  async updateInvestorRecord(campaignId, investorId, patch) {
+    const idx = this.state.investorRecords.findIndex(r => r.campaignId === campaignId && r.id === investorId);
+    if (idx === -1) return null;
+    const updated = { ...this.state.investorRecords[idx], ...patch, updatedAt: new Date().toISOString() };
+    this.state.investorRecords[idx] = updated;
+    await this.persist();
+    this.emitChange("investorRecords", "update", { id: investorId, diff: patch });
+    return updated;
+  }
+
   listFundingOutreachEvents(campaignId) {
     if (!campaignId) {
       return [...this.state.fundingOutreachEvents];

@@ -25,9 +25,10 @@ function nowIso() {
 }
 
 export class FundingEngine {
-  constructor({ store, fundingDeckEngine }) {
+  constructor({ store, fundingDeckEngine, sourceIngestionEngine }) {
     this.store = store;
     this.fundingDeckEngine = fundingDeckEngine || null;
+    this.sourceIngestionEngine = sourceIngestionEngine || null;
   }
 
   importInvestors(campaignId, records = []) {
@@ -44,6 +45,8 @@ export class FundingEngine {
       checkSize: record.checkSize || null,
       thesis: record.thesis || "",
       email: record.email || "",
+      domain: record.domain || null,
+      website: record.website || null,
       warmIntroPath: record.warmIntroPath || "",
       thesisMatch: Number.isFinite(Number(record.thesisMatch)) ? Number(record.thesisMatch) : 0.5,
       stageMatch: Number.isFinite(Number(record.stageMatch)) ? Number(record.stageMatch) : 0.5,
@@ -54,10 +57,40 @@ export class FundingEngine {
       lastContactAt: record.lastContactAt || null,
       nextActionAt: record.nextActionAt || null,
       sequenceStep: Number.isFinite(Number(record.sequenceStep)) ? Number(record.sequenceStep) : 0,
+      enrichmentSource: record.enrichmentSource || null,
+      enrichmentConfidence: record.enrichmentConfidence || null,
+      enrichedAt: record.enrichedAt || null,
+      deckUrl: record.deckUrl || null,
     }));
   }
 
-  buildPipeline(campaignId) {
+  /**
+   * Dynamically source VC investors using the source-ingestion-engine.
+   * Delegates to ingestCampaign which handles connector dispatch + storage.
+   */
+  async sourceVcInvestors(campaignId, options = {}) {
+    const { query, limit = 50 } = options;
+    if (!this.sourceIngestionEngine) {
+      return { imported: 0, records: [], error: "sourceIngestionEngine not configured" };
+    }
+
+    try {
+      const result = await this.sourceIngestionEngine.ingestCampaign(campaignId, {
+        query: query || `venture capital investors`,
+        limit,
+      });
+      return {
+        imported: result.investorRecords?.length || 0,
+        records: result.investorRecords || [],
+        sourceRuns: result.sourceRuns || [],
+      };
+    } catch (err) {
+      return { imported: 0, records: [], errors: [{ phase: "sourceVc", error: err.message }] };
+    }
+  }
+
+  buildPipeline(campaignId, options = {}) {
+    const { prioritizedLimit = 200 } = options;
     const campaign = this.store.getCampaign(campaignId);
     const investors = this.store.listInvestorRecords(campaignId);
     const withScores = investors.map(investor => {
@@ -72,7 +105,7 @@ export class FundingEngine {
 
     const prioritized = [...withScores]
       .sort((a, b) => b.score - a.score)
-      .slice(0, 25);
+      .slice(0, Math.max(1, prioritizedLimit)); // configurable — no hardcoded 25
 
     return {
       campaignId,
@@ -85,11 +118,11 @@ export class FundingEngine {
     };
   }
 
-  async sequenceOutreach(campaignId, { limit = 20 } = {}) {
-    const pipeline = this.buildPipeline(campaignId);
+  async sequenceOutreach(campaignId, { limit = 50, maxPerRun = 20 } = {}) {
+    const pipeline = this.buildPipeline(campaignId, { prioritizedLimit: limit || 50 });
     const candidates = pipeline.prioritized
-      .filter(item => ["sourced", "ready", "follow_up"].includes(item.status))
-      .slice(0, Math.max(1, Number(limit) || 20));
+      .filter(item => ["sourced", "enriched", "ready", "follow_up"].includes(item.status))
+      .slice(0, Math.max(1, Number(maxPerRun) || 20));
 
     const ts = nowIso();
     const events = candidates.map(investor => ({
@@ -97,12 +130,13 @@ export class FundingEngine {
       campaignId,
       investorId: investor.id,
       type: investor.sequenceStep > 0 ? "follow_up_queued" : "intro_queued",
-      channel: "email",
+      channel: investor.email ? "email" : "api",
       timestamp: ts,
       sequenceStep: (investor.sequenceStep || 0) + 1,
       metadata: {
         score: investor.score,
         reasons: investor.reasons,
+        email: investor.email || null,
       },
     }));
 
@@ -118,7 +152,7 @@ export class FundingEngine {
       deckOutreach: null,
     };
 
-    // ── Wire FundingDeckEngine: send actual email decks to qualified investors ──
+    // Wire FundingDeckEngine: send actual email decks to qualified investors
     if (this.fundingDeckEngine && candidates.length > 0) {
       const campaign = this.store.getCampaign(campaignId);
       const deckResult = await this.fundingDeckEngine.prepareAndSend({
@@ -135,8 +169,24 @@ export class FundingEngine {
   }
 
   async runCampaign(campaignId, options = {}) {
-    const pipeline = this.buildPipeline(campaignId);
-    const sequence = await this.sequenceOutreach(campaignId, { limit: options.limit || 20 });
+    // Step 1: Source VCs if source-ingestion-engine is available and no investors exist
+    const existing = this.store.listInvestorRecords(campaignId);
+    if (existing.length === 0 && this.sourceIngestionEngine) {
+      await this.sourceVcInvestors(campaignId, {
+        query: options.sourceQuery,
+        limit: options.sourceLimit || 50,
+      });
+    }
+
+    // Step 2: Build pipeline (no hardcoded limit — use options)
+    const pipeline = this.buildPipeline(campaignId, { prioritizedLimit: options.prioritizedLimit || 200 });
+
+    // Step 3: Run outreach sequence
+    const sequence = await this.sequenceOutreach(campaignId, {
+      limit: options.prioritizedLimit || 200,
+      maxPerRun: options.maxPerRun || 20,
+    });
+
     return {
       campaignId,
       pipeline,

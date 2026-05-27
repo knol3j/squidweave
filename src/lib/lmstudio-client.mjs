@@ -1,3 +1,13 @@
+/**
+ * LocalPlanner — Marketing content generation and action planning.
+ *
+ * Supports two LLM backends:
+ *   1. LM Studio SDK (WebSocket, local) — when llmProvider is not provided
+ *   2. OpenAI-compatible HTTP API (OpenAI, OpenRouter, DeepSeek, etc.) — when llmProvider is provided
+ *
+ * If neither is configured, falls back to policy-driven decisions.
+ */
+
 const sdkUrl = new URL(
   "../../../../extensions/plugins/lmstudio/rag-v1/node_modules/@lmstudio/sdk/dist/index.mjs",
   import.meta.url,
@@ -145,7 +155,15 @@ export class LocalPlanner {
     this.defaultBrandVoice = options.defaultBrandVoice || "direct, credible, concise, and conversion-focused";
     this.defaultOffer = options.defaultOffer || "";
     this.lmStudioBaseUrl = options.lmStudioBaseUrl || process.env.LMSTUDIO_BASE_URL || "http://127.0.0.1:1234";
+    this.llmProvider = options.llmProvider || null; // LlmProvider instance
     this.clientPromise = null;
+  }
+
+  /**
+   * Returns true if we have an LLM backend (provider or LM Studio).
+   */
+  isLlmAvailable() {
+    return Boolean(this.llmProvider?.isConfigured?.());
   }
 
   async ensureServerAvailable() {
@@ -176,6 +194,79 @@ export class LocalPlanner {
     return this.clientPromise;
   }
 
+  /**
+   * Generate LLM response using the configured backend.
+   * Tries: llmProvider → LM Studio → fallback to null.
+   */
+  async generateLlmResponse(prompt, options = {}) {
+    // Path 1: Use the OpenAI-compatible provider (preferred)
+    if (this.llmProvider?.isConfigured?.()) {
+      const result = await this.llmProvider.generate(prompt, {
+        temperature: options.temperature ?? 0.7,
+        maxTokens: options.maxTokens ?? 2048,
+        schema: true,
+      });
+      if (result.ok && result.parsed) {
+        return result.parsed;
+      }
+      if (result.ok && result.text) {
+        try {
+          return extractJson(result.text);
+        } catch {
+          // fall through to LM Studio
+        }
+      }
+      // Provider failed — fall through to LM Studio if available
+    }
+
+    // Path 2: LM Studio SDK (fallback)
+    try {
+      const client = await this.getClient();
+      const model = await client.llm.model(this.modelName);
+      const result = await model.respond(prompt);
+      return extractJson(result.content);
+    } catch (error) {
+      throw new Error(`All LLM backends unavailable. Provider: ${this.llmProvider?.isConfigured?.() ? 'configured' : 'not-configured'}, LM Studio: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate structured LLM response with retry logic.
+   */
+  async generateLlmResponseWithRetry(promptBuilder, maxAttempts = 2) {
+    let retryInstruction = "";
+    let parsed = null;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const prompt = attempt === 0 ? promptBuilder() : `${promptBuilder()}\nRetryInstructions: ${retryInstruction}`;
+      try {
+        // Path 1: OpenAI-compatible provider
+        if (this.llmProvider?.isConfigured?.()) {
+          const result = await this.llmProvider.generateStructured(prompt, {}, { maxRetries: 1 });
+          if (result.ok && result.parsed) {
+            return { parsed: result.parsed, source: "provider" };
+          }
+          lastError = result.error || "Unknown error";
+          retryInstruction = `The previous response failed. ${lastError}`;
+          continue;
+        }
+
+        // Path 2: LM Studio
+        const client = await this.getClient();
+        const model = await client.llm.model(this.modelName);
+        const result = await model.respond(prompt);
+        parsed = extractJson(result.content);
+        return { parsed, source: "lmstudio" };
+      } catch (error) {
+        lastError = error.message;
+        retryInstruction = `The previous response failed. ${lastError}`;
+      }
+    }
+
+    throw new Error(`LLM generation failed after ${maxAttempts} attempts. Last error: ${lastError}`);
+  }
+
   async buildActionPlan(campaign, summary, policyResult, memoryContext = {}) {
     if (policyResult.status !== "ready") {
       return {
@@ -199,12 +290,9 @@ export class LocalPlanner {
     ].join("\n");
 
     try {
-      const client = await this.getClient();
-      const model = await client.llm.model(this.modelName);
-      const result = await model.respond(prompt);
-      const plan = extractJson(result.content);
+      const plan = await this.generateLlmResponse(prompt);
       return {
-        source: "lmstudio",
+        source: this.llmProvider?.isConfigured?.() ? "llm-provider" : "lmstudio",
         ...plan,
       };
     } catch (error) {
@@ -254,15 +342,15 @@ export class LocalPlanner {
     ].join("\n");
 
     try {
-      const client = await this.getClient();
-      const model = await client.llm.model(this.modelName);
-      let retryInstruction = "";
       let parsed = null;
       let validationIssues = [];
+      let retryInstruction = "";
 
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const result = await model.respond(attempt === 0 ? prompt : `${prompt}\nRetryInstructions: ${retryInstruction}`);
-        parsed = extractJson(result.content);
+        const result = await this.generateLlmResponse(
+          attempt === 0 ? prompt : `${prompt}\nRetryInstructions: ${retryInstruction}`
+        );
+        parsed = result;
         validationIssues = validateLocalizedPack(parsed, campaignBrief, locales);
         if (validationIssues.length === 0) {
           break;
@@ -275,11 +363,11 @@ export class LocalPlanner {
       }
 
       if (validationIssues.length > 0) {
-        throw new Error(`LM Studio content validation failed. ${validationIssues.join("; ")}`);
+        throw new Error(`Content validation failed. ${validationIssues.join("; ")}`);
       }
 
       return {
-        source: "lmstudio",
+        source: this.llmProvider?.isConfigured?.() ? "llm-provider" : "lmstudio",
         generatedAt: new Date().toISOString(),
         campaignId: campaign.id,
         sourceLocale,
@@ -295,7 +383,7 @@ export class LocalPlanner {
         sourceLocale,
         objective: campaign.objective || this.defaultOffer,
         variants: [],
-        globalNotes: [`LM Studio unavailable for localization. ${error.message}`],
+        globalNotes: [`LLM unavailable for localization. ${error.message}`],
       };
     }
   }
