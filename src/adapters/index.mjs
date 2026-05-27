@@ -13,3 +13,4 @@ export { googleAdsAdapter as google_ads } from './google-ads.mjs';
 export { metaAdsAdapter as meta_ads } from './meta-ads.mjs';
 export { linkedinAdapter as linkedin } from './linkedin.mjs';
 export { twitterAdapter as twitter } from './twitter.mjs';
+export { listEventTypes as listCalComEvents, scheduleEvent as scheduleCalComEvent, listScheduledEvents as listCalComScheduledEvents, cancelEvent as cancelCalComEvent, getCalComStatus, getFirstEventTypeUri as getFirstCalComEventTypeUri } from './cal-com.mjs';

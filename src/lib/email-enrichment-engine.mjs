@@ -2,9 +2,10 @@
  * EmailEnrichmentEngine
  *
  * Automates finding investor email addresses via multiple providers:
- *  1. Hunter.io (primary — 25 free/mo, paid tiers up to 500/mo)
- *  2. Apollo.io (secondary — richer firmographic + contact data)
- *  3. SimpleName heuristic (fallback — first.last@fund.com pattern guessing)
+ *  1. Website scraper (free — scrapes /team /about pages for names, titles, LinkedIn)
+ *  2. Hunter.io (primary — 25 free/mo, paid tiers up to 500/mo)
+ *  3. Apollo.io (secondary — richer firmographic + contact data)
+ *  4. SimpleName heuristic (fallback — first.last@fund.com pattern guessing)
  *
  * Each provider is tried in order.  The first non-empty result wins.
  * Providers are configured via env vars; if a provider's key is absent
@@ -13,6 +14,7 @@
 
 import https from 'node:https';
 import http from 'node:http';
+import { scrapeFundTeam } from './scrape-enrichment-engine.mjs';
 
 /* ------------------------------------------------------------------ */
 /*  Config                                                            */
@@ -22,6 +24,29 @@ const ENV = {
   HUNTER_API_KEY:     process.env.HUNTER_API_KEY || '',
   APOLLO_API_KEY:     process.env.APOLLO_API_KEY || '',
 };
+
+/* ------------------------------------------------------------------ */
+/*  Provider: Website Scraper (free)                                   */
+/* ------------------------------------------------------------------ */
+
+async function huntWithScrape(domain, _firstName, _lastName) {
+  try {
+    const result = await scrapeFundTeam(domain);
+    if (!result || result.people.length === 0) {
+      return { email: null, source: 'scrape-no-data', confidence: null };
+    }
+    return {
+      email: null,
+      source: 'scrape',
+      confidence: null,
+      scrapedPeople: result.people.slice(0, 20),
+      scrapedLinkedIn: result.linkedinUrls.slice(0, 20),
+      scrapedTwitter: result.twitterUrls.slice(0, 10),
+    };
+  } catch (err) {
+    return { email: null, source: 'scrape-error', confidence: null };
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -67,7 +92,7 @@ function guessEmail(firstName, lastName, domain) {
 }
 
 /** Extract domain from a fund's website URL */
-function extractDomain(website) {
+export function extractDomain(website) {
   if (!website) return null;
   let d = website.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0].split('?')[0];
   return d || null;
@@ -224,10 +249,13 @@ export async function enrichInvestorEmail(investor, opts = {}) {
   }
 
   // Try providers in order
-  const providers = [huntWithHunter, huntWithApollo];
+  const providers = [huntWithScrape, huntWithHunter, huntWithApollo];
   for (const provider of providers) {
     const result = await provider(domain, firstName, lastName);
     if (result?.email) {
+      return result;
+    }
+    if (result?.scrapedPeople?.length > 0) {
       return result;
     }
   }
@@ -269,6 +297,7 @@ export async function batchEnrichInvestors(investors, opts = {}) {
  */
 export function getEnrichmentProvidersStatus() {
   return {
+    scraper: { configured: true, description: 'free website scraper for /team /about pages' },
     hunter: { configured: !!ENV.HUNTER_API_KEY, keyPrefix: ENV.HUNTER_API_KEY ? ENV.HUNTER_API_KEY.slice(0, 6) + '...' : null },
     apollo: { configured: !!ENV.APOLLO_API_KEY, keyPrefix: ENV.APOLLO_API_KEY ? ENV.APOLLO_API_KEY.slice(0, 6) + '...' : null },
   };
