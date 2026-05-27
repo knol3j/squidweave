@@ -1,6 +1,8 @@
 import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const STATE_PATH = "/home/gnul/squidweave/data/state.json";
+const STATE_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../data/state.json");
 
 const TEAM_PATHS = [
   "/team", "/about", "/partners", "/people", "/company",
@@ -154,6 +156,33 @@ function extractTeamPage(html) {
     }
   }
 
+  // Strategy 3: Next.js RSC payload with Strapi JSON (500.co pattern)
+  // Matches \"name\":\"Name Surname\" in doubly-escaped JSON inside self.__next_f.push()
+  const rscNamePattern = /\\"name\\":\\"([A-Z][a-z]+(?: [A-Z][a-z]+){1,3})\\"/g;
+  const rscRolePattern = /\\"role\\":\\"([^\\"]+)\\"/g;
+  const rscLiPattern = /\\"linkedin\\":\\"(https?:[^\\"]+)\\"/g;
+  const rscNames = [...html.matchAll(rscNamePattern)];
+  const rscRoles = [...html.matchAll(rscRolePattern)];
+  const rscLis = [...html.matchAll(rscLiPattern)];
+  if (rscNames.length >= 3 && rscNames.length <= 200) {
+    const roleIndex = {}, liIndex = {};
+    for (let i = 0; i < rscRoles.length; i++) roleIndex[rscRoles[i].index] = rscRoles[i][1];
+    for (let i = 0; i < rscLis.length; i++) liIndex[rscLis[i].index] = rscLis[i][1];
+    for (const m of rscNames) {
+      const name = m[1];
+      // Find nearest role after this name (within 800 chars)
+      const nearestRole = Object.entries(roleIndex)
+        .filter(e => parseInt(e[0]) > m.index && parseInt(e[0]) < m.index + 800)
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))[0];
+      const nearestLi = Object.entries(liIndex)
+        .filter(e => parseInt(e[0]) > m.index && parseInt(e[0]) < m.index + 800)
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))[0];
+      const role = nearestRole ? nearestRole[1] : null;
+      const linkedIn = nearestLi ? nearestLi[1] : null;
+      if (isRealName(name)) addCandidate(name, linkedIn, `<rsc>${role || ""}${linkedIn || ""}</rsc>`);
+    }
+  }
+
   // Strategy 2: Find names in structured team member links (/team/name-surname)
   if (peopleWithContext.length < 3) {
     const teamLinks = [...html.matchAll(/href="([^"]*\/team\/[a-z]+(?:-[a-z]+)+)[^"]*"/gi)];
@@ -207,6 +236,43 @@ export async function scrapeFundTeam(domain) {
   };
 }
 
+const DOMAIN_TIMEOUT_MS = 60_000;
+
+async function scrapeWithTimeout(domain, ms = DOMAIN_TIMEOUT_MS) {
+  let timer;
+  const result = await Promise.race([
+    scrapeFundTeam(domain),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Domain timeout after ${ms}ms`)), ms);
+    }),
+  ]);
+  clearTimeout(timer);
+  return result;
+}
+
+async function tryResolveLinkedIn(name, domain) {
+  const slug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z-]/g, "");
+  if (!slug || slug.length < 3) return null;
+  const urls = [
+    `https://www.linkedin.com/in/${slug}`,
+    `https://linkedin.com/in/${slug}`,
+  ];
+  for (const url of urls) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000);
+      const res = await fetch(url, { method: "HEAD", signal: ctrl.signal, redirect: "manual" });
+      clearTimeout(timer);
+      if (res.status === 200 || res.status === 301 || res.status === 302) {
+        return url.replace(/^https?:\/\//, "https://");
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 export async function runScrapeEnrichment({ dryRun = false } = {}) {
   const state = JSON.parse(fs.readFileSync(STATE_PATH, "utf8"));
   const contacts = state.sourcedContacts || [];
@@ -224,6 +290,7 @@ export async function runScrapeEnrichment({ dryRun = false } = {}) {
   console.log(`Domains with pattern-guess contacts: ${uniqueDomains.length}`);
 
   let totalEnriched = 0;
+  let totalTimeouts = 0;
   const results = [];
 
   for (let i = 0; i < uniqueDomains.length; i++) {
@@ -242,7 +309,30 @@ export async function runScrapeEnrichment({ dryRun = false } = {}) {
       continue;
     }
 
-    const result = await scrapeFundTeam(domain);
+    let result, timedOut = false;
+    try {
+      result = await scrapeWithTimeout(domain);
+    } catch (err) {
+      if (err.message?.includes("Domain timeout")) {
+        console.log(`    ⏱ timed out — ${domainContacts.length} contacts marked scrape-attempted`);
+        timedOut = true;
+        totalTimeouts++;
+      } else {
+        throw err;
+      }
+    }
+
+    if (timedOut) {
+      for (const c of domainContacts) {
+        c.enrichmentStatus = "scrape-attempted";
+        c.enrichedAt = new Date().toISOString();
+        c.notes = "scrape-timed-out";
+      }
+      results.push({ domain, contactCount: domainContacts.length, scraped: 0, timedOut: true });
+      await sleep(200);
+      continue;
+    }
+
     const people = result.people;
 
     if (people.length === 0) {
@@ -287,7 +377,57 @@ export async function runScrapeEnrichment({ dryRun = false } = {}) {
     }
 
     await sleep(400 + Math.random() * 600);
+
+    if ((i + 1) % 10 === 0) {
+      const enrichedNow = state.sourcedContacts.filter(c => c.enrichmentStatus === "enriched").length;
+      console.log(`  [checkpoint] writing state with ${enrichedNow} enriched contacts...`);
+      const cpPath = STATE_PATH + ".tmp";
+      fs.writeFileSync(cpPath, JSON.stringify(state, null, 2), "utf8");
+      fs.renameSync(cpPath, STATE_PATH);
+      const verify = JSON.parse(fs.readFileSync(STATE_PATH, "utf8"));
+      const verifyEnriched = verify.sourcedContacts.filter(c => c.enrichmentStatus === "enriched").length;
+      console.log(`  [checkpoint] saved after domain ${i + 1} — verified ${verifyEnriched} enriched in file`);
+    }
   }
+
+  console.log(`\nScraping done. Enriched: ${totalEnriched}, Timed out: ${totalTimeouts}`);
+  console.log("Resolving LinkedIn URLs for enriched contacts missing them...");
+
+  let linkedInResolved = 0;
+  for (const c of contacts) {
+    if (c.enrichmentStatus === "enriched" && !c.linkedinUrl && (c.firstName || c.fullName)) {
+      const name = c.fullName || `${c.firstName} ${c.lastName || ""}`.trim();
+      const domain = c.email?.split("@")[1];
+      if (name && domain) {
+        const url = await tryResolveLinkedIn(name, domain);
+        if (url) {
+          c.linkedinUrl = url;
+          c.confidence = 0.5;
+          linkedInResolved++;
+        }
+        await sleep(100 + Math.random() * 200);
+      }
+    }
+  }
+
+  console.log(`LinkedIn URLs resolved via name guessing: ${linkedInResolved}`);
+
+  let linkedInResolvedAll = 0;
+  for (const c of contacts) {
+    if (!c.enrichmentStatus && !c.linkedinUrl && (c.firstName || c.fullName)) {
+      const name = c.fullName || `${c.firstName} ${c.lastName || ""}`.trim();
+      const domain = c.email?.split("@")[1];
+      if (name && domain) {
+        const url = await tryResolveLinkedIn(name, domain);
+        if (url) {
+          c.linkedinUrl = url;
+          linkedInResolvedAll++;
+        }
+        await sleep(100 + Math.random() * 200);
+      }
+    }
+  }
+  console.log(`LinkedIn URLs resolved for all other contacts: ${linkedInResolvedAll}`);
 
   const tmpPath = STATE_PATH + ".tmp";
   fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), "utf8");

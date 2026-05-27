@@ -14,7 +14,7 @@ This ingest seeded LocaleWeave's memory layer with externally sourced market sig
 - AI-personalization-ready marketing teams
 - Global localization-opportunity planning
 
-The records were written into [data/state.json](C:/Users/Nweec/.lmstudio/projects/marketing-autopilot/data/state.json) as `researchRecords`, then consolidated into `targetProfiles` and `tacticObservations`.
+The records were written into `data/state.json` as `researchRecords`, then consolidated into `targetProfiles` and `tacticObservations`.
 
 ## Source Signals
 

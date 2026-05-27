@@ -1,7 +1,5 @@
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { EventEmitter } from "node:events";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createStateBackend } from "./state-backend.mjs";
 
 /**
  * Entity classes modeled after GHL's Firestore entity model.
@@ -202,6 +200,7 @@ const defaultState = () => ({
   investorRecords: [],
   fundingOutreachEvents: [],
   fundingRuns: [],
+  executionReceipts: [],
   /** Collection-based entity storage (mirrors GHL Firestore collections) */
   collections: {
     contacts: {},
@@ -229,6 +228,15 @@ export class Store {
   constructor(fileUrl, options = {}) {
     this.fileUrl = fileUrl;
     this.seedFileUrl = options.seedFileUrl || null;
+    this.backend = options.backend || createStateBackend({
+      fileUrl,
+      seedFileUrl: this.seedFileUrl,
+      databaseUrl: options.databaseUrl,
+      stateBackend: options.stateBackend,
+      postgresSchema: options.postgresSchema,
+      postgresTable: options.postgresTable,
+      postgresStateKey: options.postgresStateKey,
+    });
     this.state = defaultState();
     this.events = new EventEmitter();
     this.sequence = 0;
@@ -240,22 +248,7 @@ export class Store {
   }
 
   async init() {
-    await mkdir(dirname(fileURLToPath(this.fileUrl)), { recursive: true });
-    try {
-      const raw = await readFile(this.fileUrl, "utf8");
-      this.state = { ...defaultState(), ...JSON.parse(raw) };
-    } catch (error) {
-      if (error.code !== "ENOENT") {
-        throw error;
-      }
-      if (this.seedFileUrl) {
-        await copyFile(this.seedFileUrl, this.fileUrl);
-        const raw = await readFile(this.fileUrl, "utf8");
-        this.state = { ...defaultState(), ...JSON.parse(raw) };
-        return this;
-      }
-      await this.persist();
-    }
+    this.state = await this.backend.load(defaultState);
     return this;
   }
 
@@ -267,7 +260,7 @@ export class Store {
       this._persistTimer = setTimeout(async () => {
         try {
           this._compactEventArrays();
-          await writeFile(this.fileUrl, JSON.stringify(this.state, null, 2));
+          await this.backend.save(this.state);
           this._persistPromise = null;
           resolve();
         } catch (err) {
@@ -303,7 +296,7 @@ export class Store {
       this._persistTimer = null;
     }
     this._compactEventArrays();
-    writeFile(this.fileUrl, JSON.stringify(this.state, null, 2));
+    return this.backend.flush(this.state);
   }
 
   emitChange(collection, operation, payload = {}) {
@@ -674,6 +667,49 @@ export class Store {
     await this.persist();
     this.emitChange("fundingRuns", "insert", { item: run });
     return run;
+  }
+
+  listExecutionReceipts(filters = {}) {
+    const {
+      campaignId = null,
+      executionType = null,
+      status = null,
+      idempotencyKey = null,
+    } = filters;
+    return this.state.executionReceipts.filter(receipt => {
+      if (campaignId && receipt.campaignId !== campaignId) return false;
+      if (executionType && receipt.executionType !== executionType) return false;
+      if (status && receipt.status !== status) return false;
+      if (idempotencyKey && receipt.idempotencyKey !== idempotencyKey) return false;
+      return true;
+    });
+  }
+
+  getExecutionReceipt(receiptId) {
+    return this.state.executionReceipts.find(receipt => receipt.id === receiptId) || null;
+  }
+
+  async addExecutionReceipt(receipt) {
+    this.state.executionReceipts.push(receipt);
+    await this.persist();
+    this.emitChange("executionReceipts", "insert", { item: receipt });
+    return receipt;
+  }
+
+  async updateExecutionReceipt(receiptId, patch) {
+    const index = this.state.executionReceipts.findIndex(receipt => receipt.id === receiptId);
+    if (index === -1) {
+      return null;
+    }
+    const updated = {
+      ...this.state.executionReceipts[index],
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
+    this.state.executionReceipts[index] = updated;
+    await this.persist();
+    this.emitChange("executionReceipts", "update", { id: receiptId, diff: patch, item: updated });
+    return updated;
   }
 
   // ── Collection-based entity methods (inspired by GHL Firestore model) ──

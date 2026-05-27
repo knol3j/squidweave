@@ -18,6 +18,11 @@ const toBoolean = (value, fallback) => {
 export const config = {
   port: toNumber(process.env.PORT, 4010),
   dryRun: toBoolean(process.env.DRY_RUN, true),
+  databaseUrl: process.env.DATABASE_URL || "",
+  stateBackend: process.env.STATE_BACKEND || "",
+  postgresSchema: process.env.POSTGRES_SCHEMA || "public",
+  postgresStateTable: process.env.POSTGRES_STATE_TABLE || "squidweave_state",
+  postgresStateKey: process.env.POSTGRES_STATE_KEY || "primary",
   lmStudioModel: process.env.LMSTUDIO_MODEL || "google/gemma-3n-e4b",
   defaultConnector: process.env.DEFAULT_CONNECTOR || "openclaw",
   defaultLocale: process.env.DEFAULT_LOCALE || "en-US",
@@ -67,5 +72,11 @@ export const config = {
     locationId: process.env.GHL_LOCATION_ID || "",
     webhookSecret: process.env.GHL_WEBHOOK_SECRET || "",
     defaultCampaignId: process.env.GHL_DEFAULT_CAMPAIGN_ID || "",
+  },
+  safety: {
+    requireLiveApproval: toBoolean(process.env.REQUIRE_LIVE_APPROVAL, true),
+    executionDedupeWindowSeconds: toNumber(process.env.EXECUTION_DEDUPE_WINDOW_SECONDS, 900),
+    maxConcurrentExecutions: toNumber(process.env.MAX_CONCURRENT_EXECUTIONS, 1),
+    maxFundingBatch: toNumber(process.env.MAX_FUNDING_BATCH, 20),
   },
 };

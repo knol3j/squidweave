@@ -86,6 +86,7 @@ import { PaidExecutionEngine } from "./lib/paid-execution-engine.mjs";
 import { SocialPublishingEngine } from "./lib/social-publishing-engine.mjs";
 import { FundingDeckEngine } from "./lib/funding-deck-engine.mjs";
 import { SourceIngestionEngine } from "./lib/source-ingestion-engine.mjs";
+import { ExecutionGuard, UnsafeExecutionError } from "./lib/execution-guard.mjs";
 import { enrichInvestorEmail, batchEnrichInvestors, getEnrichmentProvidersStatus } from "./lib/email-enrichment-engine.mjs";
 import { createFreeSourceConnectors } from "./connectors/free-sources.mjs";
 import { VcSourcingConnector } from "./connectors/vc-sourcing-connector.mjs";
@@ -438,7 +439,14 @@ async function ensurePromptCampaign({ store, memoryEngine, prompt, campaignId, r
 }
 
 async function createApp() {
-  const store = await new Store(config.dataFile, { seedFileUrl: config.seedDataFile }).init();
+  const store = await new Store(config.dataFile, {
+    seedFileUrl: config.seedDataFile,
+    databaseUrl: config.databaseUrl,
+    stateBackend: config.stateBackend,
+    postgresSchema: config.postgresSchema,
+    postgresTable: config.postgresStateTable,
+    postgresStateKey: config.postgresStateKey,
+  }).init();
   const llmProvider = createLlmProvider(config);
   const planner = new LocalPlanner(config.localizationModel, {
     defaultLocale: config.defaultLocale,
@@ -513,12 +521,14 @@ async function createApp() {
   });
   const funnelHandlers = registerFunnelRoutes({ store, workflowEngine, pipelineEngine });
   const messagingHandlers = registerMessagingRoutes({ store, workflowEngine });
+  const executionGuard = new ExecutionGuard({ store, config });
   const scheduler = new AutomationScheduler({
     store,
     automationEngine,
     socialDispatchEngine,
     fundingEngine,
     analyticsEngine,
+    executionGuard,
     intervalSeconds: config.schedulerIntervalSeconds,
   });
 
@@ -1021,7 +1031,12 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      const result = await fundingEngine.sequenceOutreach(body.campaignId, { limit: body.limit });
+      const maxPerRun = Number.isFinite(Number(body.maxPerRun)) ? Number(body.maxPerRun) : config.safety.maxFundingBatch;
+      executionGuard.assertBatchWithinLimit(maxPerRun, config.safety.maxFundingBatch, { executionType: "funding_sequence" });
+      const result = await fundingEngine.sequenceOutreach(body.campaignId, {
+        limit: body.limit,
+        maxPerRun,
+      });
       sendJson(request, response, 201, result);
       return;
     }
@@ -1032,8 +1047,29 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      const result = await fundingEngine.runCampaign(body.campaignId, { limit: body.limit });
-      sendJson(request, response, 200, result);
+      const maxPerRun = Number.isFinite(Number(body.maxPerRun)) ? Number(body.maxPerRun) : config.safety.maxFundingBatch;
+      executionGuard.assertBatchWithinLimit(maxPerRun, config.safety.maxFundingBatch, { executionType: "funding_run" });
+      const guarded = await executionGuard.run({
+        campaignId: body.campaignId,
+        executionType: "funding_run",
+        reason: body.reason || "manual",
+        liveSideEffect: true,
+        approvalToken: String(body.approvalToken || ""),
+        idempotencyKey: executionGuard.buildIdempotencyKey({
+          campaignId: body.campaignId,
+          executionType: "funding_run",
+          reason: body.reason || "manual",
+          keyParts: [body.limit || "", maxPerRun],
+        }),
+        metadata: { limit: body.limit || null, maxPerRun },
+        operation: () => fundingEngine.runCampaign(body.campaignId, {
+          prioritizedLimit: body.limit,
+          maxPerRun,
+          sourceQuery: body.sourceQuery,
+          sourceLimit: body.sourceLimit,
+        }),
+      });
+      sendJson(request, response, 200, { executionReceiptId: guarded.receiptId, ...guarded.result });
       return;
     }
 
@@ -1061,6 +1097,18 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         return;
       }
       sendJson(request, response, 200, store.listFundingRuns(campaignId));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/safety/executions") {
+      const campaignId = url.searchParams.get("campaignId");
+      const executionType = url.searchParams.get("executionType");
+      const status = url.searchParams.get("status");
+      sendJson(request, response, 200, store.listExecutionReceipts({
+        campaignId,
+        executionType,
+        status,
+      }));
       return;
     }
 
@@ -1144,49 +1192,64 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 404, { error: "Investor not found." });
         return;
       }
-      // Generate deck for this investor
-      let deckUrl = null;
-      let sendResult = null;
-      try {
-        const deckResult = await fundingDeckEngine.generateDeckUrl({
-          fundName: investor.fundName,
-          partnerName: investor.partnerName,
-          campaignId: body.campaignId,
-        });
-        deckUrl = deckResult?.url || null;
-
-        // Actually send the email if investor has an email address
-        if (investor.email && adapters.sendEmail) {
-          const subject = `Investment Opportunity: ${store.getCampaign(body.campaignId)?.name || 'LocaleWeave Proposal'}`;
-          const deck = deckResult?.deck;
-          const emailBody = deck?.htmlBody || '';
-          const textBody = `Dear ${investor.partnerName || investor.fundName},\n\nI'm reaching out regarding a company that aligns with ${investor.fundName}'s investment thesis.\n\nView the full deck here: ${config.dryRun ? '(dry-run) ' : ''}${deckUrl || '(no url)'}\n\nWarmly,\n${process.env.SMTP_FROM_NAME || 'LocaleWeave Team'}`;
-          sendResult = await adapters.sendEmail({
-            to: investor.email,
-            subject,
-            html: emailBody || undefined,
-            text: textBody,
-          });
-        }
-      } catch (err) {
-        console.error(`[funding/send-deck] Deck generation/send error:`, err.message);
-      }
-      const event = {
-        id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      const guarded = await executionGuard.run({
         campaignId: body.campaignId,
-        investorId: body.investorId,
-        type: "deck_sent",
-        channel: investor.email ? "email" : "api",
-        timestamp: new Date().toISOString(),
-        metadata: { deckUrl, email: investor.email || null, sent: sendResult?.ok || false },
-      };
-      await store.addFundingOutreachEvents([event]);
-      await store.updateInvestorRecord(body.campaignId, body.investorId, {
-        status: "contacted",
-        lastContactAt: new Date().toISOString(),
-        deckUrl,
+        executionType: "funding_send_deck",
+        reason: body.reason || "manual",
+        liveSideEffect: true,
+        approvalToken: String(body.approvalToken || ""),
+        idempotencyKey: executionGuard.buildIdempotencyKey({
+          campaignId: body.campaignId,
+          executionType: "funding_send_deck",
+          reason: body.reason || "manual",
+          keyParts: [body.investorId],
+        }),
+        metadata: { investorId: body.investorId },
+        operation: async () => {
+          let deckUrl = null;
+          let sendResult = null;
+          try {
+            const deckResult = await fundingDeckEngine.generateDeckUrl({
+              fundName: investor.fundName,
+              partnerName: investor.partnerName,
+              campaignId: body.campaignId,
+            });
+            deckUrl = deckResult?.url || null;
+
+            if (investor.email && adapters.sendEmail) {
+              const subject = `Investment Opportunity: ${store.getCampaign(body.campaignId)?.name || 'LocaleWeave Proposal'}`;
+              const deck = deckResult?.deck;
+              const emailBody = deck?.htmlBody || "";
+              const textBody = `Dear ${investor.partnerName || investor.fundName},\n\nI'm reaching out regarding a company that aligns with ${investor.fundName}'s investment thesis.\n\nView the full deck here: ${config.dryRun ? "(dry-run) " : ""}${deckUrl || "(no url)"}\n\nWarmly,\n${process.env.SMTP_FROM_NAME || "LocaleWeave Team"}`;
+              sendResult = await adapters.sendEmail({
+                to: investor.email,
+                subject,
+                html: emailBody || undefined,
+                text: textBody,
+              });
+            }
+          } catch (err) {
+            console.error(`[funding/send-deck] Deck generation/send error:`, err.message);
+          }
+          const event = {
+            id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            campaignId: body.campaignId,
+            investorId: body.investorId,
+            type: "deck_sent",
+            channel: investor.email ? "email" : "api",
+            timestamp: new Date().toISOString(),
+            metadata: { deckUrl, email: investor.email || null, sent: sendResult?.ok || false },
+          };
+          await store.addFundingOutreachEvents([event]);
+          await store.updateInvestorRecord(body.campaignId, body.investorId, {
+            status: "contacted",
+            lastContactAt: new Date().toISOString(),
+            deckUrl,
+          });
+          return event;
+        },
       });
-      sendJson(request, response, 201, event);
+      sendJson(request, response, 201, { executionReceiptId: guarded.receiptId, ...guarded.result });
       return;
     }
 
@@ -1671,13 +1734,27 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       const job = jobManager.createJob("automation", { campaignId, reason: body.reason || "manual" });
       try {
         jobManager.push(job.id, "running", "Automation run started.");
-        const result = await automationEngine.runCampaign(campaignId, {
-          locales: body.locales,
+        const guarded = await executionGuard.run({
+          campaignId,
+          executionType: "automation_run",
           reason: body.reason || "manual",
+          idempotencyKey: executionGuard.buildIdempotencyKey({
+            campaignId,
+            executionType: "automation_run",
+            reason: body.reason || "manual",
+            keyParts: [JSON.stringify(body.locales || [])],
+          }),
+          metadata: { locales: body.locales || [] },
+          operation: () => automationEngine.runCampaign(campaignId, {
+            locales: body.locales,
+            reason: body.reason || "manual",
+          }),
         });
+        const result = guarded.result;
         jobManager.complete(job.id, result);
         sendJson(request, response, 200, {
           job: jobManager.getJob(job.id),
+          executionReceiptId: guarded.receiptId,
           ...result,
         });
       } catch (error) {
@@ -2449,8 +2526,10 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     sendJson(request, response, 404, { error: "Not found" });
   } catch (error) {
     try {
-      sendJson(request, response, 500, {
+      const statusCode = error instanceof UnsafeExecutionError ? error.statusCode : 500;
+      sendJson(request, response, statusCode, {
         error: error.message,
+        details: error instanceof UnsafeExecutionError ? error.details : undefined,
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
     } catch {

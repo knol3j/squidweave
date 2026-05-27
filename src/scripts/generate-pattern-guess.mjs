@@ -1,7 +1,10 @@
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const STATE_PATH = '/home/gnul/squidweave/data/state.json';
-const CONNECTOR_PATH = '/home/gnul/squidweave/src/connectors/vc-sourcing-connector.mjs';
+const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const STATE_PATH = path.join(ROOT_DIR, 'data/state.json');
+const CONNECTOR_PATH = path.join(ROOT_DIR, 'src/connectors/vc-sourcing-connector.mjs');
 
 const src = fs.readFileSync(CONNECTOR_PATH, 'utf8');
 const match = src.match(/const SEED_VC_FUNDS = (\[[\s\S]*?\]);/);

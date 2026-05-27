@@ -1,0 +1,41 @@
+# Dependencies — fresh install in Docker
+node_modules/
+ui/node_modules/
+
+# Build artifacts — rebuilt in Docker
+ui/dist/
+dist/
+
+# Local data — not needed for deployment
+data/
+*.db
+*.sqlite
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Local config
+.env
+.env.*
+!.env.example
+!.env.railway.example
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+coverage/
+.vite/
+tmp/
+*.md~
