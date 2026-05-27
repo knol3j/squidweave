@@ -1,6 +1,6 @@
 [Unit]
 Description=LocaleWeave — Localized Marketing Automation Brain
-After=network.target
+After=network.target network-online.target
 Wants=network-online.target
 
 [Service]
@@ -8,10 +8,13 @@ Type=simple
 User=gnul
 Group=gnul
 WorkingDirectory=/home/gnul/squidweave
-Environment=DRY_RUN=false
-Environment=PORT=4010
+# Load environment from .env.local (loaded by src/load-env.mjs at import time)
+# Run in production mode — DRY_RUN and PORT can be set in .env.local
 Environment=NODE_ENV=production
-# Path to your .env.local — loaded by src/load-env.mjs
+Environment=LOCALEWEAVE_DATA_DIR=/home/gnul/squidweave/data
+# The server loads .env.local automatically. Uncomment to force values:
+# Environment=DRY_RUN=false
+# Environment=PORT=4010
 ExecStart=/usr/bin/node /home/gnul/squidweave/src/server.mjs
 Restart=on-failure
 RestartSec=10
