@@ -14,6 +14,49 @@ function requireApiKey(request, response) {
   sendJson(request, response, 401, { error: "Unauthorized. Provide x-api-key header matching SQUIDWEAVE_API_KEY." });
   return false;
 }
+
+// ── Basic Auth for UI (sofish.io testing) ──────────────────────
+const UI_USER = process.env.UI_USER || "";
+const UI_PASS = process.env.UI_PASS || "";
+
+function requireUiAuth(request, response) {
+  if (!UI_USER || !UI_PASS) return true;
+  const header = request.headers["authorization"];
+  if (!header || !header.startsWith("Basic ")) {
+    response.writeHead(401, {
+      "content-type": "application/json; charset=utf-8",
+      "www-authenticate": 'Basic realm="SquidWeave Console"',
+    });
+    response.end(JSON.stringify({ error: "Authentication required" }));
+    return false;
+  }
+  const encoded = header.slice(6);
+  let decoded;
+  try {
+    decoded = Buffer.from(encoded, "base64").toString("utf8");
+  } catch {
+    response.writeHead(401, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: "Invalid authorization header" }));
+    return false;
+  }
+  const colon = decoded.indexOf(":");
+  if (colon === -1) {
+    response.writeHead(401, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error: "Invalid authorization format" }));
+    return false;
+  }
+  const user = decoded.slice(0, colon);
+  const pass = decoded.slice(colon + 1);
+  if (user !== UI_USER || pass !== UI_PASS) {
+    response.writeHead(401, {
+      "content-type": "application/json; charset=utf-8",
+      "www-authenticate": 'Basic realm="SquidWeave Console"',
+    });
+    response.end(JSON.stringify({ error: "Invalid credentials" }));
+    return false;
+  }
+  return true;
+}
 // ──────────────────────────────────────────────────────────────────
 import { normalizeEvent } from "./lib/analytics.mjs";
 import { AutomationEngine } from "./lib/automation-engine.mjs";
@@ -1949,6 +1992,10 @@ async function createApp() {
 
     if (parts[0] === "message-sequences" && parts.length === 2) {
       await messagingHandlers.handleSequenceById(request.method, { id: parts[1] }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (request.method === "GET" && config.staticDir && !requireUiAuth(request, response)) {
       return;
     }
 
