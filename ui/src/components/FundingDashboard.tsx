@@ -30,6 +30,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { dataService, FundingInvestor, FundingPipeline, FundingOutreachEvent, FundingRun } from '../services/dataService';
+import { useCollaboration } from './CollaborationProvider';
 
 /* ------------------------------------------------------------------ */
 /*  Pipeline Stages (mirror real VC fundraising flow)                  */
@@ -372,6 +373,7 @@ function SummaryCards({ pipeline, runs, events }) {
 /* ------------------------------------------------------------------ */
 
 export default function FundingDashboard() {
+  const { campaignState } = useCollaboration();
   const [pipeline, setPipeline] = useState(null);
   const [events, setEvents] = useState([]);
   const [runs, setRuns] = useState([]);
@@ -379,9 +381,10 @@ export default function FundingDashboard() {
   const [activeTab, setActiveTab] = useState('pipeline'); // pipeline | timeline | config
   const [enrichingAll, setEnrichingAll] = useState(false);
   const [sendingDeck, setSendingDeck] = useState(null);
-  const [campaignId] = useState('main-campaign');
+  const campaignId = campaignState.id || 'main-campaign';
 
   const loadData = async () => {
+    setLoading(true);
     try {
       const [pipelineData, eventsData, runsData] = await Promise.all([
         dataService.getFundingPipeline(campaignId),

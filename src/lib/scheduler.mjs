@@ -5,6 +5,7 @@ export class AutomationScheduler {
     socialDispatchEngine,
     fundingEngine,
     analyticsEngine,
+    executionGuard,
     intervalSeconds = 120,
   }) {
     this.store = store;
@@ -12,6 +13,7 @@ export class AutomationScheduler {
     this.socialDispatchEngine = socialDispatchEngine || null;
     this.fundingEngine = fundingEngine || null;
     this.analyticsEngine = analyticsEngine || null;
+    this.executionGuard = executionGuard || null;
     this.intervalSeconds = intervalSeconds;
     this.timer = null;
     this.running = false;
@@ -47,15 +49,46 @@ export class AutomationScheduler {
       for (const campaign of campaigns) {
         try {
           // Phase 1: Content generation + agent orchestration
-          await this.automationEngine.runCampaign(campaign.id, {
-            reason: "scheduled",
-          });
+          if (this.executionGuard) {
+            await this.executionGuard.run({
+              campaignId: campaign.id,
+              executionType: "automation_run",
+              reason: "scheduled",
+              idempotencyKey: this.executionGuard.buildIdempotencyKey({
+                campaignId: campaign.id,
+                executionType: "automation_run",
+                reason: "scheduled",
+              }),
+              metadata: { scheduler: true },
+              operation: () => this.automationEngine.runCampaign(campaign.id, {
+                reason: "scheduled",
+              }),
+            });
+          } else {
+            await this.automationEngine.runCampaign(campaign.id, {
+              reason: "scheduled",
+            });
+          }
 
           // Phase 2: Social dispatch — publish any new content packs
           if (this.socialDispatchEngine) {
-            const dispatchResult = await this.socialDispatchEngine.dispatchCampaign(
-              campaign.id,
-            );
+            const dispatchOperation = () => this.socialDispatchEngine.dispatchCampaign(campaign.id);
+            const dispatchResult = this.executionGuard
+              ? (await this.executionGuard.run({
+                  campaignId: campaign.id,
+                  executionType: "social_dispatch",
+                  reason: "scheduled",
+                  idempotencyKey: this.executionGuard.buildIdempotencyKey({
+                    campaignId: campaign.id,
+                    executionType: "social_dispatch",
+                    reason: "scheduled",
+                  }),
+                  liveSideEffect: true,
+                  approvalToken: this.executionGuard.config.dryRun ? "" : "approved",
+                  metadata: { scheduler: true },
+                  operation: dispatchOperation,
+                })).result
+              : await dispatchOperation();
             if (dispatchResult.dispatched > 0) {
               console.log(
                 `[SCHEDULER] Campaign ${campaign.id}: published ${dispatchResult.summary.published} social posts, ${dispatchResult.summary.failed} failed`,
@@ -65,10 +98,26 @@ export class AutomationScheduler {
 
           // Phase 3: Funding outreach — run scoring and deck delivery
           if (this.fundingEngine) {
-            const fundingResult = await this.fundingEngine.runCampaign(
+            const fundingOperation = () => this.fundingEngine.runCampaign(
               campaign.id,
-              { limit: 20 },
+              { prioritizedLimit: 20, maxPerRun: 20 },
             );
+            const fundingResult = this.executionGuard
+              ? (await this.executionGuard.run({
+                  campaignId: campaign.id,
+                  executionType: "funding_run",
+                  reason: "scheduled",
+                  idempotencyKey: this.executionGuard.buildIdempotencyKey({
+                    campaignId: campaign.id,
+                    executionType: "funding_run",
+                    reason: "scheduled",
+                  }),
+                  liveSideEffect: true,
+                  approvalToken: this.executionGuard.config.dryRun ? "" : "approved",
+                  metadata: { scheduler: true, maxPerRun: 20 },
+                  operation: fundingOperation,
+                })).result
+              : await fundingOperation();
             const deckCount =
               fundingResult.sequence?.run?.deckOutreach?.sent || 0;
             if (deckCount > 0) {

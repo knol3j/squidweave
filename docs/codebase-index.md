@@ -2,7 +2,7 @@
 
 ## Scope
 - Root runtime: Node API (`src/server.mjs`) + Vite UI (`ui/`) + orchestration scripts (`scripts/`)
-- Persistent state: `data/state.json`
+- Persistent state: file or Postgres backend (`src/lib/state-backend.mjs`)
 - Automation assets: `automation/blueprints/*.json`
 
 ## Runtime Surfaces
@@ -12,11 +12,14 @@
 - `src/lib/decision-engine.mjs`: policy + targeting + connector execution
 - `src/lib/memory-engine.mjs`: memory consolidation and recall
 - `src/lib/targeting-engine.mjs`: target ranking/reengagement
-- `src/lib/store.mjs`: JSON-backed datastore and collection methods
+- `src/lib/store.mjs`: state facade and collection methods
+- `src/lib/state-backend.mjs`: file/Postgres persistence backend
+- `src/lib/execution-guard.mjs`: persisted execution receipts, approval gates, dedupe, and concurrency checks
 - `src/lib/agent-orchestrator.mjs`: lifecycle agent execution summaries
 
 ## Major API Groups
 - Core: `/health`, `/state`, `/setup/requirements`
+- Safety: `/safety/executions`
 - Campaign: `/campaigns`
 - Marketing ingestion: `/analytics/events`, `/research/records`, `/outreach/events`, `/ingest/outcomes`
 - Marketing automation: `/decision/run`, `/content/generate`, `/automation/run`, `/automation/start`, `/automation/stop`
@@ -38,7 +41,7 @@
 ## Codebase Shape (functional)
 - Backend source modules: 26 (`src/**/*.mjs`)
 - UI source files: 20 (`ui/src/**/*`)
-- Node tests: 11 test files, 27 passing tests
+- Node tests: `npm test` targets `tests/` only
 
 ## Incomplete parts found and status
 1) VC workflow missing from backend automation
@@ -54,6 +57,5 @@
 - Status: resolved with portable relative paths and funding endpoints section.
 
 ## Remaining gaps (next pass)
-- UI does not yet expose first-class funding dashboard controls (API exists, UI wiring pending).
-- No dedicated tests yet for `funding-engine.mjs` and funding routes.
-- State growth management is still JSON-file based; DB migration may be needed at scale.
+- Funding engine and funding routes still need deeper dedicated test coverage.
+- The Postgres backend currently stores application state as a single JSON document; relational decomposition is still a future scaling step.

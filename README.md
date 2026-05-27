@@ -6,7 +6,7 @@ Localized marketing automation brain with a LocaleWeave React control surface.
 
 - `src/`: local backend "brain" for campaign state, analytics ingestion, decisioning, localization, target ranking, memory recall, and automation scheduling
 - `ui/`: extracted LocaleWeave UI/UX, rewired to use the local backend instead of Firebase/Gemini as its control plane
-- `data/state.json`: persisted local state for campaigns, research records, memory objects, decisions, localized content packs, and automation runs
+- State backend: file (`data/state.json`) or Postgres via `STATE_BACKEND=postgres` + `DATABASE_URL`
 - `docs/market-intelligence-2026-05-07.md`: sourced market analysis currently fed into the brain
 
 ## What Works Now
@@ -55,6 +55,7 @@ Useful endpoints:
 - `POST /content/generate`
 - `POST /automation/run`
 - `POST /automation/start`
+- `GET /safety/executions`
 - `POST /funding/investors`
 - `GET /funding/investors?campaignId=...`
 - `GET /funding/pipeline?campaignId=...`
@@ -106,6 +107,7 @@ Before switching connectors out of safe mode:
 1. Populate `.env` or `.env.local` with `OPENCLAW_*` and `CLAWDBOT_*`.
 2. Set `DRY_RUN=false` only after `GET /connectors/status?probe=true` returns healthy live connector status.
 3. If you want runtime overrides without editing files, use `POST /connectors/:name/config`.
+4. Keep `REQUIRE_LIVE_APPROVAL=true` if you want live automation and funding side effects to require explicit approval.
 
 ## Root Scripts
 
@@ -118,6 +120,8 @@ npm run ui:build
 npm run ui:lint
 npm run automation:smoke
 ```
+
+`npm test` runs only the `tests/` suite and excludes operational scripts.
 
 ## One-command Automation Validation
 
@@ -173,8 +177,11 @@ curl "http://127.0.0.1:4010/connectors/status?probe=true"
 ## Notes
 
 - Connector calls stay safe by default with `DRY_RUN=true`.
+- Execution receipts are persisted and exposed via `/safety/executions` for approval, dedupe, and audit visibility.
+- Live side effects are gated when `DRY_RUN=false` and `REQUIRE_LIVE_APPROVAL=true`.
 - Connector state is explicit: `dry-run`, `ready`, `live`, `error`, or `not-configured`.
 - Campaigns now default to dual-rail execution through `openclaw` and `clawdbot`.
 - The UI now uses the backend for campaign persistence and generated localized assets.
+- The funding dashboard is wired to the active campaign state instead of a fixed demo campaign id.
 - The memory layer only promotes playbooks after repeated outcome evidence; research alone seeds target profiles but does not create trusted tactics.
 - Firebase and Gemini files remain in the UI tree from the source template, but the active flow is local-first through the autopilot API.

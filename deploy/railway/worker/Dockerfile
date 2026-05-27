@@ -1,5 +1,6 @@
 FROM python:3.12-slim
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
@@ -8,13 +9,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xz-utils \
   && rm -rf /var/lib/apt/lists/*
 
-# Install Hermes Agent CLI
-RUN curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+# Install Hermes Agent CLI with retry
+RUN for i in 1 2 3; do \
+      curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash && break; \
+      echo "Hermes install attempt $i failed, retrying..." && sleep 3; \
+    done
 
 ENV PATH="/root/.local/bin:${PATH}"
 WORKDIR /app
 
-# Copy prism skills into Hermes Agent skill directory
+# Create hermes home and copy prism skills
+RUN mkdir -p /app/.hermes
 COPY deploy/railway/worker/skills/ /app/.hermes/skills/
 
 COPY deploy/railway/worker/start.sh /app/start.sh

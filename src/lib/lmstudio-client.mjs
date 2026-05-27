@@ -34,6 +34,13 @@ function truncateText(value, maxLength = 320) {
     : `${normalized.slice(0, maxLength - 1)}…`;
 }
 
+function lowerFirst(value) {
+  if (!value) {
+    return "";
+  }
+  return `${value.charAt(0).toLowerCase()}${value.slice(1)}`;
+}
+
 function compactCampaignBrief(campaign, defaults) {
   return {
     id: campaign.id,
@@ -376,6 +383,7 @@ export class LocalPlanner {
         globalNotes: parsed.globalNotes || [],
       };
     } catch (error) {
+      const backendLabel = this.llmProvider?.isConfigured?.() ? "LLM provider" : "LM Studio";
       return {
         source: "unavailable",
         generatedAt: new Date().toISOString(),
@@ -383,7 +391,7 @@ export class LocalPlanner {
         sourceLocale,
         objective: campaign.objective || this.defaultOffer,
         variants: [],
-        globalNotes: [`LLM unavailable for localization. ${error.message}`],
+        globalNotes: [`${backendLabel} unavailable for localization. ${backendLabel} ${lowerFirst(error.message)}`],
       };
     }
   }
