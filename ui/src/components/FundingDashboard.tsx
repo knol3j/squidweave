@@ -386,14 +386,28 @@ export default function FundingDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pipelineData, eventsData, runsData] = await Promise.all([
+      const [pipelineResult, eventsResult, runsResult] = await Promise.allSettled([
         dataService.getFundingPipeline(campaignId),
         dataService.getFundingOutreachEvents(campaignId),
         dataService.getFundingRuns(campaignId),
       ]);
-      setPipeline(pipelineData);
-      setEvents(eventsData);
-      setRuns(runsData);
+      if (pipelineResult.status === 'fulfilled') {
+        setPipeline(pipelineResult.value);
+      } else {
+        console.error('FundingDashboard pipeline load error:', pipelineResult.reason);
+      }
+
+      if (eventsResult.status === 'fulfilled') {
+        setEvents(eventsResult.value);
+      } else {
+        console.error('FundingDashboard events load error:', eventsResult.reason);
+      }
+
+      if (runsResult.status === 'fulfilled') {
+        setRuns(runsResult.value);
+      } else {
+        console.error('FundingDashboard runs load error:', runsResult.reason);
+      }
     } catch (err) {
       console.error('FundingDashboard load error:', err);
     } finally {
@@ -469,7 +483,7 @@ export default function FundingDashboard() {
     }
   };
 
-  if (loading) {
+  if (loading && !pipeline && events.length === 0 && runs.length === 0) {
     return (
       <div className="flex h-full items-center justify-center bg-[#08111f]">
         <div className="flex items-center gap-3 text-slate-400">
