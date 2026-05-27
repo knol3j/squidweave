@@ -428,7 +428,8 @@ async function ensurePromptCampaign({ store, memoryEngine, prompt, campaignId, r
     basePreheader: existing?.basePreheader || "Autonomous campaign run in progress",
     baseCta: existing?.baseCta || "Book strategy review",
     intakeStatus: "active",
-    activeTab: "engine",
+    // Preserve the operator's current workspace instead of forcing a tab switch.
+    activeTab: existing?.activeTab || "engine",
   });
   const campaign = await store.upsertCampaign(draft);
   await memoryEngine.consolidateCampaign(campaign.id);
