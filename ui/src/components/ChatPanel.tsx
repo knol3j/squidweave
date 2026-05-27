@@ -110,7 +110,6 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
     try {
       await updateCampaignState({
         activePrompt: currentInput,
-        activeTab: 'engine',
         enabledModules,
         automationEnabled: true,
         objective: currentInput,
