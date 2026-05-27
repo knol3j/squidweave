@@ -42,6 +42,7 @@ export class FundingEngine {
       sectors: unique(record.sectors || []),
       checkSize: record.checkSize || null,
       thesis: record.thesis || "",
+      email: record.email || "",
       warmIntroPath: record.warmIntroPath || "",
       thesisMatch: Number.isFinite(Number(record.thesisMatch)) ? Number(record.thesisMatch) : 0.5,
       stageMatch: Number.isFinite(Number(record.stageMatch)) ? Number(record.stageMatch) : 0.5,

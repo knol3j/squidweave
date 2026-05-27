@@ -5,12 +5,38 @@ const DEFAULT_HEADERS = {
   accept: "application/json, text/plain, */*",
 };
 
-async function fetchJson(url, headers = {}) {
-  const response = await fetch(url, { headers: { ...DEFAULT_HEADERS, ...headers } });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for ${url}`);
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchJson(url, headers = {}, options = {}) {
+  const retries = Number.isFinite(Number(options.retries)) ? Number(options.retries) : 2;
+  const retryStatuses = Array.isArray(options.retryStatuses) ? options.retryStatuses : [429, 502, 503, 504];
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(url, { headers: { ...DEFAULT_HEADERS, ...headers } });
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        const error = new Error(`HTTP ${response.status} for ${url}${body ? `: ${body.slice(0, 180)}` : ""}`);
+        error.status = response.status;
+        throw error;
+      }
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+      const status = Number(error?.status);
+      const canRetry = attempt < retries && (retryStatuses.includes(status) || status === 0 || Number.isNaN(status));
+      if (!canRetry) {
+        break;
+      }
+      const backoffMs = 400 * (2 ** attempt) + Math.floor(Math.random() * 250);
+      await sleep(backoffMs);
+    }
   }
-  return response.json();
+
+  throw lastError;
 }
 
 function clamp01(value, fallback = 0.5) {

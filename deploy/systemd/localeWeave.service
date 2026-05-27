@@ -1,0 +1,27 @@
+[Unit]
+Description=LocaleWeave — Localized Marketing Automation Brain
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gnul
+Group=gnul
+WorkingDirectory=/home/gnul/squidweave
+Environment=DRY_RUN=false
+Environment=PORT=4010
+Environment=NODE_ENV=production
+# Path to your .env.local — loaded by src/load-env.mjs
+ExecStart=/usr/bin/node /home/gnul/squidweave/src/server.mjs
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target

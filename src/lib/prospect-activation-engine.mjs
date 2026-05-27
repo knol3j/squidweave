@@ -145,6 +145,7 @@ export class ProspectActivationEngine {
     await this.store.updateSourcedContacts(campaignId, updatedContacts);
 
     const connectorResults = [];
+    const connectorIssues = [];
     if (options.dispatch && selected.length) {
       const connectorNames = Array.isArray(options.connectors) && options.connectors.length
         ? options.connectors
@@ -152,7 +153,11 @@ export class ProspectActivationEngine {
       for (const connectorName of connectorNames) {
         const connector = this.connectors[connectorName];
         if (!connector) {
+          connectorIssues.push({ connector: connectorName, reason: "missing-connector" });
           continue;
+        }
+        if (typeof connector.isConfigured === "function" && !connector.isConfigured()) {
+          connectorIssues.push({ connector: connectorName, reason: "not-configured" });
         }
         connectorResults.push(await connector.execute({
           type: "enrich_contact_batch",
@@ -171,9 +176,10 @@ export class ProspectActivationEngine {
       campaignId,
       action: "enrich",
       provider: options.provider || "internal-waterfall",
-      status: "completed",
+      status: connectorIssues.length ? "attention" : "completed",
       processedContacts: updatedContacts.length,
       connectorResults,
+      connectorIssues,
       createdAt: nowIso(),
     };
 
@@ -215,6 +221,7 @@ export class ProspectActivationEngine {
     await this.store.updateSourcedContacts(campaignId, updatedContacts);
 
     const connectorResults = [];
+    const connectorIssues = [];
     if (options.dispatch && selected.length) {
       const connectorNames = Array.isArray(options.connectors) && options.connectors.length
         ? options.connectors
@@ -222,7 +229,11 @@ export class ProspectActivationEngine {
       for (const connectorName of connectorNames) {
         const connector = this.connectors[connectorName];
         if (!connector) {
+          connectorIssues.push({ connector: connectorName, reason: "missing-connector" });
           continue;
+        }
+        if (typeof connector.isConfigured === "function" && !connector.isConfigured()) {
+          connectorIssues.push({ connector: connectorName, reason: "not-configured" });
         }
         connectorResults.push(await connector.execute({
           type: "queue_outreach_sequence",
@@ -239,9 +250,10 @@ export class ProspectActivationEngine {
       id: crypto.randomUUID(),
       campaignId,
       action: options.dispatch ? "sequence-and-dispatch" : "sequence",
-      status: "completed",
+      status: connectorIssues.length ? "attention" : "completed",
       processedContacts: updatedContacts.length,
       connectorResults,
+      connectorIssues,
       createdAt: nowIso(),
     };
 

@@ -22,6 +22,7 @@ const BLUEPRINTS_DIR = join(__dirname, '..', 'automation', 'blueprints');
 const args = process.argv.slice(2);
 const ENRICH_ONLY = args.includes('--enrich-only');
 const BOOTSTRAP_ONLY = args.includes('--bootstrap-only');
+const FUNDING_ONLY = args.includes('--funding-only');
 const SINGLE_CAMPAIGN = args.find(a => a.startsWith('--campaign='))?.split('=')[1] || null;
 
 // ---------------------------------------------------------------------------
@@ -184,6 +185,35 @@ async function pipelineSummary(campaignId) {
 }
 
 // ---------------------------------------------------------------------------
+// Summary Report
+// ---------------------------------------------------------------------------
+function printSummary(results, elapsed) {
+  console.log('\n' + '═'.repeat(80));
+  console.log('  ORCHESTRATION SUMMARY');
+  console.log('═'.repeat(80));
+
+  const header = `  ${'Campaign'.padEnd(30)} ${'Design Theme'.padEnd(22)} ${'Enriched'.padEnd(10)} ${'Sequenced'.padEnd(10)} ${'Funding'.padEnd(9)}  Notes`;
+  console.log(`\n${header}`);
+  console.log(`  ${'─'.repeat(28)}  ${'─'.repeat(20)}  ${'─'.repeat(8)}  ${'─'.repeat(8)}  ${'─'.repeat(7)}  ──────────────────`);
+
+  let totalEnriched = 0;
+  let totalSequenced = 0;
+  let totalFunding = 0;
+  for (const r of results) {
+    const note = r.error ? `⚠ ${r.error}` : (r.pipelineCounts ? `${r.pipelineCounts.total || 0} total contacts` : '');
+    console.log(`  ${r.campaignId.padEnd(30)} ${(r.designTheme || '—').padEnd(22)} ${String(r.enriched || '—').padEnd(10)} ${String(r.sequenced || '—').padEnd(10)} ${String(r.fundingProcessed || '—').padEnd(9)} ${note}`);
+    totalEnriched += r.enriched || 0;
+    totalSequenced += r.sequenced || 0;
+    totalFunding += r.fundingProcessed || 0;
+  }
+
+  console.log(`\n  ${'─'.repeat(28)}  ${'─'.repeat(20)}  ${'─'.repeat(8)}  ${'─'.repeat(8)}  ${'─'.repeat(7)}`);
+  console.log(`  ${'TOTAL'.padEnd(30)} ${''.padEnd(22)} ${String(totalEnriched).padEnd(10)} ${String(totalSequenced).padEnd(10)} ${String(totalFunding).padEnd(9)}`);
+  console.log(`\n  Completed in ${elapsed}s`);
+  console.log('═'.repeat(80));
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
@@ -238,6 +268,36 @@ async function main() {
     return;
   }
 
+  if (FUNDING_ONLY) {
+    console.log('\n━━━ Funding-only mode — skipping bootstrap and enrichment ━━━\n');
+    const results = [];
+    for (const bp of blueprints) {
+      process.stdout.write(`  → ${bp.campaignId}... `);
+      try {
+        const funding = await runFunding(bp.campaignId);
+        results.push({
+          campaignId: bp.campaignId,
+          campaignName: bp.campaignName,
+          designTheme: bp.designTheme,
+          enriched: 0,
+          sequenced: 0,
+          fundingProcessed: funding.fundingProcessed || 0,
+          error: funding.fundingError || null,
+          pipelineCounts: null,
+        });
+        const fundingStr = `${funding.fundingProcessed || 0} investor steps`;
+        const errStr = funding.fundingError ? `, ERROR: ${funding.fundingError}` : '';
+        console.log(`✓ (${fundingStr})${errStr}`);
+      } catch (err) {
+        results.push({ campaignId: bp.campaignId, error: err.message });
+        console.log(`✗ ${err.message}`);
+      }
+    }
+    const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
+    printSummary(results, elapsed);
+    return;
+  }
+
   // ── Enrichment + Sequencing phase ──
   console.log('\n━━━ Running enrichment + sequencing across all campaigns ━━━\n');
 
@@ -271,29 +331,7 @@ async function main() {
 
   // ── Summary Report ──
   const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
-  console.log('\n' + '═'.repeat(80));
-  console.log('  ORCHESTRATION SUMMARY');
-  console.log('═'.repeat(80));
-
-  const header = `  ${'Campaign'.padEnd(30)} ${'Design Theme'.padEnd(22)} ${'Enriched'.padEnd(10)} ${'Sequenced'.padEnd(10)} ${'Funding'.padEnd(9)}  Notes`;
-  console.log(`\n${header}`);
-  console.log(`  ${'─'.repeat(28)}  ${'─'.repeat(20)}  ${'─'.repeat(8)}  ${'─'.repeat(8)}  ${'─'.repeat(7)}  ──────────────────`);
-
-  let totalEnriched = 0;
-  let totalSequenced = 0;
-  let totalFunding = 0;
-  for (const r of results) {
-    const note = r.error ? `⚠ ${r.error}` : (r.pipelineCounts ? `${r.pipelineCounts.total || 0} total contacts` : '');
-    console.log(`  ${r.campaignId.padEnd(30)} ${(r.designTheme || '—').padEnd(22)} ${String(r.enriched || '—').padEnd(10)} ${String(r.sequenced || '—').padEnd(10)} ${String(r.fundingProcessed || '—').padEnd(9)} ${note}`);
-    totalEnriched += r.enriched || 0;
-    totalSequenced += r.sequenced || 0;
-    totalFunding += r.fundingProcessed || 0;
-  }
-
-  console.log(`\n  ${'─'.repeat(28)}  ${'─'.repeat(20)}  ${'─'.repeat(8)}  ${'─'.repeat(8)}  ${'─'.repeat(7)}`);
-  console.log(`  ${'TOTAL'.padEnd(30)} ${''.padEnd(22)} ${String(totalEnriched).padEnd(10)} ${String(totalSequenced).padEnd(10)} ${String(totalFunding).padEnd(9)}`);
-  console.log(`\n  Completed in ${elapsed}s`);
-  console.log('═'.repeat(80));
+  printSummary(results, elapsed);
 }
 
 main().catch(err => {

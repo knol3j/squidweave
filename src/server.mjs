@@ -42,6 +42,9 @@ import { FundingDeckEngine } from "./lib/funding-deck-engine.mjs";
 import { SourceIngestionEngine } from "./lib/source-ingestion-engine.mjs";
 import { createFreeSourceConnectors } from "./connectors/free-sources.mjs";
 import { GhlBridge } from "./integrations/ghl-bridge.mjs";
+import { registerFunnelRoutes, getFunnelCollections } from "./modules/funnel/funnel-routes.mjs";
+import { registerMessagingRoutes, getMessagingCollections } from "./modules/messaging/messaging-routes.mjs";
+import * as adapters from "./adapters/index.mjs";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -423,9 +426,25 @@ async function createApp() {
   const workflowEngine = new WorkflowEngine({ store });
   const prospectActivationEngine = new ProspectActivationEngine({ store, connectors, config });
   const fundingEngine = new FundingEngine({ store });
-  const paidExecutionEngine = new PaidExecutionEngine({ dryRun: config.dryRun });
-  const socialPublishingEngine = new SocialPublishingEngine({ dryRun: config.dryRun });
-  const fundingDeckEngine = new FundingDeckEngine({ dryRun: config.dryRun });
+  const paidExecutionEngine = new PaidExecutionEngine({
+    dryRun: config.dryRun,
+    adapters: {
+      google_ads: adapters.google_ads,
+      meta_ads: adapters.meta_ads,
+    },
+  });
+  const socialPublishingEngine = new SocialPublishingEngine({
+    dryRun: config.dryRun,
+    adapters: {
+      telegram: adapters.telegram,
+      linkedin: adapters.linkedin,
+      twitter: adapters.twitter,
+    },
+  });
+  const fundingDeckEngine = new FundingDeckEngine({
+    dryRun: config.dryRun,
+    sendEmailFn: adapters.sendEmail,
+  });
   const sourceIngestionEngine = new SourceIngestionEngine({
     store,
     connectors: createFreeSourceConnectors(),
@@ -438,6 +457,8 @@ async function createApp() {
     memoryEngine,
     config: config.ghl,
   });
+  const funnelHandlers = registerFunnelRoutes({ store, workflowEngine, pipelineEngine });
+  const messagingHandlers = registerMessagingRoutes({ store, workflowEngine });
   const scheduler = new AutomationScheduler({
     store,
     automationEngine,
@@ -842,6 +863,58 @@ async function createApp() {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/funding/source") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      const results = { imported: 0, seedImported: 0, secImported: 0, errors: [] };
+
+      // 1. Seed data import
+      if (body.useSeedData !== false) {
+        try {
+          const { readFile } = await import("node:fs/promises");
+          const seedText = await readFile(new URL("../data/seed-investors.json", import.meta.url), "utf-8");
+          const seedRecords = JSON.parse(seedText);
+          const imported = fundingEngine.importInvestors(body.campaignId, seedRecords);
+          await store.addInvestorRecords(imported);
+          results.seedImported = imported.length;
+          results.imported += imported.length;
+        } catch (err) {
+          results.errors.push({ phase: "seed", error: err.message });
+        }
+      }
+
+      // 2. SEC-based investor sourcing via source-ingestion-engine
+      if (body.secSearchQuery) {
+        try {
+          const researchRecords = await sourceIngestionEngine.ingestResearch({
+            sources: ["sec"],
+            query: body.secSearchQuery,
+            limit: body.secLimit || 10,
+          });
+          const investorRecords = [];
+          for (const connector of (sourceIngestionEngine.connectors || [])) {
+            if (typeof connector.toInvestorRecords === "function") {
+              const records = connector.toInvestorRecords(researchRecords, body.campaignId);
+              investorRecords.push(...records);
+            }
+          }
+          if (investorRecords.length > 0) {
+            await store.addInvestorRecords(investorRecords);
+            results.secImported = investorRecords.length;
+            results.imported += investorRecords.length;
+          }
+        } catch (err) {
+          results.errors.push({ phase: "sec", error: err.message });
+        }
+      }
+
+      sendJson(request, response, 201, results);
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/funding/pipeline") {
       const campaignId = url.searchParams.get("campaignId");
       if (!campaignId) {
@@ -1155,13 +1228,31 @@ async function createApp() {
             limit: Number.isFinite(Number(body.enrichLimit)) ? Number(body.enrichLimit) : 24,
             dispatch: true,
           });
-          mark("organic_enrichment", "completed", { processedContacts: enrichment?.run?.processedContacts || 0 });
+          const enrichmentProcessed = enrichment?.run?.processedContacts || 0;
+          const enrichmentStatus = enrichment?.run?.status === "attention"
+            ? "partial"
+            : enrichmentProcessed === 0
+              ? "skipped"
+              : "completed";
+          mark("organic_enrichment", enrichmentStatus, {
+            processedContacts: enrichmentProcessed,
+            connectorIssues: enrichment?.run?.connectorIssues || [],
+          });
 
           sequencing = await prospectActivationEngine.sequenceContacts(campaign.id, {
             limit: Number.isFinite(Number(body.sequenceLimit)) ? Number(body.sequenceLimit) : 24,
             dispatch: true,
           });
-          mark("organic_sequencing", "completed", { processedContacts: sequencing?.run?.processedContacts || 0 });
+          const sequencingProcessed = sequencing?.run?.processedContacts || 0;
+          const sequencingStatus = sequencing?.run?.status === "attention"
+            ? "partial"
+            : sequencingProcessed === 0
+              ? "skipped"
+              : "completed";
+          mark("organic_sequencing", sequencingStatus, {
+            processedContacts: sequencingProcessed,
+            connectorIssues: sequencing?.run?.connectorIssues || [],
+          });
         } else {
           mark("organic_workflow", "skipped", { reason: "policy-disabled" });
         }
@@ -1488,7 +1579,7 @@ async function createApp() {
     }
 
     // ── Entity CRUD API ────────────────────────────────────────────
-    if (request.method === "GET" && parts.length === 2 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags"].includes(parts[0])) {
+    if (request.method === "GET" && parts.length === 2 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags","funnels","funnelSteps","funnelSubmissions","messageTemplates","messageSequences"].includes(parts[0])) {
       const [collection, id] = parts;
       const doc = store.getDocument(collection, id);
       if (!doc) { sendJson(request, response, 404, { error: "Not found" }); return; }
@@ -1496,7 +1587,7 @@ async function createApp() {
       return;
     }
 
-    if (request.method === "GET" && parts.length === 1 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags"].includes(parts[0])) {
+    if (request.method === "GET" && parts.length === 1 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags","funnels","funnelSteps","funnelSubmissions","messageTemplates","messageSequences"].includes(parts[0])) {
       const collection = parts[0];
       const locationId = url.searchParams.get("locationId");
       const campaignId = url.searchParams.get("campaignId");
@@ -1509,7 +1600,7 @@ async function createApp() {
       return;
     }
 
-    if (request.method === "POST" && parts.length === 1 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags"].includes(parts[0])) {
+    if (request.method === "POST" && parts.length === 1 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags","funnels","funnelSteps","funnelSubmissions","messageTemplates","messageSequences"].includes(parts[0])) {
       const body = await readBody(request);
       const collection = parts[0];
       const id = body.id || null;
@@ -1518,7 +1609,7 @@ async function createApp() {
       return;
     }
 
-    if (request.method === "DELETE" && parts.length === 2 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags"].includes(parts[0])) {
+    if (request.method === "DELETE" && parts.length === 2 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags","funnels","funnelSteps","funnelSubmissions","messageTemplates","messageSequences"].includes(parts[0])) {
       const [collection, id] = parts;
       await store.deleteDocument(collection, id);
       sendJson(request, response, 200, { deleted: true, id });
@@ -1771,6 +1862,67 @@ async function createApp() {
     if (request.method === "GET" && url.pathname === "/migration/migrate-sourced") {
       const count = await store.migrateSourcedContacts();
       sendJson(request, response, 200, { migrated: count });
+      return;
+    }
+
+    // ── Funnel routes ─────────────────────────────────────────
+    if (parts[0] === "funnels" && parts.length === 1) {
+      await funnelHandlers.handleFunnels(request.method, { locationId: url.searchParams.get("locationId"), campaignId: url.searchParams.get("campaignId") }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (parts[0] === "funnels" && parts.length === 2 && parts[1] !== "embed") {
+      await funnelHandlers.handleFunnelById(request.method, { id: parts[1] }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (parts[0] === "funnels" && parts[1] && parts[2] === "submit") {
+      await funnelHandlers.handleFunnelSubmit(request.method, { id: parts[1] }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (parts[0] === "funnels" && parts[1] && parts[2] === "embed") {
+      await funnelHandlers.handleFunnelEmbed(request.method, { id: parts[1] }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (parts[0] === "funnels" && parts[1] && parts[2] === "steps" && parts.length === 3) {
+      await funnelHandlers.handleFunnelSteps(request.method, { funnelId: parts[1] }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (parts[0] === "funnels" && parts[1] && parts[2] === "steps" && parts.length === 4) {
+      await funnelHandlers.handleFunnelStepById(request.method, { funnelId: parts[1], stepId: parts[3] }, request, response, sendJson, readBody);
+      return;
+    }
+
+    // ── Messaging routes ──────────────────────────────────────
+    if (parts[0] === "message-templates" && parts.length === 1) {
+      await messagingHandlers.handleTemplates(request.method, { campaignId: url.searchParams.get("campaignId") }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (parts[0] === "message-templates" && parts.length === 2) {
+      await messagingHandlers.handleTemplateById(request.method, { id: parts[1] }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (url.pathname === "/message-templates/render" && request.method === "POST") {
+      // fallback: handled by parts-based match below
+    }
+
+    if (parts[0] === "message-templates" && parts[1] && parts[2] === "render") {
+      await messagingHandlers.handleTemplateRender(request.method, { id: parts[1] }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (parts[0] === "message-sequences" && parts.length === 1) {
+      await messagingHandlers.handleSequences(request.method, { campaignId: url.searchParams.get("campaignId") }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (parts[0] === "message-sequences" && parts.length === 2) {
+      await messagingHandlers.handleSequenceById(request.method, { id: parts[1] }, request, response, sendJson, readBody);
       return;
     }
 

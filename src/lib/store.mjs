@@ -217,6 +217,11 @@ const defaultState = () => ({
     tasks: {},
     calendarEvents: {},
     tags: {},
+    funnels: {},
+    funnelSteps: {},
+    funnelSubmissions: {},
+    messageTemplates: {},
+    messageSequences: {},
   },
 });
 
