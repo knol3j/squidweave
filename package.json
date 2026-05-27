@@ -16,7 +16,8 @@
     "automation:bootstrap": "node scripts/bootstrap-automation.mjs",
     "automation:orchestrate": "node scripts/orchestrate-blueprints.mjs",
     "automation:enrich": "node scripts/orchestrate-blueprints.mjs --enrich-only",
-    "automation:funding": "node scripts/orchestrate-blueprints.mjs --enrich-only",
+    "automation:funding": "node scripts/orchestrate-blueprints.mjs --funding-only",
+    "automation:full": "node scripts/orchestrate-blueprints.mjs",
     "automation:cron": "node scripts/orchestrate-blueprints.mjs --enrich-only",
     "automation:smoke": "node scripts/automation-smoke.mjs"
   },

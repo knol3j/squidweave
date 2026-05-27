@@ -780,4 +780,242 @@ export const dataService = {
       body: JSON.stringify({ campaignId, locales, reason: 'ui-request' }),
     });
   },
+
+  // ── Entity type definitions ───────────────────────────────────
+  async getContacts(locationId?: string, campaignId?: string) {
+    const search = new URLSearchParams();
+    if (locationId) search.set('locationId', locationId);
+    if (campaignId) search.set('campaignId', campaignId);
+    const qs = search.toString();
+    return api<any[]>(`/contacts${qs ? '?' + qs : ''}`);
+  },
+
+  async getContact(id: string) {
+    return api<any>(`/contacts/${id}`);
+  },
+
+  async saveContact(data: any) {
+    return api<any>('/contacts', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async deleteContact(id: string) {
+    return api<any>(`/contacts/${id}`, { method: 'DELETE' });
+  },
+
+  async getOpportunities(pipelineId?: string, contactId?: string) {
+    const search = new URLSearchParams();
+    if (pipelineId) search.set('pipelineId', pipelineId);
+    if (contactId) search.set('contactId', contactId);
+    const qs = search.toString();
+    return api<any[]>(`/opportunities${qs ? '?' + qs : ''}`);
+  },
+
+  async getOpportunity(id: string) {
+    return api<any>(`/opportunities/${id}`);
+  },
+
+  async saveOpportunity(data: any) {
+    return api<any>('/opportunities', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async deleteOpportunity(id: string) {
+    return api<any>(`/opportunities/${id}`, { method: 'DELETE' });
+  },
+
+  async getPipelines(locationId?: string) {
+    const search = locationId ? `?locationId=${encodeURIComponent(locationId)}` : '';
+    return api<any[]>(`/pipelines${search}`);
+  },
+
+  async getPipeline(id: string) {
+    return api<any>(`/pipelines/${id}`);
+  },
+
+  async savePipeline(data: any) {
+    return api<any>('/pipelines', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async deletePipeline(id: string) {
+    return api<any>(`/pipelines/${id}`, { method: 'DELETE' });
+  },
+
+  async getWorkflows(locationId?: string) {
+    const search = locationId ? `?locationId=${encodeURIComponent(locationId)}` : '';
+    return api<any[]>(`/workflows${search}`);
+  },
+
+  async getWorkflow(id: string) {
+    return api<any>(`/workflows/${id}`);
+  },
+
+  async saveWorkflow(data: any) {
+    return api<any>('/workflows', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async deleteWorkflow(id: string) {
+    return api<any>(`/workflows/${id}`, { method: 'DELETE' });
+  },
+
+  async getNotes(contactId?: string) {
+    const search = contactId ? `?contactId=${encodeURIComponent(contactId)}` : '';
+    return api<any[]>(`/notes${search}`);
+  },
+
+  async saveNote(data: any) {
+    return api<any>('/notes', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async deleteNote(id: string) {
+    return api<any>(`/notes/${id}`, { method: 'DELETE' });
+  },
+
+  async getTasks(contactId?: string) {
+    const search = contactId ? `?contactId=${encodeURIComponent(contactId)}` : '';
+    return api<any[]>(`/tasks${search}`);
+  },
+
+  async saveTask(data: any) {
+    return api<any>('/tasks', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async deleteTask(id: string) {
+    return api<any>(`/tasks/${id}`, { method: 'DELETE' });
+  },
+
+  async getCalendarEvents(contactId?: string) {
+    const search = contactId ? `?contactId=${encodeURIComponent(contactId)}` : '';
+    return api<any[]>(`/calendarEvents${search}`);
+  },
+
+  async saveCalendarEvent(data: any) {
+    return api<any>('/calendarEvents', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async deleteCalendarEvent(id: string) {
+    return api<any>(`/calendarEvents/${id}`, { method: 'DELETE' });
+  },
+
+  async getTags(locationId?: string) {
+    const search = locationId ? `?locationId=${encodeURIComponent(locationId)}` : '';
+    return api<any[]>(`/tags${search}`);
+  },
+
+  async saveTag(data: any) {
+    return api<any>('/tags', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async deleteTag(id: string) {
+    return api<any>(`/tags/${id}`, { method: 'DELETE' });
+  },
+
+  // ── Relationship queries ──────────────────────────────────────
+  async getContactOpportunities(contactId: string) {
+    return api<any[]>(`/contacts/${contactId}/opportunities`);
+  },
+
+  async getContactNotes(contactId: string) {
+    return api<any[]>(`/contacts/${contactId}/notes`);
+  },
+
+  async getContactTasks(contactId: string) {
+    return api<any[]>(`/contacts/${contactId}/tasks`);
+  },
+
+  async getPipelineOpportunities(pipelineId: string) {
+    return api<any[]>(`/pipelines/${pipelineId}/opportunities`);
+  },
+
+  async getWorkflowSteps(workflowId: string) {
+    return api<any[]>(`/workflows/${workflowId}/steps`);
+  },
+
+  // ── GHL Bridge ────────────────────────────────────────────────
+  async ghlWebhook(body: any, campaignId?: string) {
+    const search = campaignId ? `?campaignId=${encodeURIComponent(campaignId)}` : '';
+    return api<any>(`/integrations/ghl/webhook${search}`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  async ghlSyncContacts(campaignId: string, options?: any) {
+    return api<any>('/integrations/ghl/sync/contacts', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, options }),
+    });
+  },
+
+  async ghlSyncOpportunities(campaignId: string, options?: any) {
+    return api<any>('/integrations/ghl/sync/opportunities', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, options }),
+    });
+  },
+
+  async ghlSyncPipelines(campaignId: string, options?: any) {
+    return api<any>('/integrations/ghl/sync/pipelines', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, options }),
+    });
+  },
+
+  async ghlSyncWorkflows(campaignId: string, options?: any) {
+    return api<any>('/integrations/ghl/sync/workflows', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, options }),
+    });
+  },
+
+  async ghlSyncForms(campaignId: string, options?: any) {
+    return api<any>('/integrations/ghl/sync/forms', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, options }),
+    });
+  },
+
+  async ghlSyncCalendars(campaignId: string, options?: any) {
+    return api<any>('/integrations/ghl/sync/calendars', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, options }),
+    });
+  },
+
+  async ghlFullSync(campaignId: string, options?: any) {
+    return api<any>('/integrations/ghl/sync/full', {
+      method: 'POST',
+      body: JSON.stringify({ campaignId, options }),
+    });
+  },
+
+  async ghlPushContact(contact: any, campaignId?: string) {
+    return api<any>('/integrations/ghl/push/contact', {
+      method: 'POST',
+      body: JSON.stringify({ contact, campaignId }),
+    });
+  },
+
+  async ghlPushOpportunity(opportunity: any, campaignId?: string) {
+    return api<any>('/integrations/ghl/push/opportunity', {
+      method: 'POST',
+      body: JSON.stringify({ opportunity, campaignId }),
+    });
+  },
+
+  async ghlPushNote(note: any, campaignId?: string) {
+    return api<any>('/integrations/ghl/push/note', {
+      method: 'POST',
+      body: JSON.stringify({ note, campaignId }),
+    });
+  },
+
+  async ghlPushTask(task: any, campaignId?: string) {
+    return api<any>('/integrations/ghl/push/task', {
+      method: 'POST',
+      body: JSON.stringify({ task, campaignId }),
+    });
+  },
+
+  async migrateSourcedContacts() {
+    return api<{ migrated: number }>('/migration/migrate-sourced');
+  },
 };

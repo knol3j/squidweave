@@ -33,6 +33,7 @@ const TRIGGER_TYPES = {
   VALIDATION_ERROR: "validation_error",
   OFFER_ACCESS_GRANTED: "offer_access_granted",
   OFFER_ACCESS_REMOVED: "offer_access_removed",
+  FUNNEL_SUBMISSION: "funnel_submission",
 };
 
 const STEP_TYPES = {
