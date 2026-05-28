@@ -61,14 +61,25 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         </button>
 
         <div className="p-12 text-center flex flex-col items-center">
-          <motion.div 
-            key={currentStep}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className={`w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center mb-8 border border-white/10 shadow-inner`}
-          >
-            <current.icon className={`w-10 h-10 ${current.color}`} />
-          </motion.div>
+          {currentStep === 0 ? (
+            <motion.div
+              key="logo"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="mb-8"
+            >
+              <img src="/logo-login.png" alt="SquidWeave" className="h-24 w-auto object-contain mx-auto" />
+            </motion.div>
+          ) : (
+            <motion.div 
+              key={currentStep}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={`w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center mb-8 border border-white/10 shadow-inner`}
+            >
+              <current.icon className={`w-10 h-10 ${current.color}`} />
+            </motion.div>
+          )}
 
           <h2 className="text-2xl font-bold text-white mb-4 tracking-tight">{current.title}</h2>
           <p className="text-slate-400 leading-relaxed text-base mb-10 max-w-sm">
