@@ -60,8 +60,12 @@ function LoginGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#020617', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
-      <form onSubmit={handleSubmit} style={{ background: '#0f172a', padding: '2rem', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.1)', width: '320px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '1.25rem' }}>SquidWeave Login</h2>
+      <form onSubmit={handleSubmit} style={{ background: '#0f172a', padding: '2rem', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.1)', width: '360px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <img src="/logo-login.png" alt="SquidWeave" style={{ height: '80px', margin: '0 auto 0.75rem', display: 'block', objectFit: 'contain' }} />
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0' }}>Welcome Back</h2>
+          <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Sign in to your dashboard</p>
+        </div>
         {error && <div style={{ color: '#f87171', marginBottom: '0.75rem', textAlign: 'center', fontSize: '0.875rem' }}>{error}</div>}
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>Username</label>
