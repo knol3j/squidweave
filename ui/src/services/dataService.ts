@@ -1,4 +1,35 @@
-const API_BASE = import.meta.env.VITE_BRAIN_API_BASE || 'http://127.0.0.1:4010';
+// In production behind a reverse proxy (Cloudflare tunnel, nginx, etc.),
+// use relative paths so the browser hits the same origin.
+// In dev (localhost), fall back to explicit host:port.
+const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const API_BASE = import.meta.env.VITE_BRAIN_API_BASE || (isDev ? 'http://127.0.0.1:4010' : '');
+
+// ── Auth helpers ──────────────────────────────────────────────
+// Store/retrieve Basic Auth credentials in sessionStorage so the
+// frontend can include Authorization headers in every API call.
+// This avoids the browser limitation where fetch() fails when the
+// page URL contains embedded credentials (user:pass@host).
+const AUTH_KEY = 'squidweave_auth';
+
+function getAuthHeaders(): Record<string, string> {
+  const stored = sessionStorage.getItem(AUTH_KEY);
+  if (stored) {
+    return { Authorization: `Basic ${stored}` };
+  }
+  return {};
+}
+
+export function setAuthCredentials(user: string, pass: string) {
+  sessionStorage.setItem(AUTH_KEY, btoa(`${user}:${pass}`));
+}
+
+export function clearAuthCredentials() {
+  sessionStorage.removeItem(AUTH_KEY);
+}
+
+export function hasAuthCredentials(): boolean {
+  return !!sessionStorage.getItem(AUTH_KEY);
+}
 
 export interface Campaign {
   id: string;
@@ -388,8 +419,12 @@ export interface FundingRun {
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: { 'content-type': 'application/json' },
     ...init,
+    headers: {
+      'content-type': 'application/json',
+      ...getAuthHeaders(),
+      ...(init?.headers || {}),
+    },
   });
   if (!response.ok) {
     const text = await response.text();

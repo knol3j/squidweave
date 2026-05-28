@@ -79,11 +79,179 @@ type FundingImportDraft = {
   rows: string;
 };
 
+const AUDIENCE_OPTIONS = [
+  'Founders',
+  'CEO',
+  'COO',
+  'CRO',
+  'VP Revenue',
+  'VP Revenue Operations',
+  'Demand Gen Leaders',
+  'Heads of Growth',
+  'CMO',
+  'Marketing Operations',
+];
+
+const OFFER_OPTIONS = [
+  'Book a 20 minute audit',
+  'Book a strategy review',
+  'Request a demo',
+  'Get a custom teardown',
+  'Start a pilot',
+  'Download the deck',
+];
+
+const MARKET_OPTIONS = [
+  'en-US',
+  'en-GB',
+  'de-DE',
+  'fr-FR',
+  'es-ES',
+  'DACH fintech',
+  'UK SaaS',
+  'US SaaS',
+  'Mid-market SaaS',
+  'Enterprise SaaS',
+  'PLG SaaS',
+  'B2B services',
+];
+
+const CHANNEL_OPTIONS = [
+  'LinkedIn',
+  'Email',
+  'Landing page',
+  'Outbound calling',
+  'Paid social',
+  'Google Search',
+  'Webinar',
+  'Partner co-marketing',
+];
+
+const BRAND_VOICE_OPTIONS = [
+  'Direct',
+  'Expert',
+  'Specific',
+  'No fluff',
+  'Analytical',
+  'Confident',
+  'Warm',
+  'Executive',
+];
+
 function splitList(value: string) {
   return value
     .split(/[\n,]/g)
     .map(item => item.trim())
     .filter(Boolean);
+}
+
+function splitChannelList(value: string) {
+  return value
+    .split(/[\n,+]/g)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function uniqueOptions(options: string[], currentValue: string, splitter: (value: string) => string[]) {
+  return [...new Set([...options, ...splitter(currentValue)])];
+}
+
+function PresetSingleSelectField({
+  label,
+  value,
+  options,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  placeholder: string;
+  onChange: (nextValue: string) => void;
+}) {
+  const mergedOptions = React.useMemo(
+    () => [...new Set([...options, ...(value && !options.includes(value) ? [value] : [])])],
+    [options, value],
+  );
+
+  return (
+    <label className="space-y-2">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</span>
+      <select
+        value={value}
+        onChange={event => onChange(event.target.value)}
+        className="w-full rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition focus:border-indigo-400/50"
+      >
+        <option value="">{placeholder}</option>
+        {mergedOptions.map(option => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function PresetMultiSelectField({
+  label,
+  value,
+  options,
+  placeholder,
+  splitter,
+  joiner,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  placeholder: string;
+  splitter: (value: string) => string[];
+  joiner: (values: string[]) => string;
+  onChange: (nextValue: string) => void;
+}) {
+  const selected = splitter(value);
+  const mergedOptions = React.useMemo(() => uniqueOptions(options, value, splitter), [options, value, splitter]);
+
+  const toggleOption = (option: string) => {
+    const nextSelected = selected.includes(option)
+      ? selected.filter(item => item !== option)
+      : [...selected, option];
+    onChange(joiner(nextSelected));
+  };
+
+  return (
+    <label className="space-y-2">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</span>
+      <details className="rounded-2xl border border-white/10 bg-[#0b1526]">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm text-white outline-none">
+          <div className="flex items-center justify-between gap-3">
+            <span className={selected.length ? 'text-white' : 'text-slate-600'}>
+              {selected.length ? selected.join(', ') : placeholder}
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-300">
+              {selected.length || 0} selected
+            </span>
+          </div>
+        </summary>
+        <div className="border-t border-white/10 px-4 py-3">
+          <div className="grid gap-2">
+            {mergedOptions.map(option => (
+              <label key={option} className="flex items-center gap-3 text-sm text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(option)}
+                  onChange={() => toggleOption(option)}
+                  className="h-4 w-4 rounded border-white/10 bg-[#08111f] text-indigo-500 focus:ring-indigo-400"
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </details>
+    </label>
+  );
 }
 
 function percent(value?: number | null) {
@@ -605,11 +773,6 @@ export default function CampaignPreview() {
               {[
                 { key: 'clientName', label: 'Client Name', placeholder: 'Acme Growth Team' },
                 { key: 'brandName', label: 'Brand / Campaign Name', placeholder: 'Acme Pipeline Acceleration' },
-                { key: 'audience', label: 'Target Audience', placeholder: 'VP Revenue, demand gen leaders, founders' },
-                { key: 'offer', label: 'Primary Offer', placeholder: 'Book a 20 minute audit' },
-                { key: 'markets', label: 'Markets / Locales', placeholder: 'en-US, de-DE, UK SaaS, DACH fintech' },
-                { key: 'channel', label: 'Primary Channel', placeholder: 'LinkedIn + email + landing page' },
-                { key: 'brandVoice', label: 'Brand Voice', placeholder: 'Direct, expert, specific, no fluff' },
                 { key: 'successDefinition', label: 'Success Definition', placeholder: '20 SQLs/month with CAC under target' },
               ].map(field => (
                 <label key={field.key} className="space-y-2">
@@ -622,6 +785,52 @@ export default function CampaignPreview() {
                   />
                 </label>
               ))}
+
+              <PresetSingleSelectField
+                label="Target Audience"
+                value={intakeDraft.audience}
+                options={AUDIENCE_OPTIONS}
+                placeholder="Select target audience"
+                onChange={nextValue => setIntakeDraft(current => ({ ...current, audience: nextValue }))}
+              />
+
+              <PresetSingleSelectField
+                label="Primary Offer"
+                value={intakeDraft.offer}
+                options={OFFER_OPTIONS}
+                placeholder="Select primary offer"
+                onChange={nextValue => setIntakeDraft(current => ({ ...current, offer: nextValue }))}
+              />
+
+              <PresetMultiSelectField
+                label="Markets / Locales"
+                value={intakeDraft.markets}
+                options={MARKET_OPTIONS}
+                placeholder="Select markets and locales"
+                splitter={splitList}
+                joiner={values => values.join(', ')}
+                onChange={nextValue => setIntakeDraft(current => ({ ...current, markets: nextValue }))}
+              />
+
+              <PresetMultiSelectField
+                label="Primary Channel"
+                value={intakeDraft.channel}
+                options={CHANNEL_OPTIONS}
+                placeholder="Select primary channels"
+                splitter={splitChannelList}
+                joiner={values => values.join(' + ')}
+                onChange={nextValue => setIntakeDraft(current => ({ ...current, channel: nextValue }))}
+              />
+
+              <PresetMultiSelectField
+                label="Brand Voice"
+                value={intakeDraft.brandVoice}
+                options={BRAND_VOICE_OPTIONS}
+                placeholder="Select brand voice traits"
+                splitter={splitList}
+                joiner={values => values.join(', ')}
+                onChange={nextValue => setIntakeDraft(current => ({ ...current, brandVoice: nextValue }))}
+              />
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4">

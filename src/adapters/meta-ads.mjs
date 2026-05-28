@@ -61,7 +61,7 @@ export async function metaAdsAdapter({ campaignId, channel, creativeSummary, bud
   }
 
   const result = await createCampaign({
-    name: `LocaleWeave-${campaignId}-${Date.now()}`,
+    name: `SquidWeave-${campaignId}-${Date.now()}`,
     objective: 'OUTCOME_TRAFFIC',
     status: 'PAUSED',
   });

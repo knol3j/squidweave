@@ -19,8 +19,62 @@ import { CollaborationProvider, useCollaboration } from './components/Collaborat
 import { jsPDF } from 'jspdf';
 import BrainDashboard from './components/BrainDashboard';
 import FundingDashboard from './components/FundingDashboard';
-import { dataService } from './services/dataService';
+import { dataService, setAuthCredentials, hasAuthCredentials } from './services/dataService';
 import { SquidCompatProvider } from './lib/squid';
+
+// ── Login Gate ──────────────────────────────────────────────
+// Shows a simple login form when the server returns 401.
+// Stores credentials in sessionStorage for subsequent API calls.
+function LoginGate({ children }: { children: React.ReactNode }) {
+  const [authenticated, setAuthenticated] = useState(hasAuthCredentials());
+  const [error, setError] = useState('');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    try {
+      setAuthCredentials(username, password);
+      // Verify credentials by hitting /state
+      const resp = await fetch('/state', {
+        headers: {
+          'Authorization': 'Basic ' + btoa(`${username}:${password}`),
+          'Content-Type': 'application/json',
+        },
+      });
+      if (resp.ok) {
+        setAuthenticated(true);
+      } else {
+        sessionStorage.removeItem('squidweave_auth');
+        setError('Invalid credentials');
+      }
+    } catch (err) {
+      sessionStorage.removeItem('squidweave_auth');
+      setError('Connection error');
+    }
+  };
+
+  if (authenticated) return <>{children}</>;
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#020617', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
+      <form onSubmit={handleSubmit} style={{ background: '#0f172a', padding: '2rem', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.1)', width: '320px' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '1.25rem' }}>SquidWeave Login</h2>
+        {error && <div style={{ color: '#f87171', marginBottom: '0.75rem', textAlign: 'center', fontSize: '0.875rem' }}>{error}</div>}
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>Username</label>
+          <input type="text" value={username} onChange={e => setUsername(e.target.value)} style={{ width: '100%', padding: '0.5rem', background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.375rem', color: '#e2e8f0', boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>Password</label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} autoFocus style={{ width: '100%', padding: '0.5rem', background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.375rem', color: '#e2e8f0', boxSizing: 'border-box' }} />
+        </div>
+        <button type="submit" style={{ width: '100%', padding: '0.625rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 600 }}>Sign In</button>
+      </form>
+    </div>
+  );
+}
 
 function AppContent() {
   const { user, loading: authLoading, campaignState, updateCampaignState, sendMessage, messages } = useCollaboration();
@@ -43,14 +97,16 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('localeweave_onboarding_seen');
+    const hasSeenOnboarding =
+      localStorage.getItem('squidweave_onboarding_seen') ||
+      localStorage.getItem('localeweave_onboarding_seen');
     if (!hasSeenOnboarding) {
       setShowOnboarding(true);
     }
   }, []);
 
   const handleOnboardingComplete = () => {
-    localStorage.setItem('localeweave_onboarding_seen', 'true');
+    localStorage.setItem('squidweave_onboarding_seen', 'true');
     setShowOnboarding(false);
   };
 
@@ -73,7 +129,7 @@ function AppContent() {
   };
 
   const handleExport = (format: 'txt' | 'json' | 'pdf') => {
-    const fileName = `localeweave-campaign-export.${format}`;
+    const fileName = `squidweave-campaign-export.${format}`;
     setExportMenuOpen(false);
 
     if (format === 'pdf') {
@@ -83,7 +139,7 @@ function AppContent() {
       
       doc.setTextColor(99, 102, 241);
       doc.setFontSize(24);
-      doc.text("LOCALEWEAVE", 20, 30);
+      doc.text("SQUIDWEAVE", 20, 30);
       
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(18);
@@ -129,7 +185,7 @@ function AppContent() {
     let type = "";
 
     if (format === 'txt') {
-      content = "LocaleWeave Campaign Export\n" + 
+      content = "SquidWeave Campaign Export\n" + 
                 "==========================\n\n" + 
                 "Context: " + (activePrompt || "None") + "\n\n" +
                 "Date: " + new Date().toLocaleString();
@@ -439,7 +495,9 @@ export default function App() {
   return (
     <SquidCompatProvider>
       <CollaborationProvider>
-        <AppContent />
+        <LoginGate>
+          <AppContent />
+        </LoginGate>
       </CollaborationProvider>
     </SquidCompatProvider>
   );

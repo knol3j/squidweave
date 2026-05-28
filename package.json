@@ -1,5 +1,5 @@
 {
-  "name": "localeweave",
+  "name": "squidweave",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -34,9 +34,9 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.localeweave.desktop",
-    "productName": "LocaleWeave",
-    "artifactName": "LocaleWeave-${version}-portable.${ext}",
+    "appId": "com.squidweave.desktop",
+    "productName": "SquidWeave",
+    "artifactName": "SquidWeave-${version}-portable.${ext}",
     "asar": true,
     "files": [
       "electron/**/*",
