@@ -712,6 +712,36 @@ export class Store {
     return updated;
   }
 
+  async addDlqEntry(entry) {
+    if (!this.state.deadLetterQueue) {
+      this.state.deadLetterQueue = [];
+    }
+    this.state.deadLetterQueue.push(entry);
+    await this.persist();
+    this.emitChange("deadLetterQueue", "insert", { item: entry });
+    return entry;
+  }
+
+  listDlqEntries(filters = {}) {
+    const entries = this.state.deadLetterQueue || [];
+    const { campaignId = null, runId = null, since = null } = filters;
+    return entries.filter(entry => {
+      if (campaignId && entry.campaignId !== campaignId) return false;
+      if (runId && entry.runId !== runId) return false;
+      if (since && new Date(entry.failedAt) < new Date(since)) return false;
+      return true;
+    });
+  }
+
+  async popDlqEntry(entryId) {
+    const idx = (this.state.deadLetterQueue || []).findIndex(e => e.id === entryId);
+    if (idx === -1) return null;
+    const [entry] = this.state.deadLetterQueue.splice(idx, 1);
+    await this.persist();
+    this.emitChange("deadLetterQueue", "delete", { id: entryId });
+    return entry;
+  }
+
   // ── Collection-based entity methods (inspired by GHL Firestore model) ──
 
   /**

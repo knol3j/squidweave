@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { dataService, Metric } from '../services/dataService';
 import { useCollaboration } from './CollaborationProvider';
+import { formatShortDate } from '../lib/format';
 
 function useLiveMetrics() {
   const { campaignState } = useCollaboration();
@@ -28,7 +29,7 @@ function useLiveMetrics() {
   }, [campaignState.id]);
 
   return useMemo(() => metrics.map(metric => ({
-    name: new Date(metric.timestamp.toDate()).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+    name: formatShortDate(metric.timestamp.toDate()),
     ctr: metric.ctr,
     conv: metric.conv,
   })), [metrics]);
@@ -36,7 +37,7 @@ function useLiveMetrics() {
 
 function EmptyState() {
   return (
-    <div className="flex h-full items-center justify-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+    <div className="flex h-full items-center justify-center text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">
       No live data
     </div>
   );

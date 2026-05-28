@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import {
   Activity,
+  AlertTriangle,
   Bot,
   BrainCircuit,
   Cable,
@@ -29,6 +30,7 @@ import {
 import { useCollaboration } from './CollaborationProvider';
 import { ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, OpenClawDiagnostic, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
 import { AGENT_SYSTEM } from '../lib/agentSystem';
+import { formatPercent, formatShortDate } from '../lib/format';
 
 type BrainState = {
   campaigns?: Record<string, any>;
@@ -49,20 +51,6 @@ type BrainState = {
 };
 
 const TABS = ['Knowledge Graph', 'Research Feed', 'Memory Recall', 'Reengagement'] as const;
-
-function shortDate(value?: string | null) {
-  if (!value) {
-    return 'No live timestamp';
-  }
-  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function percent(value?: number | null) {
-  if (typeof value !== 'number') {
-    return 'N/A';
-  }
-  return `${Math.round(value * 100)}%`;
-}
 
 function buildGraphNodes(state: BrainState, campaign: any) {
   const latestPack = state.contentPacks?.at(-1);
@@ -149,6 +137,8 @@ function buildGraphNodes(state: BrainState, campaign: any) {
 export default function BrainDashboard() {
   const { campaignState } = useCollaboration();
   const [state, setState] = useState<BrainState>({});
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<typeof TABS[number]>('Knowledge Graph');
   const [recall, setRecall] = useState<MemoryRecall | null>(null);
   const [reengagement, setReengagement] = useState<{ updatedAt: string; queue: any[] } | null>(null);
@@ -207,9 +197,17 @@ export default function BrainDashboard() {
           setOutreachEvents(nextOutreach);
           setSetupRequirements(nextRequirements);
           setOpenClawDiagnostics(nextDiagnostics.diagnostics || []);
+          setLoadError(null);
         }
       } catch (error) {
         console.error(error);
+        if (active) {
+          setLoadError(error instanceof Error ? error.message : 'Failed to load brain data');
+        }
+      } finally {
+        if (active) {
+          setInitialLoading(false);
+        }
       }
     };
     run();
@@ -223,7 +221,7 @@ export default function BrainDashboard() {
   const decisionSeries = useMemo(() => {
     const decisions = state.decisions || [];
     return decisions.slice(-7).map((decision: any) => ({
-      name: shortDate(decision.createdAt),
+      name: formatShortDate(decision.createdAt),
       activity: decision.summary?.eventCount || 0,
       variants: state.contentPacks?.filter((pack: any) => pack.decisionId === decision.id).length || 0,
     }));
@@ -252,7 +250,7 @@ export default function BrainDashboard() {
       {
         label: 'Reengagement',
         value: `${reengagement?.queue?.length || 0} queued`,
-        detail: reengagement?.updatedAt ? `Updated ${shortDate(reengagement.updatedAt)}` : 'No queue built',
+        detail: reengagement?.updatedAt ? `Updated ${formatShortDate(reengagement.updatedAt)}` : 'No queue built',
         icon: Target,
       },
     ];
@@ -265,6 +263,49 @@ export default function BrainDashboard() {
   const targetProfiles = recall?.semanticMemories?.targetProfiles || [];
   const episodicEvents = recall?.episodicMemories?.outreachEvents || [];
   const rankedTargets = targetDecision?.topTargets || [];
+
+  if (initialLoading) {
+    return (
+      <div className="h-full overflow-y-auto bg-[#08111f] px-6 py-5 text-slate-100 custom-scrollbar">
+        <div className="mx-auto max-w-7xl space-y-5">
+          <div className="animate-pulse space-y-3 p-6 glass-card">
+            <div className="h-4 bg-white/10 rounded w-1/3" />
+            <div className="h-4 bg-white/10 rounded w-2/3" />
+            <div className="h-4 bg-white/10 rounded w-1/2" />
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="animate-pulse rounded-xl border border-white/10 bg-white/[0.04] px-5 py-4 space-y-2">
+                <div className="h-3 bg-white/10 rounded w-1/2" />
+                <div className="h-5 bg-white/10 rounded w-2/3" />
+              </div>
+            ))}
+          </div>
+          <div className="animate-pulse rounded-[28px] border border-white/10 bg-white/[0.04] p-6 space-y-3" style={{ minHeight: 470 }}>
+            <div className="h-4 bg-white/10 rounded w-1/4" />
+            <div className="h-32 bg-white/10 rounded w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[#08111f]">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
+          <p className="text-red-400 text-sm font-medium">Failed to load brain data</p>
+          <p className="text-slate-500 text-xs">{loadError}</p>
+          <button onClick={() => window.location.reload()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const hasBrainData = (state.decisions?.length || 0) > 0 || (state.memory?.playbooks?.length || 0) > 0 || researchRecords.length > 0 || (state.contentPacks?.length || 0) > 0;
 
   const saveConnector = async (connector: string) => {
     const draft = connectorDrafts[connector];
@@ -306,7 +347,7 @@ export default function BrainDashboard() {
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Brain</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Brain</div>
             <h2 className="mt-1 text-3xl font-semibold tracking-tight text-white">Agent Platform</h2>
             <p className="mt-1 text-sm text-slate-400">
               {campaignState.markets?.join(' • ') || campaignState.locales?.join(' • ') || 'No markets configured'} · {campaignState.channel || 'No channel configured'} · persistent memory recall with live reengagement timing
@@ -314,7 +355,7 @@ export default function BrainDashboard() {
           </div>
           <button
             onClick={() => dataService.runAutomation(campaignState.id || 'main-campaign', 'brain-dashboard')}
-            className="inline-flex items-center gap-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm hover:bg-indigo-500/15"
+            className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm hover:bg-indigo-500/15"
           >
             <Play className="h-4 w-4" />
             Trigger Brain
@@ -323,7 +364,7 @@ export default function BrainDashboard() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {cards.map(card => (
-            <div key={card.label} className="rounded-3xl border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
+            <div key={card.label} className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
               <div className="flex items-center gap-2 text-indigo-400">
                 <div className="rounded-full bg-indigo-500/10 p-1.5">
                   <card.icon className="h-4 w-4" />
@@ -335,6 +376,23 @@ export default function BrainDashboard() {
             </div>
           ))}
         </div>
+
+        {!hasBrainData && (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] py-20 px-6 text-center">
+            <Inbox className="h-12 w-12 text-slate-500 mb-4" />
+            <h3 className="text-lg font-semibold text-white">No brain activity yet</h3>
+            <p className="mt-2 max-w-sm text-sm text-slate-400">
+              Run the brain or trigger an automation cycle to populate the knowledge graph, memory recall, and decision history.
+            </p>
+            <button
+              onClick={() => dataService.runAutomation(campaignState.id || 'main-campaign', 'brain-dashboard')}
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm transition hover:bg-indigo-500/15"
+            >
+              <Play className="h-4 w-4" />
+              Trigger Brain
+            </button>
+          </div>
+        )}
 
         <div className="rounded-[28px] border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
           <div className="mb-3 flex items-center justify-between">
@@ -382,7 +440,7 @@ export default function BrainDashboard() {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`border-b-2 pb-3 transition-colors ${
-                    activeTab === tab ? 'border-violet-500 text-violet-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                    activeTab === tab ? 'border-violet-500 text-violet-400' : 'border-transparent text-slate-400 hover:text-slate-300'
                   }`}
                 >
                   {tab}
@@ -392,15 +450,15 @@ export default function BrainDashboard() {
           </div>
 
           <div className="grid gap-0 xl:grid-cols-[1.8fr_0.9fr]">
-            <div className="min-h-[470px] border-r border-slate-100 p-5">
+            <div className="min-h-[470px] border-r border-white/10 p-5">
               {activeTab === 'Knowledge Graph' && (
-                <div className="relative h-full min-h-[430px] overflow-hidden rounded-[24px] bg-[#fcfbfe]">
+                <div className="relative h-full min-h-[430px] overflow-hidden rounded-[24px] bg-[#0b1526]">
                   <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
                     {edges.map(([from, to], index) => {
                       const a = nodes.find(node => node.id === from);
                       const b = nodes.find(node => node.id === to);
                       if (!a || !b) return null;
-                      return <line key={`${from}-${to}-${index}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#ddd6fe" strokeWidth="0.35" />;
+                      return <line key={`${from}-${to}-${index}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#6366f1" strokeWidth="0.35" />;
                     })}
                   </svg>
                   {nodes.map(node => (
@@ -412,7 +470,7 @@ export default function BrainDashboard() {
                       style={{ left: `${node.x}%`, top: `${node.y}%` }}
                     >
                       <div className={`rounded-full ${node.tone} shadow-[0_0_0_12px_rgba(167,139,250,0.06)]`} style={{ width: node.size * 2, height: node.size * 2 }} />
-                      <div className="mt-2 whitespace-nowrap text-center text-[11px] font-medium text-slate-600">{node.label}</div>
+                      <div className="mt-2 whitespace-nowrap text-center text-[11px] font-medium text-slate-300">{node.label}</div>
                     </motion.div>
                   ))}
                 </div>
@@ -421,20 +479,20 @@ export default function BrainDashboard() {
               {activeTab === 'Memory Recall' && (
                 <div className="space-y-3">
                   {playbooks.length === 0 ? (
-                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-slate-50 text-sm text-slate-400">
+                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-white/[0.04] text-sm text-slate-400">
                       No procedural memory has been promoted yet.
                     </div>
                   ) : (
                     playbooks.map(playbook => (
-                      <div key={playbook.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                      <div key={playbook.id} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4">
                         <div className="flex items-center justify-between">
-                          <div className="text-sm font-medium text-slate-800">{playbook.segment} · {playbook.region}</div>
-                          <div className="text-xs font-semibold text-violet-600">{percent(playbook.confidence)}</div>
+                          <div className="text-sm font-medium text-white">{playbook.segment} · {playbook.region}</div>
+                          <div className="text-xs font-semibold text-violet-400">{formatPercent(playbook.confidence)}</div>
                         </div>
-                        <div className="mt-2 text-xs text-slate-500">
-                          {playbook.recommendedChannel} every {playbook.cadenceDays} days · win rate {percent(playbook.winRate)} · risk {percent(playbook.riskRate)}
+                        <div className="mt-2 text-xs text-slate-400">
+                          {playbook.recommendedChannel} every {playbook.cadenceDays} days · win rate {formatPercent(playbook.winRate)} · risk {formatPercent(playbook.riskRate)}
                         </div>
-                        <div className="mt-2 text-sm text-slate-600">{playbook.rationale}</div>
+                        <div className="mt-2 text-sm text-slate-400">{playbook.rationale}</div>
                       </div>
                     ))
                   )}
@@ -444,7 +502,7 @@ export default function BrainDashboard() {
               {activeTab === 'Research Feed' && (
                 <div className="space-y-3">
                   {researchRecords.length === 0 ? (
-                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-slate-50 text-sm text-slate-400">
+                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-white/[0.04] text-sm text-slate-400">
                       No sourced research records have been ingested yet.
                     </div>
                   ) : (
@@ -452,11 +510,11 @@ export default function BrainDashboard() {
                       .slice()
                       .sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
                       .map(record => (
-                        <div key={record.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                        <div key={record.id} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4">
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <div className="text-sm font-medium text-slate-800">{record.company || record.targetId}</div>
-                              <div className="mt-1 text-xs text-slate-500">
+                              <div className="text-sm font-medium text-white">{record.company || record.targetId}</div>
+                              <div className="mt-1 text-xs text-slate-400">
                                 {record.segment || 'No segment'} · {record.region || 'No region'} · {record.preferredChannel || 'No preferred channel'}
                               </div>
                             </div>
@@ -465,18 +523,18 @@ export default function BrainDashboard() {
                                 href={record.metadata.sourceUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-700"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-violet-400 hover:text-violet-300"
                               >
                                 Source
                                 <ExternalLink className="h-3 w-3" />
                               </a>
                             )}
                           </div>
-                          <div className="mt-3 text-sm text-slate-600">{record.notes || 'No analyst note recorded.'}</div>
+                          <div className="mt-3 text-sm text-slate-400">{record.notes || 'No analyst note recorded.'}</div>
                           <div className="mt-3 grid gap-2 md:grid-cols-3">
-                            <div className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-500">Fit {percent(record.fitScore)}</div>
-                            <div className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-500">Intent {percent(record.intentScore)}</div>
-                            <div className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-500">Recency {percent(record.recencyScore)}</div>
+                            <div className="rounded-xl bg-white/[0.06] px-3 py-2 text-xs text-slate-400">Fit {formatPercent(record.fitScore)}</div>
+                            <div className="rounded-xl bg-white/[0.06] px-3 py-2 text-xs text-slate-400">Intent {formatPercent(record.intentScore)}</div>
+                            <div className="rounded-xl bg-white/[0.06] px-3 py-2 text-xs text-slate-400">Recency {formatPercent(record.recencyScore)}</div>
                           </div>
                           {!!record.metadata?.evidence?.length && (
                             <div className="mt-3 space-y-1">
@@ -496,20 +554,20 @@ export default function BrainDashboard() {
               {activeTab === 'Reengagement' && (
                 <div className="space-y-3">
                   {(reengagement?.queue || []).length === 0 ? (
-                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-slate-50 text-sm text-slate-400">
+                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-white/[0.04] text-sm text-slate-400">
                       No reengagement queue is ready yet.
                     </div>
                   ) : (
                     reengagement?.queue.map((target: any) => (
-                      <div key={target.targetId} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                      <div key={target.targetId} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4">
                         <div className="flex items-center justify-between">
-                          <div className="text-sm font-medium text-slate-800">{target.company || target.targetId}</div>
-                          <div className="text-xs text-slate-500">{target.recommendedChannel || 'No channel'}</div>
+                          <div className="text-sm font-medium text-white">{target.company || target.targetId}</div>
+                          <div className="text-xs text-slate-400">{target.recommendedChannel || 'No channel'}</div>
                         </div>
-                        <div className="mt-2 text-xs text-slate-500">
-                          next touch {shortDate(target.nextEligibleAt)} · score {percent(target.score)}
+                        <div className="mt-2 text-xs text-slate-400">
+                          next touch {formatShortDate(target.nextEligibleAt)} · score {formatPercent(target.score)}
                         </div>
-                        <div className="mt-2 text-sm text-slate-600">{(target.reasons || []).join(' · ') || 'No memory-backed reason recorded.'}</div>
+                        <div className="mt-2 text-sm text-slate-400">{(target.reasons || []).join(' · ') || 'No memory-backed reason recorded.'}</div>
                       </div>
                     ))
                   )}
@@ -518,33 +576,33 @@ export default function BrainDashboard() {
             </div>
 
             <div className="space-y-4 p-5">
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                   <BrainCircuit className="h-4 w-4 text-violet-500" />
                   Brain Summary
                 </div>
-                <div className="mt-4 space-y-3 text-sm text-slate-600">
+                <div className="mt-4 space-y-3 text-sm text-slate-400">
                   <div>
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Latest Action</div>
-                    <div className="mt-1 font-medium text-slate-800">{latestDecision?.plan?.recommendedAction?.type || 'No live action'}</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Latest Action</div>
+                    <div className="mt-1 font-medium text-white">{latestDecision?.plan?.recommendedAction?.type || 'No live action'}</div>
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Memory Status</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Memory Status</div>
                     <div className="mt-1">{state.memory?.memoryConsolidations?.length ? `Consolidated ${state.memory.memoryConsolidations.length} times` : 'No consolidation history yet'}</div>
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Where Data Lives</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Where Data Lives</div>
                     <div className="mt-1">{campaignState.channel || 'No channel configured'} · {analyticsEvents.length} analytics · {outreachEvents.length} outreach</div>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                   <MemoryStick className="h-4 w-4 text-violet-500" />
                   Memory Recall
                 </div>
-                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                <div className="mt-4 space-y-2 text-sm text-slate-400">
                   <div className="flex justify-between">
                     <span>Playbooks</span>
                     <span>{playbooks.length}</span>
@@ -560,12 +618,12 @@ export default function BrainDashboard() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                   <Inbox className="h-4 w-4 text-violet-500" />
                   Signal Intake
                 </div>
-                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                <div className="mt-4 space-y-2 text-sm text-slate-400">
                   <div className="flex justify-between">
                     <span>Research Records</span>
                     <span>{researchRecords.length}</span>
@@ -581,29 +639,29 @@ export default function BrainDashboard() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                   <Cable className="h-4 w-4 text-violet-500" />
                   Connector Rails
                 </div>
                 <div className="mt-4 space-y-2">
                   {connectorStatuses.map(status => (
-                    <div key={status.connector} className="rounded-2xl bg-white px-3 py-2">
+                    <div key={status.connector} className="rounded-xl bg-white/[0.06] px-3 py-2">
                       <div className="flex items-center justify-between">
-                        <div className="text-xs font-semibold text-slate-700">{status.connector}</div>
-                        <div className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                        <div className="text-xs font-semibold text-slate-200">{status.connector}</div>
+                        <div className={`text-[11px] font-semibold uppercase tracking-[0.15em] ${
                           status.mode === 'live' || status.mode === 'ready'
-                            ? 'text-emerald-600'
+                            ? 'text-emerald-400'
                             : status.mode === 'dry-run'
-                              ? 'text-amber-600'
+                              ? 'text-amber-400'
                               : status.mode === 'auth-error'
-                                ? 'text-rose-600'
+                                ? 'text-rose-400'
                                 : 'text-slate-400'
                         }`}>
                           {status.mode}
                         </div>
                       </div>
-                      <div className="mt-1 text-xs text-slate-500">
+                      <div className="mt-1 text-xs text-slate-400">
                         {status.configured ? status.baseUrl || 'Configured' : 'Missing base URL or token'}
                       </div>
                       {status.tokenLikelyRotated && (
@@ -611,11 +669,11 @@ export default function BrainDashboard() {
                       )}
                       {status.error && <div className="mt-1 text-[11px] text-rose-500">{status.error}</div>}
                       {status.diagnosis?.recommendations?.length ? (
-                        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-700">
+                        <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-300">
                           {status.diagnosis.recommendations[0]}
                         </div>
                       ) : null}
-                      <div className="mt-3 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/[0.04] p-3">
                         <input
                           value={connectorDrafts[status.connector]?.baseUrl || ''}
                           onChange={event => setConnectorDrafts(current => ({
@@ -626,7 +684,7 @@ export default function BrainDashboard() {
                             },
                           }))}
                           placeholder={`${status.connector} base URL`}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-violet-300"
+                          className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-3 py-2 text-xs text-slate-200 outline-none focus:border-violet-400"
                         />
                         <input
                           type="password"
@@ -639,12 +697,12 @@ export default function BrainDashboard() {
                             },
                           }))}
                           placeholder={`New ${status.connector} token`}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-violet-300"
+                          className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-3 py-2 text-xs text-slate-200 outline-none focus:border-violet-400"
                         />
                         <button
                           onClick={() => saveConnector(status.connector)}
                           disabled={connectorSaving === status.connector}
-                          className="w-full rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="w-full rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-200 transition hover:bg-violet-500/15 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {connectorSaving === status.connector ? 'Saving...' : `Update ${status.connector}`}
                         </button>
@@ -655,7 +713,7 @@ export default function BrainDashboard() {
                     <div className="text-xs text-slate-400">No connector rails discovered.</div>
                   )}
                   {openClawDiagnostics.some(item => !item.ready) && (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs text-amber-800">
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-xs text-amber-300">
                       {openClawDiagnostics.filter(item => !item.ready).map(item => (
                         <div key={`diagnostic-${item.connector}`} className="mb-2 last:mb-0">
                           <div className="font-semibold">{item.connector}: {item.summary}</div>
@@ -670,41 +728,41 @@ export default function BrainDashboard() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                   <ClipboardList className="h-4 w-4 text-violet-500" />
                   Setup Requirements
                 </div>
                 <div className="mt-4 space-y-3">
                   <div>
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Live Connector Env</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Live Connector Env</div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {(setupRequirements?.environment.requiredForLiveConnectors || []).map(item => (
-                        <span key={item} className="rounded-full bg-white px-2.5 py-1 text-[11px] text-slate-600">{item}</span>
+                        <span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-400">{item}</span>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Accepted Outreach Events</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Accepted Outreach Events</div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {(setupRequirements?.outreachEventTypes || []).map(item => (
-                        <span key={item} className="rounded-full bg-white px-2.5 py-1 text-[11px] text-slate-600">{item}</span>
+                        <span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-400">{item}</span>
                       ))}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                   <Target className="h-4 w-4 text-violet-500" />
                   Top Targets
                 </div>
                 <div className="mt-4 space-y-2">
                   {rankedTargets.slice(0, 3).map((profile: any) => (
-                    <div key={profile.id} className="rounded-2xl bg-white px-3 py-2">
-                      <div className="text-xs font-semibold text-slate-700">{profile.company || profile.targetId}</div>
-                      <div className="mt-1 text-xs text-slate-500">
+                    <div key={profile.id} className="rounded-xl bg-white/[0.06] px-3 py-2">
+                      <div className="text-xs font-semibold text-slate-200">{profile.company || profile.targetId}</div>
+                      <div className="mt-1 text-xs text-slate-400">
                         {profile.segment || 'No segment'} · {profile.recommendedChannel || 'No channel'} · {profile.recommendation || 'no recommendation'}
                       </div>
                     </div>
@@ -715,15 +773,15 @@ export default function BrainDashboard() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                   <Bot className="h-4 w-4 text-violet-500" />
                   Scheduler
                 </div>
-                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                <div className="mt-4 space-y-2 text-sm text-slate-400">
                   <div className="flex justify-between">
                     <span>Status</span>
-                    <span className={state.scheduler?.running ? 'text-emerald-600' : 'text-slate-500'}>
+                    <span className={state.scheduler?.running ? 'text-emerald-400' : 'text-slate-500'}>
                       {state.scheduler?.running ? 'Running' : 'Stopped'}
                     </span>
                   </div>
@@ -733,21 +791,21 @@ export default function BrainDashboard() {
                   </div>
                   <div className="flex justify-between">
                     <span>Last Tick</span>
-                    <span>{shortDate(state.scheduler?.lastTickAt || undefined)}</span>
+                    <span>{formatShortDate(state.scheduler?.lastTickAt || undefined)}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                   <Sparkles className="h-4 w-4 text-violet-500" />
                   Agent Studio Output
                 </div>
                 <div className="mt-4 space-y-2">
                   {(latestPack?.variants || []).slice(0, 3).map((variant: any) => (
-                    <div key={variant.locale} className="rounded-2xl bg-white px-3 py-2">
-                      <div className="text-xs font-semibold text-slate-700">{variant.locale}</div>
-                      <div className="mt-1 text-xs text-slate-500">{variant.cta}</div>
+                    <div key={variant.locale} className="rounded-xl bg-white/[0.06] px-3 py-2">
+                      <div className="text-xs font-semibold text-slate-200">{variant.locale}</div>
+                      <div className="mt-1 text-xs text-slate-400">{variant.cta}</div>
                     </div>
                   ))}
                   {!(latestPack?.variants || []).length && (

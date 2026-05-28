@@ -13,6 +13,7 @@ import { CTRChart, ConversionChart } from './components/PerformanceChart';
 import Onboarding from './components/Onboarding';
 import ABTestingPanel from './components/ABTestingPanel';
 import CampaignPreview from './components/CampaignPreview';
+import { formatShortDateTime } from './lib/format';
 import AudienceInsight from './components/AudienceInsight';
 import Performance from './components/Performance';
 import { CollaborationProvider, useCollaboration } from './components/CollaborationProvider';
@@ -84,6 +85,7 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [runningBrain, setRunningBrain] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -150,7 +152,7 @@ function AppContent() {
       
       doc.setFontSize(10);
       doc.setTextColor(148, 163, 184);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 65);
+      doc.text(`Generated: ${formatShortDateTime(new Date())}`, 20, 65);
       doc.text(`User: ${user?.displayName || 'Anonymous'}`, 20, 72);
       
       doc.setFontSize(14);
@@ -188,7 +190,7 @@ function AppContent() {
       content = "SquidWeave Campaign Export\n" + 
                 "==========================\n\n" + 
                 "Context: " + (activePrompt || "None") + "\n\n" +
-                "Date: " + new Date().toLocaleString();
+                "Date: " + formatShortDateTime(new Date());
       type = 'text/plain';
     } else if (format === 'json') {
       content = JSON.stringify({
@@ -317,9 +319,16 @@ function AppContent() {
                 </AnimatePresence>
               </div>
 
-              <button className="group relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/5 hover:text-slate-100">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2000);
+                }}
+                className="group relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-white/5 hover:text-slate-100"
+              >
                 <Share2 className="w-4 h-4" />
-                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-black px-2 py-1 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">Share Link</span>
+                <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-black px-2 py-1 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">{linkCopied ? 'Copied!' : 'Share Link'}</span>
               </button>
               <div className="mx-2 h-6 w-px bg-white/10"></div>
               <button
@@ -458,7 +467,7 @@ function AppContent() {
               <div className="mt-6 space-y-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-4">
                 <div className="flex items-center gap-2">
                   <Bot className="h-3.5 w-3.5 text-indigo-300" />
-                  <span className="font-bold uppercase tracking-tight text-indigo-200">Brain Insight</span>
+                  <span className="font-bold uppercase tracking-tight text-indigo-200">Agent Insight</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-slate-300">
                   This rail only reflects persisted backend state. If a source is not connected, the UI should show no live data instead of synthetic estimates.

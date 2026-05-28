@@ -5,6 +5,21 @@ function unique(values = []) {
   return [...new Set(values.map(value => String(value || "").trim()).filter(Boolean))];
 }
 
+function computeSignalConfidence(record) {
+  const signals = [
+    record.enrichmentConfidence != null,   // 1 point: enriched email
+    Boolean(record.email),                // 1 point: has direct email
+    Boolean(record.partnerName),          // 1 point: has partner name
+    Boolean(record.website || record.domain), // 1 point: has domain
+    Boolean(record.warmIntroPath),        // 2 points: warm intro
+    record.thesisMatch >= 0.7,            // 1 point: strong thesis match
+    record.stageMatch >= 0.7,             // 1 point: strong stage match
+    record.checkSizeMatch >= 0.7,         // 1 point: strong size match
+  ];
+  const raw = signals.reduce((sum, s) => sum + (s ? (typeof s === "number" ? s : 1) : 0), 0);
+  return Math.min(1, raw / 8);           // normalize to 0-1, max 8 points
+}
+
 function scoreInvestor(record, campaign) {
   const checks = [
     { key: "thesisMatch", value: Number(record.thesisMatch || 0), weight: 0.35 },
@@ -13,9 +28,21 @@ function scoreInvestor(record, campaign) {
     { key: "warmPath", value: Number(record.warmPath || 0), weight: 0.2 },
   ];
   const total = checks.reduce((sum, item) => sum + (Number.isFinite(item.value) ? item.value * item.weight : 0), 0);
-  const clamped = Math.max(0, Math.min(1, total));
+  const rawScore = Math.max(0, Math.min(1, total));
+
+  const signalConfidence = computeSignalConfidence(record);
+  const calibrationStrength = 0.6;
+  const calibratedScore = rawScore * calibrationStrength + signalConfidence * (1 - calibrationStrength) * rawScore + (1 - signalConfidence) * 0.5 * (1 - calibrationStrength);
+
+  const confidenceBand =
+    signalConfidence >= 0.75 ? "high" :
+    signalConfidence >= 0.45 ? "medium" : "low";
+
   return {
-    score: Number(clamped.toFixed(4)),
+    score: Number(calibratedScore.toFixed(4)),
+    rawScore: Number(rawScore.toFixed(4)),
+    signalConfidence: Number(signalConfidence.toFixed(4)),
+    confidenceBand,
     reasons: checks
       .filter(item => Number.isFinite(item.value) && item.value >= 0.7)
       .map(item => `${item.key}:${Math.round(item.value * 100)}%`),

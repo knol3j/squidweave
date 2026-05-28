@@ -49,9 +49,9 @@
 }
 
 .glass-panel {
-  @apply rounded-[28px] border border-white/10 bg-[#08111f]/88 shadow-[0_16px_60px_rgba(2,6,23,0.45)] backdrop-blur-xl;
+  @apply rounded-2xl border border-white/10 bg-[#08111f]/88 shadow-[0_16px_60px_rgba(2,6,23,0.45)] backdrop-blur-xl;
 }
 
 .glass-card {
-  @apply rounded-[24px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_14px_40px_rgba(2,6,23,0.3)] transition-all hover:bg-white/[0.06];
+  @apply rounded-xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_14px_40px_rgba(2,6,23,0.3)] transition-all hover:bg-white/[0.06];
 }

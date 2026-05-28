@@ -1101,6 +1101,96 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       return;
     }
 
+    // ── Funding run detail ───────────────────────────────────────
+    if (request.method === "GET" && parts[0] === "funding" && parts[1] === "runs" && parts[2]) {
+      const runId = parts[2];
+      const allRuns = store.listFundingRuns();
+      const run = allRuns.find(r => r.id === runId);
+      if (!run) {
+        sendJson(request, response, 404, { error: "Funding run not found." });
+        return;
+      }
+      sendJson(request, response, 200, run);
+      return;
+    }
+
+    // ── Dead Letter Queue: list ───────────────────────────────────
+    if (request.method === "GET" && url.pathname === "/dlq") {
+      const campaignId = url.searchParams.get("campaignId");
+      const runId = url.searchParams.get("runId");
+      const since = url.searchParams.get("since");
+      const limit = Number.isFinite(Number(url.searchParams.get("limit")))
+        ? Number(url.searchParams.get("limit")) : 50;
+      const entries = store.listDlqEntries({ campaignId, runId, since });
+      sendJson(request, response, 200, {
+        count: entries.length,
+        entries: entries.slice(0, limit),
+      });
+      return;
+    }
+
+    // ── Dead Letter Queue: pop (retry) ──────────────────────────────
+    if (request.method === "DELETE" && parts[0] === "dlq" && parts[1] && parts[2] === "retry") {
+      const entryId = parts[2];
+      const entry = await store.popDlqEntry(entryId);
+      if (!entry) {
+        sendJson(request, response, 404, { error: "DLQ entry not found." });
+        return;
+      }
+      sendJson(request, response, 200, {
+        retried: true,
+        entry,
+        note: "Re-submit via POST /funding/run with campaignId to retry the failed step.",
+      });
+      return;
+    }
+
+    // ── Safety: cancel / abort an execution receipt ─────────────────
+    if (request.method === "DELETE" && parts[0] === "safety" && parts[1] === "executions" && parts[2]) {
+      const receiptId = parts[2];
+      const allReceipts = store.listExecutionReceipts();
+      const receipt = allReceipts.find(r => r.id === receiptId);
+      if (!receipt) {
+        sendJson(request, response, 404, { error: "Execution receipt not found." });
+        return;
+      }
+      if (receipt.status === "completed") {
+        sendJson(request, response, 409, { error: "Cannot cancel a completed execution." });
+        return;
+      }
+      await store.updateExecutionReceipt(receiptId, {
+        status: "cancelled",
+        endedAt: new Date().toISOString(),
+        outcome: "cancelled_by_user",
+      });
+      sendJson(request, response, 200, { cancelled: true, receiptId });
+      return;
+    }
+
+    // ── Dedupe: check idempotency key ─────────────────────────────
+    if (request.method === "GET" && url.pathname === "/dedupe/check") {
+      const idempotencyKey = url.searchParams.get("key");
+      if (!idempotencyKey) {
+        sendJson(request, response, 400, { error: "key query parameter is required." });
+        return;
+      }
+      const receipts = store.listExecutionReceipts({ idempotencyKey });
+      if (receipts.length === 0) {
+        sendJson(request, response, 200, { exists: false, key: idempotencyKey });
+        return;
+      }
+      const latest = receipts[receipts.length - 1];
+      sendJson(request, response, 200, {
+        exists: true,
+        key: idempotencyKey,
+        receiptId: latest.id,
+        status: latest.status,
+        createdAt: latest.createdAt,
+        outcome: latest.outcome || null,
+      });
+      return;
+    }
+
     if (request.method === "GET" && url.pathname === "/safety/executions") {
       const campaignId = url.searchParams.get("campaignId");
       const executionType = url.searchParams.get("executionType");
