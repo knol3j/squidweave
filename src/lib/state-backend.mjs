@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -47,7 +47,12 @@ class FileStateBackend {
   }
 
   async save(state) {
-    await writeFile(this.fileUrl, JSON.stringify(state, null, 2));
+    // Atomic write: write to temp file then rename to avoid truncation on crash
+    const filePath = fileURLToPath(this.fileUrl);
+    const tmpPath = filePath + ".tmp";
+    const data = JSON.stringify(state, null, 2);
+    await writeFile(tmpPath, data);
+    await rename(tmpPath, filePath);
   }
 
   async flush(state) {

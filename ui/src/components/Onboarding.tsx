@@ -8,8 +8,8 @@ interface OnboardingProps {
 
 const steps = [
   {
-    title: "Welcome to LocaleWeave",
-    description: "Your local-first agent platform for localized campaign strategy, automation, and privacy-first execution.",
+    title: "Welcome to SquidWeave",
+    description: "Your agent platform for campaign strategy, automation, and privacy-first execution.",
     icon: Zap,
     color: "text-indigo-400",
   },

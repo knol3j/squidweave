@@ -93,7 +93,7 @@ export async function googleAdsAdapter({ campaignId, channel, creativeSummary, b
   }
 
   const result = await createCampaign({
-    name: `LocaleWeave-${campaignId}`,
+    name: `SquidWeave-${campaignId}`,
     budgetMicros: Math.round((budgetAmount || 10) * 1000000), // $ → micros
     status: 'PAUSED', // Start paused for safety
   });

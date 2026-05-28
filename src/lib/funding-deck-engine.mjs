@@ -45,7 +45,7 @@ function buildEmailBody(deck, investor, campaign) {
     `<p><strong>Target Market:</strong> ${escapeHtml(campaign?.audience || '')}</p>`,
     `<hr/>`,
     `<p style="color: #666;">I'd welcome the opportunity to share the full deck and discuss how we're approaching this market.</p>`,
-    `<p style="color: #666;">Warmly,<br/>${escapeHtml(process.env.SMTP_FROM_NAME || 'LocaleWeave Team')}</p>`,
+    `<p style="color: #666;">Warmly,<br/>${escapeHtml(process.env.SMTP_FROM_NAME || 'SquidWeave Team')}</p>`,
     `</body></html>`,
   ].join('\n');
 
@@ -65,7 +65,7 @@ function buildEmailBody(deck, investor, campaign) {
     `I'd welcome the opportunity to share the full deck and discuss how we're approaching this market.`,
     ``,
     `Warmly,`,
-    `${process.env.SMTP_FROM_NAME || 'LocaleWeave Team'}`,
+    `${process.env.SMTP_FROM_NAME || 'SquidWeave Team'}`,
   ].join('\n');
 
   return { html, text };
@@ -163,7 +163,7 @@ export class FundingDeckEngine {
     }
 
     // Real email delivery with sendEmailFn
-    const subject = `Investment Opportunity: ${campaign?.name || campaign?.clientName || 'LocaleWeave Proposal'}`;
+    const subject = `Investment Opportunity: ${campaign?.name || campaign?.clientName || 'SquidWeave Proposal'}`;
 
     for (const investor of shortlisted) {
       try {

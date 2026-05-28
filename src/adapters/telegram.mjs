@@ -88,7 +88,7 @@ function buildMessage(variant, campaignId) {
   if (variant?.title) lines.push(`<b>${escapeHtml(variant.title)}</b>`);
   if (variant?.body) lines.push(escapeHtml(variant.body));
   if (variant?.cta) lines.push(`\n👉 <a href="${escapeHtml(variant.ctaUrl || '#')}">${escapeHtml(variant.cta)}</a>`);
-  lines.push(`\n<code>#${campaignId || 'localeweave'}</code>`);
+  lines.push(`\n<code>#${campaignId || 'squidweave'}</code>`);
   return lines.join('\n\n');
 }
 

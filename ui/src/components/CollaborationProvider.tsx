@@ -29,7 +29,8 @@ interface CollaborationContextType {
 
 const CollaborationContext = createContext<CollaborationContextType | undefined>(undefined);
 const CAMPAIGN_ID = 'main-campaign';
-const STORAGE_KEY = 'localeweave-local-messages';
+const STORAGE_KEY = 'squidweave-local-messages';
+const LEGACY_STORAGE_KEY = 'localeweave-local-messages';
 
 export const useCollaboration = () => {
   const context = useContext(CollaborationContext);
@@ -41,7 +42,7 @@ export const useCollaboration = () => {
 
 function readStoredMessages(): ChatMessage[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -50,8 +51,8 @@ function readStoredMessages(): ChatMessage[] {
 
 export function CollaborationProvider({ children }: { children: React.ReactNode }) {
   const [user] = useState<LocalUser | null>({
-    uid: 'local-operator',
-    displayName: 'Local Operator',
+    uid: 'squidweave-operator',
+    displayName: 'SquidWeave Operator',
     photoURL: null,
   });
   const [loading, setLoading] = useState(true);

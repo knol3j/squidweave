@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-const DEFAULT_API_BASE = import.meta.env.VITE_BRAIN_API_BASE || 'http://127.0.0.1:4010';
+// Same logic as dataService.ts — relative paths in production, explicit host in dev
+const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const DEFAULT_API_BASE = import.meta.env.VITE_BRAIN_API_BASE || (isDev ? 'http://127.0.0.1:4010' : '');
 
 type Observer<T> = {
   next?: (value: T) => void;
@@ -157,10 +159,25 @@ function createSseObservable<T>(url: string, transform: (payload: any) => T, fal
   };
 }
 
+// Same auth key as dataService.ts — shared sessionStorage
+const AUTH_KEY = 'squidweave_auth';
+
+function getAuthHeaders(): Record<string, string> {
+  const stored = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(AUTH_KEY) : null;
+  if (stored) {
+    return { Authorization: `Basic ${stored}` };
+  }
+  return {};
+}
+
 async function fetchJson<T>(apiBase: string, path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {
-    headers: { 'content-type': 'application/json' },
     ...init,
+    headers: {
+      'content-type': 'application/json',
+      ...getAuthHeaders(),
+      ...(init?.headers || {}),
+    },
   });
 
   if (!response.ok) {

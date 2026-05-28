@@ -1218,10 +1218,10 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
             deckUrl = deckResult?.url || null;
 
             if (investor.email && adapters.sendEmail) {
-              const subject = `Investment Opportunity: ${store.getCampaign(body.campaignId)?.name || 'LocaleWeave Proposal'}`;
+              const subject = `Investment Opportunity: ${store.getCampaign(body.campaignId)?.name || 'SquidWeave Proposal'}`;
               const deck = deckResult?.deck;
               const emailBody = deck?.htmlBody || "";
-              const textBody = `Dear ${investor.partnerName || investor.fundName},\n\nI'm reaching out regarding a company that aligns with ${investor.fundName}'s investment thesis.\n\nView the full deck here: ${config.dryRun ? "(dry-run) " : ""}${deckUrl || "(no url)"}\n\nWarmly,\n${process.env.SMTP_FROM_NAME || "LocaleWeave Team"}`;
+              const textBody = `Dear ${investor.partnerName || investor.fundName},\n\nI'm reaching out regarding a company that aligns with ${investor.fundName}'s investment thesis.\n\nView the full deck here: ${config.dryRun ? "(dry-run) " : ""}${deckUrl || "(no url)"}\n\nWarmly,\n${process.env.SMTP_FROM_NAME || "SquidWeave Team"}`;
               sendResult = await adapters.sendEmail({
                 to: investor.email,
                 subject,
@@ -2551,7 +2551,7 @@ export async function startServer({ port = config.port, host = process.env.HOST 
     server.once("error", reject);
     server.listen(port, host, resolve);
   });
-  console.log(`LocaleWeave listening on http://${host}:${port}`);
+  console.log(`SquidWeave listening on http://${host}:${port}`);
   scheduler.start();
   return server;
 }
