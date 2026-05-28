@@ -66,9 +66,9 @@ Consolidated from multiple Hermes sessions (May 25-27, 2026).
 - Commit: `65199cc` — Dockerfile + CI/CD workflow.
 
 ### Credentials Provided
-- Railway deploy token: `REDACTED_RAILWAY_TOKEN` (added as GitHub secret `RAILWAY_TOKEN`).
-- SMTP (Gmail): `knol3j@gmail.com` + app password `REDACTED_SMTP_PASS` — verified working, email sent from `admin@sofish.io`.
-- Cloudflare API token from cert.pem: `REDACTED_CF_TOKEN`.
+- Railway deploy token: `[REDACTED]` (added as GitHub secret `RAILWAY_TOKEN`).
+- SMTP (Gmail): `[REDACTED]` + app password `[REDACTED]` — verified working, email sent from `admin@sofish.io`.
+- Cloudflare API token from cert.pem: `[REDACTED]`.
 - Porkbun API keys for DNS management.
 
 ---
