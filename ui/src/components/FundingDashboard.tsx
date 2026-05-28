@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   Activity,
+  AlertTriangle,
   ArrowRight,
   Banknote,
   Building2,
@@ -13,6 +14,7 @@ import {
   ExternalLink,
   FileText,
   Globe2,
+  Inbox,
   Mail,
   MailCheck,
   MessageSquare,
@@ -31,6 +33,7 @@ import {
 } from 'lucide-react';
 import { dataService, FundingInvestor, FundingPipeline, FundingOutreachEvent, FundingRun } from '../services/dataService';
 import { useCollaboration } from './CollaborationProvider';
+import { formatShortDate, formatShortDateTime, formatPercent } from '../lib/format';
 
 /* ------------------------------------------------------------------ */
 /*  Pipeline Stages (mirror real VC fundraising flow)                  */
@@ -50,20 +53,7 @@ const PIPELINE_STAGES = [
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function shortDate(value) {
-  if (!value) return '—';
-  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
-function shortDateTime(value) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
-function percent(value) {
-  if (typeof value !== 'number') return '—';
-  return `${Math.round(value * 100)}%`;
-}
 
 function scoreColor(score) {
   if (typeof score !== 'number') return 'text-slate-400';
@@ -126,7 +116,7 @@ function InvestorCard({ investor, onSendDeck, onScheduleMeeting }) {
       </div>
 
       <div className="mt-2 flex items-center gap-3 text-[11px]">
-        <span className={scoreColor(score)}>Score {percent(score)}</span>
+        <span className={scoreColor(score)}>Score {formatPercent(score)}</span>
         {investor.email && (
           <span className="text-slate-500">{investor.email}</span>
         )}
@@ -134,7 +124,7 @@ function InvestorCard({ investor, onSendDeck, onScheduleMeeting }) {
           <span className="text-amber-500">No email</span>
         )}
         {investor.lastContactAt && (
-          <span className="text-slate-500">Contacted {shortDate(investor.lastContactAt)}</span>
+          <span className="text-slate-500">Contacted {formatShortDate(investor.lastContactAt)}</span>
         )}
       </div>
 
@@ -218,7 +208,7 @@ function EnrichmentConfigPanel() {
   }, []);
 
   return (
-    <div className="rounded-[28px] border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
           <Search className="h-4 w-4 text-indigo-400" />
@@ -300,10 +290,10 @@ function OutreachTimeline({ events }) {
                 <span className="text-xs font-medium text-slate-200">
                   {event.type?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                 </span>
-                <span className="text-[10px] text-slate-600">{shortDateTime(event.timestamp)}</span>
+                <span className="text-[10px] text-slate-600">{formatShortDateTime(event.timestamp)}</span>
               </div>
               <div className="mt-0.5 text-[11px] text-slate-500">
-                {event.channel} · {event.metadata?.score ? `Score ${percent(event.metadata.score)}` : ''}
+                {event.channel} · {event.metadata?.score ? `Score ${formatPercent(event.metadata.score)}` : ''}
               </div>
               {event.metadata?.reasons?.length > 0 && (
                 <div className="mt-0.5 text-[10px] text-slate-600">
@@ -353,7 +343,7 @@ function SummaryCards({ pipeline, runs, events }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
       {cards.map(card => (
-        <div key={card.label} className="rounded-3xl border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
+        <div key={card.label} className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
           <div className="flex items-center gap-2 text-indigo-400">
             <div className="rounded-full bg-indigo-500/10 p-1.5">
               <card.icon className="h-4 w-4" />
@@ -378,6 +368,7 @@ export default function FundingDashboard() {
   const [events, setEvents] = useState([]);
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('pipeline'); // pipeline | timeline | config
   const [enrichingAll, setEnrichingAll] = useState(false);
   const [sendingDeck, setSendingDeck] = useState(null);
@@ -395,6 +386,7 @@ export default function FundingDashboard() {
         setPipeline(pipelineResult.value);
       } else {
         console.error('FundingDashboard pipeline load error:', pipelineResult.reason);
+        setLoadError(pipelineResult.reason?.message || 'Failed to load pipeline');
       }
 
       if (eventsResult.status === 'fulfilled') {
@@ -410,6 +402,7 @@ export default function FundingDashboard() {
       }
     } catch (err) {
       console.error('FundingDashboard load error:', err);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load funding data');
     } finally {
       setLoading(false);
     }
@@ -485,10 +478,70 @@ export default function FundingDashboard() {
 
   if (loading && !pipeline && events.length === 0 && runs.length === 0) {
     return (
+      <div className="h-full overflow-y-auto bg-[#08111f] px-6 py-5 text-slate-100 custom-scrollbar">
+        <div className="mx-auto max-w-7xl space-y-5">
+          <div className="animate-pulse space-y-3 p-6 glass-card">
+            <div className="h-4 bg-white/10 rounded w-1/3" />
+            <div className="h-8 bg-white/10 rounded w-1/2" />
+            <div className="h-4 bg-white/10 rounded w-2/3" />
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="animate-pulse rounded-xl border border-white/10 bg-white/[0.04] px-5 py-4 space-y-2">
+                <div className="h-3 bg-white/10 rounded w-1/2" />
+                <div className="h-4 bg-white/10 rounded w-3/4" />
+                <div className="h-4 bg-white/10 rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError && !pipeline) {
+    return (
       <div className="flex h-full items-center justify-center bg-[#08111f]">
-        <div className="flex items-center gap-3 text-slate-400">
-          <Activity className="h-5 w-5 animate-pulse" />
-          <span className="text-sm">Loading funding pipeline...</span>
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
+          <p className="text-red-400 text-sm font-medium">Failed to load investors</p>
+          <p className="text-slate-500 text-xs">{loadError}</p>
+          <button onClick={() => window.location.reload()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalInvestors = pipeline?.counts?.total || pipeline?.prioritized?.length || 0;
+
+  if (!loading && totalInvestors === 0 && events.length === 0 && runs.length === 0) {
+    return (
+      <div className="h-full overflow-y-auto bg-[#08111f] px-6 py-5 text-slate-100 custom-scrollbar">
+        <div className="mx-auto max-w-7xl space-y-5">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+              Funding Pipeline
+            </div>
+            <h2 className="mt-1 text-3xl font-semibold tracking-tight text-white">
+              Investor Outreach
+            </h2>
+          </div>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] py-24 px-6 text-center">
+            <Inbox className="h-12 w-12 text-slate-500 mb-4" />
+            <h3 className="text-lg font-semibold text-white">No investors in pipeline</h3>
+            <p className="mt-2 max-w-sm text-sm text-slate-400">
+              Import investor data or run the funding engine to populate the pipeline with prioritized targets.
+            </p>
+            <button
+              onClick={() => dataService.runFunding(campaignId).then(() => loadData())}
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-violet-500/20 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-200 shadow-sm transition hover:bg-violet-500/15"
+            >
+              <Play className="h-4 w-4" />
+              Run Funding Engine
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -500,7 +553,7 @@ export default function FundingDashboard() {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
               Funding Pipeline
             </div>
             <h2 className="mt-1 text-3xl font-semibold tracking-tight text-white">
@@ -572,7 +625,7 @@ export default function FundingDashboard() {
         )}
 
         {activeTab === 'timeline' && (
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                 <Activity className="h-4 w-4 text-indigo-400" />
@@ -587,7 +640,7 @@ export default function FundingDashboard() {
         {activeTab === 'config' && (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <EnrichmentConfigPanel />
-            <div className="rounded-[28px] border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
                   <RefreshCw className="h-4 w-4 text-indigo-400" />
@@ -600,7 +653,7 @@ export default function FundingDashboard() {
                   <div key={run.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
                     <div>
                       <div className="text-xs font-medium text-slate-300">{run.type}</div>
-                      <div className="text-[10px] text-slate-600">{shortDateTime(run.createdAt)}</div>
+                      <div className="text-[10px] text-slate-600">{formatShortDateTime(run.createdAt)}</div>
                     </div>
                     <span className="text-[10px] text-slate-500">{run.eventsCount || 0} events</span>
                   </div>

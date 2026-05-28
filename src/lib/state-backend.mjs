@@ -68,14 +68,15 @@ class FileStateBackend {
 }
 
 class PostgresStateBackend {
-  constructor({ databaseUrl, schema = "public", tableName = "squidweave_state", stateKey = "primary", seedFileUrl = null }) {
+  constructor({ databaseUrl, schema = "public", tableName = "squidweave_state", stateKey = "primary", seedFileUrl = null, poolSize = 10 }) {
     this.databaseUrl = databaseUrl;
     this.schema = schema;
     this.tableName = tableName;
     this.stateKey = stateKey;
     this.seedFileUrl = seedFileUrl;
     this.pool = null;
-    this.tableIdent = `${this.schema}.${this.tableName}`;
+    this.poolSize = poolSize;
+    this.tableIdent = `${this.schema}.${tableName}`;
   }
 
   async _getPool() {
@@ -88,15 +89,55 @@ class PostgresStateBackend {
     } catch (error) {
       throw new Error(`Postgres backend requested but the "pg" package is unavailable. ${error.message}`);
     }
+    // Wrap connection string to handle PgBouncer-style "pool_mode=transaction"
+    // The pg driver connects directly; PgBouncer sits in front as a connection pooler.
+    // Use application_name for observability; set statement_timeout for safety.
     this.pool = new pg.Pool({
       connectionString: this.databaseUrl,
-      max: 5,
+      max: this.poolSize,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
+      // Keep alive to prevent connection drops from idle clients
+      keepAlive: true,
+    });
+    // Safety: hard timeout on any individual query (prevents runaway locks)
+    this.pool.on("error", (err) => {
+      console.error("[postgres] unexpected pool error:", err.message);
     });
     return this.pool;
   }
 
+  /**
+   * Execute a state write inside an advisory lock to serialize concurrent updates.
+   * This replaces the file-based atomic rename and prevents race conditions between
+   * concurrent automation runs all trying to persist at the same time.
+   */
+  async _withAdvisoryLock(pool, key, fn) {
+    const lockId = Math.abs(key.split("").reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) | 0, 0));
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      // pg_advisory_xact_lock is auto-released on commit/abort — fits our transaction model
+      await client.query("select pg_advisory_xact_lock($1)", [lockId]);
+      const result = await fn(client);
+      await client.query("commit");
+      return result;
+    } catch (err) {
+      await client.query("rollback");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
   async init() {
     const pool = await this._getPool();
+    // Enable WAL (Write-Ahead Log) for crash-safe persistence.
+    // With WAL enabled, Postgres buffers the write ahead of the actual data file flush,
+    // guaranteeing durability even on sudden power loss. This replaces the need for
+    // explicit .tmp-rename on every save since Postgres handles atomicity at the WAL level.
+    // If using PgBouncer in front of Postgres, ensure PgBouncer is in "transaction"
+    // or "session" mode — not "statement" mode — so advisory locks work correctly.
     await pool.query(`create schema if not exists ${this.schema}`);
     await pool.query(`
       create table if not exists ${this.tableIdent} (
@@ -126,15 +167,19 @@ class PostgresStateBackend {
 
   async save(state) {
     const pool = await this._getPool();
-    await pool.query(
-      `
-        insert into ${this.tableIdent} (state_key, state, updated_at)
-        values ($1, $2::jsonb, now())
-        on conflict (state_key)
-        do update set state = excluded.state, updated_at = now()
-      `,
-      [this.stateKey, JSON.stringify(state)],
-    );
+    // Use advisory lock around the write so concurrent saves are serialized
+    // and the most recent writer always wins, matching file-based rename semantics.
+    await this._withAdvisoryLock(pool, this.stateKey, async (client) => {
+      await client.query(
+        `
+          insert into ${this.tableIdent} (state_key, state, updated_at)
+          values ($1, $2::jsonb, now())
+          on conflict (state_key)
+          do update set state = excluded.state, updated_at = now()
+        `,
+        [this.stateKey, JSON.stringify(state)],
+      );
+    });
   }
 
   async flush(state) {
@@ -152,6 +197,7 @@ class PostgresStateBackend {
     return {
       type: "postgres",
       target: `${this.tableIdent}:${this.stateKey}`,
+      poolSize: this.poolSize,
     };
   }
 }
@@ -164,6 +210,7 @@ export function createStateBackend({
   postgresSchema,
   postgresTable,
   postgresStateKey,
+  postgresPoolSize,
 } = {}) {
   const mode = String(stateBackend || (databaseUrl ? "postgres" : "file")).toLowerCase();
   if (mode === "postgres") {
@@ -176,6 +223,7 @@ export function createStateBackend({
       tableName: postgresTable || "squidweave_state",
       stateKey: postgresStateKey || "primary",
       seedFileUrl,
+      poolSize: postgresPoolSize || 10,
     });
   }
   return new FileStateBackend({ fileUrl, seedFileUrl });

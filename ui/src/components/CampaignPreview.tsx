@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Database,
   Globe2,
+  Inbox,
   Layers3,
   MailPlus,
   Landmark,
@@ -17,6 +18,7 @@ import {
   Target,
   Upload,
   WandSparkles,
+  AlertTriangle,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useCollaboration } from './CollaborationProvider';
@@ -34,6 +36,7 @@ import {
   SourcedContact,
 } from '../services/dataService';
 import { AGENT_STAGES, AGENT_SYSTEM, getAllAgentIds } from '../lib/agentSystem';
+import { formatPercent, formatDate } from '../lib/format';
 
 type IntakeDraft = {
   clientName: string;
@@ -138,6 +141,29 @@ const BRAND_VOICE_OPTIONS = [
   'Executive',
 ];
 
+const SOURCE_OPTIONS = [
+  'manual-ingest',
+  'G2',
+  'LinkedIn',
+  'analyst-note',
+  'CRM-export',
+  'apollo',
+  'zoominfo',
+  'web-scrape',
+  'referral',
+];
+
+const REGION_OPTIONS = [
+  'US',
+  'DACH',
+  'France',
+  'UK',
+  'EMEA',
+  'APAC',
+  'NA',
+  'LATAM',
+];
+
 function splitList(value: string) {
   return value
     .split(/[\n,]/g)
@@ -176,11 +202,11 @@ function PresetSingleSelectField({
 
   return (
     <label className="space-y-2">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</span>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">{label}</span>
       <select
         value={value}
         onChange={event => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition focus:border-indigo-400/50"
+        className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition focus:border-indigo-400/50"
       >
         <option value="">{placeholder}</option>
         {mergedOptions.map(option => (
@@ -222,14 +248,14 @@ function PresetMultiSelectField({
 
   return (
     <label className="space-y-2">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</span>
-      <details className="rounded-2xl border border-white/10 bg-[#0b1526]">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">{label}</span>
+      <details className="rounded-xl border border-white/10 bg-[#0b1526]">
         <summary className="cursor-pointer list-none px-4 py-3 text-sm text-white outline-none">
           <div className="flex items-center justify-between gap-3">
             <span className={selected.length ? 'text-white' : 'text-slate-600'}>
               {selected.length ? selected.join(', ') : placeholder}
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-300">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-indigo-300">
               {selected.length || 0} selected
             </span>
           </div>
@@ -252,13 +278,6 @@ function PresetMultiSelectField({
       </details>
     </label>
   );
-}
-
-function percent(value?: number | null) {
-  if (typeof value !== 'number') {
-    return 'N/A';
-  }
-  return `${Math.round(value * 100)}%`;
 }
 
 function buildIntakeDraft(campaignState: ReturnType<typeof useCollaboration>['campaignState']): IntakeDraft {
@@ -384,6 +403,8 @@ export default function CampaignPreview() {
   const [enrichingProspects, setEnrichingProspects] = React.useState(false);
   const [sequencingProspects, setSequencingProspects] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const refreshResearch = React.useCallback(async () => {
     const records = await dataService.getResearchRecords(campaignState.id || 'main-campaign');
@@ -453,9 +474,16 @@ export default function CampaignPreview() {
 
   React.useEffect(() => {
     setProspectingLoading(true);
+    setLoadError(null);
     Promise.all([refreshProspecting(), refreshActivation(), refreshFunding()])
-      .catch(error => console.error(error))
-      .finally(() => setProspectingLoading(false));
+      .catch(error => {
+        console.error(error);
+        setLoadError(error instanceof Error ? error.message : 'Failed to load campaign data');
+      })
+      .finally(() => {
+        setProspectingLoading(false);
+        setInitialLoading(false);
+      });
   }, [refreshProspecting, refreshActivation, refreshFunding]);
 
   const lastCampaign = React.useMemo(
@@ -708,12 +736,56 @@ export default function CampaignPreview() {
 
   const sections = lastCampaign?.content.split(/(\[.*?\]:)/g) || [];
 
+  if (initialLoading) {
+    return (
+      <div className="h-full overflow-y-auto bg-[#08111f] p-4 md:p-8 custom-scrollbar">
+        <div className="mx-auto max-w-7xl space-y-8">
+          <div className="animate-pulse space-y-3 p-6 glass-card">
+            <div className="h-4 bg-white/10 rounded w-3/4" />
+            <div className="h-4 bg-white/10 rounded w-1/2" />
+            <div className="h-4 bg-white/10 rounded w-5/6" />
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="animate-pulse rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 space-y-2">
+                <div className="h-3 bg-white/10 rounded w-1/2" />
+                <div className="h-6 bg-white/10 rounded w-3/4" />
+              </div>
+            ))}
+          </div>
+          <div className="animate-pulse space-y-3 p-6 glass-card">
+            <div className="h-4 bg-white/10 rounded w-1/3" />
+            <div className="h-4 bg-white/10 rounded w-2/3" />
+            <div className="h-4 bg-white/10 rounded w-1/2" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[#08111f]">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
+          <p className="text-red-400 text-sm font-medium">Failed to load campaign data</p>
+          <p className="text-slate-500 text-xs">{loadError}</p>
+          <button onClick={() => window.location.reload()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const hasData = researchRecords.length > 0 || prospectingPlan || prospectPipeline || fundingPipeline || fundingInvestors.length > 0;
+
   return (
     <div className="h-full overflow-y-auto bg-[#08111f] p-4 md:p-8 custom-scrollbar">
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="flex flex-col gap-4 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
               <ClipboardList className="h-3.5 w-3.5 text-indigo-400" />
               Client Intake and Market Operating System
             </div>
@@ -731,8 +803,8 @@ export default function CampaignPreview() {
               { label: 'Research Records', value: `${researchRecords.length}` },
               { label: 'Unique Targets', value: `${uniqueTargets}` },
             ].map(item => (
-              <div key={item.label} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{item.label}</div>
+              <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">{item.label}</div>
                 <div className="mt-2 text-xl font-semibold text-white">{item.value}</div>
               </div>
             ))}
@@ -740,9 +812,23 @@ export default function CampaignPreview() {
         </div>
 
         {statusMessage && (
-          <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span>{statusMessage}</span>
+          </div>
+        )}
+
+        {!hasData && !initialLoading && (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] py-24 px-6 text-center">
+            <Inbox className="h-12 w-12 text-slate-500 mb-4" />
+            <h3 className="text-lg font-semibold text-white">No campaigns yet</h3>
+            <p className="mt-2 max-w-sm text-sm text-slate-400">
+              Fill in the client intake below to define your first mission brief. The system will use it to drive autonomous research, prospecting, and activation.
+            </p>
+            <a href="#intake" className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm transition hover:bg-indigo-500/15">
+              <Target className="h-4 w-4" />
+              Start Intake
+            </a>
           </div>
         )}
 
@@ -750,11 +836,11 @@ export default function CampaignPreview() {
           <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]"
+            className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                   <Target className="h-3.5 w-3.5 text-indigo-400" />
                   Client Intake
                 </div>
@@ -763,7 +849,7 @@ export default function CampaignPreview() {
               <button
                 onClick={handleIntakeSave}
                 disabled={intakeSaving}
-                className="rounded-2xl bg-indigo-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-indigo-400 disabled:opacity-60"
+                className="rounded-xl bg-indigo-500 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white transition hover:bg-indigo-400 disabled:opacity-60"
               >
                 {intakeSaving ? 'Saving...' : 'Save Brief'}
               </button>
@@ -776,12 +862,12 @@ export default function CampaignPreview() {
                 { key: 'successDefinition', label: 'Success Definition', placeholder: '20 SQLs/month with CAC under target' },
               ].map(field => (
                 <label key={field.key} className="space-y-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{field.label}</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">{field.label}</span>
                   <input
                     value={intakeDraft[field.key as keyof IntakeDraft]}
                     onChange={event => setIntakeDraft(current => ({ ...current, [field.key]: event.target.value }))}
                     placeholder={field.placeholder}
-                    className="w-full rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-indigo-400/50"
+                    className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-indigo-400/50"
                   />
                 </label>
               ))}
@@ -842,13 +928,13 @@ export default function CampaignPreview() {
                 { key: 'researchObjectives', label: 'Research objectives for the agent swarm', rows: 3, placeholder: 'One objective per line: competitors, ICP signals, objections, trends, retention blockers.' },
               ].map(field => (
                 <label key={field.key} className="space-y-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{field.label}</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">{field.label}</span>
                   <textarea
                     rows={field.rows}
                     value={intakeDraft[field.key as keyof IntakeDraft]}
                     onChange={event => setIntakeDraft(current => ({ ...current, [field.key]: event.target.value }))}
                     placeholder={field.placeholder}
-                    className="w-full rounded-[24px] border border-white/10 bg-[#0b1526] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-indigo-400/50"
+                    className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-indigo-400/50"
                   />
                 </label>
               ))}
@@ -859,11 +945,11 @@ export default function CampaignPreview() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]"
+            className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                   <Bot className="h-3.5 w-3.5 text-fuchsia-400" />
                   Autonomous Coverage
                 </div>
@@ -871,7 +957,7 @@ export default function CampaignPreview() {
               </div>
               <button
                 onClick={() => updateCampaignState({ enabledModules: getAllAgentIds() })}
-                className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-fuchsia-100 transition hover:bg-fuchsia-500/15"
+                className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-fuchsia-100 transition hover:bg-fuchsia-500/15"
               >
                 Enable All
               </button>
@@ -879,13 +965,13 @@ export default function CampaignPreview() {
 
             <div className="mt-6 space-y-4">
               {agentGroups.map(group => (
-                <div key={group.stage} className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+                <div key={group.stage} className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm font-semibold text-white">
                       <Layers3 className="h-4 w-4 text-indigo-400" />
                       {group.stage}
                     </div>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                       {group.agents.filter(agent => enabledSet.has(agent.id)).length}/{group.agents.length} enabled
                     </div>
                   </div>
@@ -901,7 +987,7 @@ export default function CampaignPreview() {
                               ? enabledModules.filter(id => id !== agent.id)
                               : [...enabledModules, agent.id],
                           })}
-                          className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                          className={`w-full rounded-xl border px-4 py-3 text-left transition ${
                             active
                               ? 'border-emerald-500/20 bg-emerald-500/10'
                               : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.05]'
@@ -913,7 +999,7 @@ export default function CampaignPreview() {
                               <div className="mt-1 text-xs leading-5 text-slate-400">{agent.description}</div>
                             </div>
                             <div className="text-right">
-                              <div className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${active ? 'text-emerald-300' : 'text-slate-500'}`}>
+                              <div className={`text-[10px] font-semibold uppercase tracking-[0.15em] ${active ? 'text-emerald-300' : 'text-slate-500'}`}>
                                 {active ? 'online' : 'offline'}
                               </div>
                               <div className="mt-1 text-[11px] text-slate-500">{agent.outcome}</div>
@@ -930,10 +1016,10 @@ export default function CampaignPreview() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
+          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                   <Upload className="h-3.5 w-3.5 text-amber-400" />
                   Research Intake
                 </div>
@@ -942,70 +1028,189 @@ export default function CampaignPreview() {
               <button
                 onClick={handleResearchSubmit}
                 disabled={researchSaving}
-                className="rounded-2xl bg-amber-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-amber-400 disabled:opacity-60"
+                className="rounded-xl bg-amber-500 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-950 transition hover:bg-amber-400 disabled:opacity-60"
               >
                 {researchSaving ? 'Ingesting...' : 'Ingest Record'}
               </button>
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-              {[
-                { key: 'source', label: 'Source', placeholder: 'G2, LinkedIn, analyst note' },
-                { key: 'targetId', label: 'Target ID', placeholder: 'segment-dach-revops-001' },
-                { key: 'company', label: 'Company', placeholder: 'Acme GmbH' },
-                { key: 'contactName', label: 'Contact Name', placeholder: 'Morgan Lee' },
-                { key: 'title', label: 'Title', placeholder: 'VP Revenue Operations' },
-                { key: 'segment', label: 'Segment', placeholder: 'Mid-market SaaS' },
-                { key: 'region', label: 'Region', placeholder: 'DACH' },
-                { key: 'preferredChannel', label: 'Preferred Channel', placeholder: 'linkedin' },
-                { key: 'channels', label: 'All Channels', placeholder: 'linkedin, email, webinar' },
-                { key: 'estimatedReach', label: 'Estimated Reach', placeholder: '5400' },
-                { key: 'fitScore', label: 'Fit Score', placeholder: '0.0 - 1.0' },
-                { key: 'intentScore', label: 'Intent Score', placeholder: '0.0 - 1.0' },
-                { key: 'recencyScore', label: 'Recency Score', placeholder: '0.0 - 1.0' },
-                { key: 'sourceUrl', label: 'Source URL', placeholder: 'https://...' },
-              ].map(field => (
-                <label key={field.key} className="space-y-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{field.label}</span>
-                  <input
-                    value={researchDraft[field.key as keyof ResearchDraft]}
-                    onChange={event => setResearchDraft(current => ({ ...current, [field.key]: event.target.value }))}
-                    placeholder={field.placeholder}
-                    className="w-full rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
-                  />
-                </label>
-              ))}
+              {/* Dropdown: Source */}
+              <PresetSingleSelectField
+                label="SOURCE"
+                value={researchDraft.source}
+                options={SOURCE_OPTIONS}
+                placeholder="Select source"
+                onChange={v => setResearchDraft(current => ({ ...current, source: v }))}
+              />
+              {/* Text: Target ID */}
+              <label className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">TARGET ID</span>
+                <input
+                  value={researchDraft.targetId}
+                  onChange={event => setResearchDraft(current => ({ ...current, targetId: event.target.value }))}
+                  placeholder="segment-dach-revops-001"
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                />
+              </label>
+              {/* Text: Company */}
+              <label className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">COMPANY</span>
+                <input
+                  value={researchDraft.company}
+                  onChange={event => setResearchDraft(current => ({ ...current, company: event.target.value }))}
+                  placeholder="Acme GmbH"
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                />
+              </label>
+              {/* Text: Contact Name */}
+              <label className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">CONTACT NAME</span>
+                <input
+                  value={researchDraft.contactName}
+                  onChange={event => setResearchDraft(current => ({ ...current, contactName: event.target.value }))}
+                  placeholder="Morgan Lee"
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                />
+              </label>
+              {/* Dropdown: Title */}
+              <PresetSingleSelectField
+                label="TITLE"
+                value={researchDraft.title}
+                options={AUDIENCE_OPTIONS}
+                placeholder="Select job title"
+                onChange={v => setResearchDraft(current => ({ ...current, title: v }))}
+              />
+              {/* Dropdown: Segment */}
+              <PresetSingleSelectField
+                label="SEGMENT"
+                value={researchDraft.segment}
+                options={MARKET_OPTIONS}
+                placeholder="Select segment"
+                onChange={v => setResearchDraft(current => ({ ...current, segment: v }))}
+              />
+              {/* Dropdown: Region */}
+              <PresetSingleSelectField
+                label="REGION"
+                value={researchDraft.region}
+                options={REGION_OPTIONS}
+                placeholder="Select region"
+                onChange={v => setResearchDraft(current => ({ ...current, region: v }))}
+              />
+              {/* Dropdown: Preferred Channel */}
+              <PresetSingleSelectField
+                label="PREFERRED CHANNEL"
+                value={researchDraft.preferredChannel}
+                options={CHANNEL_OPTIONS}
+                placeholder="Select primary channel"
+                onChange={v => setResearchDraft(current => ({ ...current, preferredChannel: v }))}
+              />
+              {/* Multi-select: All Channels */}
+              <PresetMultiSelectField
+                label="ALL CHANNELS"
+                value={researchDraft.channels}
+                options={CHANNEL_OPTIONS}
+                placeholder="Select channels"
+                splitter={splitChannelList}
+                joiner={(vals: string[]) => vals.join(', ')}
+                onChange={v => setResearchDraft(current => ({ ...current, channels: v }))}
+              />
+              {/* Number: Estimated Reach */}
+              <label className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">ESTIMATED REACH</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={researchDraft.estimatedReach}
+                  onChange={event => setResearchDraft(current => ({ ...current, estimatedReach: event.target.value }))}
+                  placeholder="5400"
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                />
+              </label>
+              {/* Number: Fit Score (0-1) */}
+              <label className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">FIT SCORE</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={researchDraft.fitScore}
+                  onChange={event => setResearchDraft(current => ({ ...current, fitScore: event.target.value }))}
+                  placeholder="0.0 – 1.0"
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                />
+              </label>
+              {/* Number: Intent Score (0-1) */}
+              <label className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">INTENT SCORE</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={researchDraft.intentScore}
+                  onChange={event => setResearchDraft(current => ({ ...current, intentScore: event.target.value }))}
+                  placeholder="0.0 – 1.0"
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                />
+              </label>
+              {/* Number: Recency Score (0-1) */}
+              <label className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">RECENCY SCORE</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={researchDraft.recencyScore}
+                  onChange={event => setResearchDraft(current => ({ ...current, recencyScore: event.target.value }))}
+                  placeholder="0.0 – 1.0"
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                />
+              </label>
+              {/* URL: Source URL */}
+              <label className="space-y-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">SOURCE URL</span>
+                <input
+                  type="url"
+                  value={researchDraft.sourceUrl}
+                  onChange={event => setResearchDraft(current => ({ ...current, sourceUrl: event.target.value }))}
+                  placeholder="https://..."
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                />
+              </label>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4">
               <label className="space-y-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Evidence bullets</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Evidence bullets</span>
                 <textarea
                   rows={4}
                   value={researchDraft.evidence}
                   onChange={event => setResearchDraft(current => ({ ...current, evidence: event.target.value }))}
                   placeholder={'One evidence point per line.\nRecent funding event\nNew regional expansion\nHiring SDR leadership'}
-                  className="w-full rounded-[24px] border border-white/10 bg-[#0b1526] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
                 />
               </label>
 
               <label className="space-y-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Notes for the brain</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Notes for the brain</span>
                 <textarea
                   rows={4}
                   value={researchDraft.notes}
                   onChange={event => setResearchDraft(current => ({ ...current, notes: event.target.value }))}
                   placeholder="Why this target matters, what pain was observed, what message angle is likely to land."
-                  className="w-full rounded-[24px] border border-white/10 bg-[#0b1526] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-amber-400/50"
                 />
               </label>
             </div>
           </section>
 
-          <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
+          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                   <Database className="h-3.5 w-3.5 text-emerald-400" />
                   Live Research Feed
                 </div>
@@ -1013,7 +1218,7 @@ export default function CampaignPreview() {
               </div>
               <button
                 onClick={() => refreshResearch().catch(error => console.error(error))}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300 transition hover:bg-white/[0.05]"
+                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-300 transition hover:bg-white/[0.05]"
               >
                 Refresh
               </button>
@@ -1026,8 +1231,8 @@ export default function CampaignPreview() {
                 { label: 'Objectives', value: (campaignState.researchObjectives || []).length },
                 { label: 'Markets', value: (campaignState.markets || campaignState.locales || []).length },
               ].map(item => (
-                <div key={item.label} className="rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{item.label}</div>
+                <div key={item.label} className="rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">{item.label}</div>
                   <div className="mt-2 text-lg font-semibold text-white">{item.value}</div>
                 </div>
               ))}
@@ -1041,7 +1246,7 @@ export default function CampaignPreview() {
                 </div>
               ) : (
                 topResearch.map(record => (
-                  <div key={record.id} className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+                  <div key={record.id} className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <div className="text-sm font-semibold text-white">{record.company || record.targetId}</div>
@@ -1051,22 +1256,22 @@ export default function CampaignPreview() {
                       </div>
                       <div className="text-right text-[10px] uppercase tracking-[0.16em] text-slate-500">
                         <div>{record.source}</div>
-                        <div className="mt-1">{new Date(record.capturedAt).toLocaleDateString()}</div>
+                        <div className="mt-1">{formatDate(record.capturedAt)}</div>
                       </div>
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <span className="rounded-full bg-white/[0.05] px-3 py-1 text-[11px] text-slate-300">Fit {percent(record.fitScore)}</span>
-                      <span className="rounded-full bg-white/[0.05] px-3 py-1 text-[11px] text-slate-300">Intent {percent(record.intentScore)}</span>
-                      <span className="rounded-full bg-white/[0.05] px-3 py-1 text-[11px] text-slate-300">Recency {percent(record.recencyScore)}</span>
+                      <span className="rounded-full bg-white/[0.05] px-3 py-1 text-[11px] text-slate-300">Fit {formatPercent(record.fitScore)}</span>
+                      <span className="rounded-full bg-white/[0.05] px-3 py-1 text-[11px] text-slate-300">Intent {formatPercent(record.intentScore)}</span>
+                      <span className="rounded-full bg-white/[0.05] px-3 py-1 text-[11px] text-slate-300">Recency {formatPercent(record.recencyScore)}</span>
                       {record.preferredChannel && <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-[11px] text-indigo-200">{record.preferredChannel}</span>}
                     </div>
 
                     <p className="mt-4 text-sm leading-6 text-slate-400">{record.notes || 'No notes captured for this target yet.'}</p>
 
                     {!!record.metadata?.evidence?.length && (
-                      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Evidence</div>
+                      <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">Evidence</div>
                         <div className="mt-2 space-y-1 text-sm text-slate-300">
                           {record.metadata.evidence.slice(0, 3).map(item => (
                             <div key={item}>{item}</div>
@@ -1082,10 +1287,10 @@ export default function CampaignPreview() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
+          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                   <BriefcaseBusiness className="h-3.5 w-3.5 text-cyan-400" />
                   Contact Sourcing Engine
                 </div>
@@ -1103,14 +1308,14 @@ export default function CampaignPreview() {
                       .catch(error => console.error(error))
                       .finally(() => setProspectingLoading(false));
                   }}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300 transition hover:bg-white/[0.05]"
+                  className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-300 transition hover:bg-white/[0.05]"
                 >
                   Refresh
                 </button>
                 <button
                   onClick={handleProspectingRun}
                   disabled={prospectingRunning}
-                  className="rounded-2xl bg-cyan-400 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
+                  className="rounded-xl bg-cyan-400 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-950 transition hover:bg-cyan-300 disabled:opacity-60"
                 >
                   {prospectingRunning ? 'Generating...' : 'Generate Queue'}
                 </button>
@@ -1124,15 +1329,15 @@ export default function CampaignPreview() {
                 { label: 'Runs', value: prospectingRuns.length },
                 { label: 'Actionable Targets', value: prospectingPlan?.targetSummary.actionableTargets || 0 },
               ].map(item => (
-                <div key={item.label} className="rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{item.label}</div>
+                <div key={item.label} className="rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">{item.label}</div>
                   <div className="mt-2 text-lg font-semibold text-white">{item.value}</div>
                 </div>
               ))}
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+              <div className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold text-white">Priority accounts</div>
                   <div className="text-[10px] uppercase tracking-[0.16em] text-slate-500">
@@ -1143,7 +1348,7 @@ export default function CampaignPreview() {
                 <div className="mt-4 space-y-3">
                   {prospectingPlan?.topAccounts.length ? (
                     prospectingPlan.topAccounts.map(account => (
-                      <div key={`${account.targetId}-${account.company}`} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <div key={`${account.targetId}-${account.company}`} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="text-sm font-semibold text-white">{account.company}</div>
@@ -1185,22 +1390,22 @@ export default function CampaignPreview() {
               </div>
 
               <div className="space-y-4">
-                <div className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+                <div className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
                   <div className="text-sm font-semibold text-white">Sourcing workflow</div>
                   <div className="mt-4 space-y-3">
                     {(prospectingPlan?.sourcingWorkflow || []).map(step => (
-                      <div key={step} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
+                      <div key={step} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
                         {step}
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+                <div className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
                   <div className="text-sm font-semibold text-white">Enrichment and compliance checklist</div>
                   <div className="mt-4 space-y-2">
                     {(prospectingPlan?.enrichmentChecklist || []).map(item => (
-                      <div key={item} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
+                      <div key={item} className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
                         <span>{item}</span>
                       </div>
@@ -1208,20 +1413,20 @@ export default function CampaignPreview() {
                   </div>
                 </div>
 
-                <div className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+                <div className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
                   <div className="text-sm font-semibold text-white">Procedural memory signals</div>
                   <div className="mt-4 space-y-3">
                     {prospectingPlan?.proceduralSignals.length ? (
                       prospectingPlan.proceduralSignals.map(signal => (
-                        <div key={`${signal.segment}-${signal.region}-${signal.channel}`} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                        <div key={`${signal.segment}-${signal.region}-${signal.channel}`} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
                           <div className="text-sm text-white">{signal.segment || 'Unknown segment'}</div>
                           <div className="mt-1 text-xs text-slate-500">
-                            {signal.region || 'Global'} · {signal.channel || 'No channel'} · {percent(signal.confidence)}
+                            {signal.region || 'Global'} · {signal.channel || 'No channel'} · {formatPercent(signal.confidence)}
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">
+                      <div className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">
                         No learned sourcing patterns yet. As campaigns run, Hermes-backed memory can feed this panel.
                       </div>
                     )}
@@ -1231,21 +1436,21 @@ export default function CampaignPreview() {
             </div>
           </section>
 
-          <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
+          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                   <MailPlus className="h-3.5 w-3.5 text-emerald-400" />
                   Prospect Queue
                 </div>
                 <h3 className="mt-2 text-xl font-semibold text-white">Generated buyers and imported contacts</h3>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+              <div className="rounded-xl border border-white/10 bg-[#0b1526] px-4 py-2 text-[11px] uppercase tracking-[0.15em] text-slate-400">
                 {latestProspectingRun ? `${latestProspectingRun.generatedCandidates} last generated` : 'No run yet'}
               </div>
             </div>
 
-            <div className="mt-6 rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+            <div className="mt-6 rounded-xl border border-white/10 bg-[#0b1526] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-sm font-semibold text-white">Manual or vendor-enriched import</div>
@@ -1256,7 +1461,7 @@ export default function CampaignPreview() {
                 <button
                   onClick={handleContactImport}
                   disabled={contactImporting}
-                  className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100 transition hover:bg-emerald-500/15 disabled:opacity-60"
+                  className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-emerald-100 transition hover:bg-emerald-500/15 disabled:opacity-60"
                 >
                   {contactImporting ? 'Importing...' : 'Import Contacts'}
                 </button>
@@ -1264,23 +1469,23 @@ export default function CampaignPreview() {
 
               <div className="mt-4 space-y-4">
                 <label className="space-y-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Import source</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Import source</span>
                   <input
                     value={contactImportDraft.source}
                     onChange={event => setContactImportDraft(current => ({ ...current, source: event.target.value }))}
                     placeholder="apollo, crm-export, manual-import"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400/50"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400/50"
                   />
                 </label>
 
                 <label className="space-y-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Contact rows</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Contact rows</span>
                   <textarea
                     rows={6}
                     value={contactImportDraft.rows}
                     onChange={event => setContactImportDraft(current => ({ ...current, rows: event.target.value }))}
                     placeholder={'Acme | Morgan Lee | VP Revenue Operations | morgan@acme.com | https://linkedin.com/in/morgan | DACH | Mid-market SaaS\nNorthwind | Jamie Fox | Head of Growth | jamie@northwind.io | https://linkedin.com/in/jamie | US | PLG SaaS'}
-                    className="w-full rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400/50"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400/50"
                   />
                 </label>
               </div>
@@ -1293,26 +1498,26 @@ export default function CampaignPreview() {
                 { label: 'Sequenced', value: prospectPipeline?.counts.sequenced || 0 },
                 { label: 'Suppressed', value: prospectPipeline?.counts.suppressed || 0 },
               ].map(item => (
-                <div key={item.label} className="rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{item.label}</div>
+                <div key={item.label} className="rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">{item.label}</div>
                   <div className="mt-2 text-lg font-semibold text-white">{item.value}</div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+            <div className="mt-6 rounded-xl border border-white/10 bg-[#0b1526] p-4">
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={handleProspectEnrichment}
                   disabled={enrichingProspects}
-                  className="rounded-2xl bg-emerald-400 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60"
+                  className="rounded-xl bg-emerald-400 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60"
                 >
                   {enrichingProspects ? 'Enriching...' : 'Run Enrichment'}
                 </button>
                 <button
                   onClick={handleSequenceBuild}
                   disabled={sequencingProspects}
-                  className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-500/15 disabled:opacity-60"
+                  className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-cyan-100 transition hover:bg-cyan-500/15 disabled:opacity-60"
                 >
                   {sequencingProspects ? 'Planning...' : 'Build Sequences'}
                 </button>
@@ -1320,7 +1525,7 @@ export default function CampaignPreview() {
 
               <div className="mt-4 space-y-3">
                 {(activationRuns.slice(0, 3) || []).map(run => (
-                  <div key={run.id} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                  <div key={run.id} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold text-white">{run.action}</div>
@@ -1331,14 +1536,14 @@ export default function CampaignPreview() {
                       </div>
                       <div className="text-right text-[10px] uppercase tracking-[0.16em] text-slate-500">
                         <div>{run.status}</div>
-                        <div className="mt-1">{new Date(run.createdAt).toLocaleDateString()}</div>
+                        <div className="mt-1">{formatDate(run.createdAt)}</div>
                       </div>
                     </div>
                   </div>
                 ))}
 
                 {!activationRuns.length && (
-                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">
+                  <div className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">
                     No activation runs yet. Enrichment turns sourced contacts into sequence-ready records, then sequence planning turns them into outreach cadences.
                   </div>
                 )}
@@ -1348,7 +1553,7 @@ export default function CampaignPreview() {
             <div className="mt-6 space-y-3">
               {recentProspects.length ? (
                 recentProspects.map(contact => (
-                  <div key={contact.id} className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+                  <div key={contact.id} className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-sm font-semibold text-white">{contact.fullName || contact.role || contact.company}</div>
@@ -1358,7 +1563,7 @@ export default function CampaignPreview() {
                       </div>
                       <div className="text-right">
                         <div className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{contact.contactStatus}</div>
-                        <div className="mt-1 text-xs text-emerald-300">{percent(contact.score)}</div>
+                        <div className="mt-1 text-xs text-emerald-300">{formatPercent(contact.score)}</div>
                       </div>
                     </div>
 
@@ -1381,14 +1586,14 @@ export default function CampaignPreview() {
                     </div>
 
                     {contact.searchQuery && (
-                      <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-300">
+                      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-300">
                         Query: {contact.searchQuery}
                       </div>
                     )}
 
                     {!!contact.sequencePlan?.steps?.length && (
-                      <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                           {contact.sequencePlan.channel} sequence
                         </div>
                         <div className="mt-2 space-y-1 text-xs leading-5 text-slate-300">
@@ -1416,10 +1621,10 @@ export default function CampaignPreview() {
           </section>
         </div>
 
-        <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
+        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                 <Landmark className="h-3.5 w-3.5 text-amber-300" />
                 VC Funding Automation
               </div>
@@ -1428,14 +1633,14 @@ export default function CampaignPreview() {
             <div className="flex gap-2">
               <button
                 onClick={() => refreshFunding().catch(error => console.error(error))}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300 transition hover:bg-white/[0.05]"
+                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-300 transition hover:bg-white/[0.05]"
               >
                 Refresh
               </button>
               <button
                 onClick={handleFundingRun}
                 disabled={fundingRunning}
-                className="rounded-2xl bg-amber-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 transition hover:bg-amber-200 disabled:opacity-60"
+                className="rounded-xl bg-amber-300 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-950 transition hover:bg-amber-200 disabled:opacity-60"
               >
                 {fundingRunning ? 'Running...' : 'Run Funding'}
               </button>
@@ -1449,15 +1654,15 @@ export default function CampaignPreview() {
               { label: 'Funding Runs', value: fundingRuns.length },
               { label: 'Outreach Events', value: fundingEvents.length },
             ].map(item => (
-              <div key={item.label} className="rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{item.label}</div>
+              <div key={item.label} className="rounded-xl border border-white/10 bg-[#0b1526] px-4 py-3">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">{item.label}</div>
                 <div className="mt-2 text-lg font-semibold text-white">{item.value}</div>
               </div>
             ))}
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+            <div className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-sm font-semibold text-white">Investor import</div>
@@ -1468,7 +1673,7 @@ export default function CampaignPreview() {
                 <button
                   onClick={handleFundingImport}
                   disabled={fundingImporting}
-                  className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-100 transition hover:bg-amber-400/15 disabled:opacity-60"
+                  className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-100 transition hover:bg-amber-400/15 disabled:opacity-60"
                 >
                   {fundingImporting ? 'Importing...' : 'Import Investors'}
                 </button>
@@ -1478,17 +1683,17 @@ export default function CampaignPreview() {
                 value={fundingImportDraft.rows}
                 onChange={event => setFundingImportDraft({ rows: event.target.value })}
                 placeholder={'Alpha Ventures | Dana Smith | 0.92 | 0.88 | 0.7 | 0.65 | sourced | B2B infra thesis | Intro via portfolio CTO | b2b,infra | seed,series-a | us,eu | strong fit\nNorth Bridge | Alex Kim | 0.74 | 0.8 | 0.68 | 0.9 | follow_up | AI tooling thesis | Warm intro from advisor | ai,saas | seed | us | requested deck'}
-                className="mt-4 w-full rounded-[24px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-amber-300/50"
+                className="mt-4 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-slate-600 focus:border-amber-300/50"
               />
             </div>
 
-            <div className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+            <div className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
               <div className="text-sm font-semibold text-white">Funding actions</div>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   onClick={handleFundingSequence}
                   disabled={fundingSequencing}
-                  className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-fuchsia-100 transition hover:bg-fuchsia-500/15 disabled:opacity-60"
+                  className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-fuchsia-100 transition hover:bg-fuchsia-500/15 disabled:opacity-60"
                 >
                   {fundingSequencing ? 'Queuing...' : 'Queue Outreach'}
                 </button>
@@ -1496,13 +1701,13 @@ export default function CampaignPreview() {
 
               <div className="mt-4 space-y-3">
                 {fundingRuns.slice(0, 3).map(run => (
-                  <div key={run.id} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                  <div key={run.id} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
                     <div className="text-sm font-semibold text-white">{run.type}</div>
-                    <div className="mt-1 text-xs text-slate-500">{run.processedInvestors} investors · {run.status} · {new Date(run.createdAt).toLocaleDateString()}</div>
+                    <div className="mt-1 text-xs text-slate-500">{run.processedInvestors} investors · {run.status} · {formatDate(run.createdAt)}</div>
                   </div>
                 ))}
                 {!fundingRuns.length && (
-                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">No funding runs yet.</div>
+                  <div className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">No funding runs yet.</div>
                 )}
               </div>
             </div>
@@ -1510,7 +1715,7 @@ export default function CampaignPreview() {
 
           <div className="mt-6 space-y-3">
             {(fundingPipeline?.prioritized || []).slice(0, 8).map(investor => (
-              <div key={investor.id} className="rounded-[24px] border border-white/10 bg-[#0b1526] p-4">
+              <div key={investor.id} className="rounded-xl border border-white/10 bg-[#0b1526] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-white">{investor.fundName}</div>
@@ -1518,7 +1723,7 @@ export default function CampaignPreview() {
                   </div>
                   <div className="text-right">
                     <div className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Priority score</div>
-                    <div className="mt-1 text-xs text-amber-200">{percent(investor.score)}</div>
+                    <div className="mt-1 text-xs text-amber-200">{formatPercent(investor.score)}</div>
                   </div>
                 </div>
                 {!!investor.reasons?.length && (
@@ -1527,23 +1732,23 @@ export default function CampaignPreview() {
               </div>
             ))}
             {!(fundingPipeline?.prioritized || []).length && (
-              <div className="rounded-2xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">
+              <div className="rounded-xl border border-dashed border-white/10 px-4 py-3 text-sm text-slate-400">
                 No funding pipeline yet. Import investor rows, then run funding automation.
               </div>
             )}
           </div>
         </section>
 
-        <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
+        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                 <WandSparkles className="h-3.5 w-3.5 text-indigo-400" />
                 Strategy Surface
               </div>
               <h3 className="mt-2 text-xl font-semibold text-white">Latest generated execution blueprint</h3>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-[#0b1526] px-4 py-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+            <div className="rounded-xl border border-white/10 bg-[#0b1526] px-4 py-2 text-[11px] uppercase tracking-[0.15em] text-slate-400">
               {lastCampaign ? 'Live' : 'Awaiting first run'}
             </div>
           </div>
@@ -1565,7 +1770,7 @@ export default function CampaignPreview() {
                 const title = part.replace(/[\[\]:]/g, '');
                 const content = sections[index + 1] || '';
                 return (
-                  <div key={`${title}-${index}`} className="rounded-[24px] border border-white/10 bg-[#0b1526] p-5">
+                  <div key={`${title}-${index}`} className="rounded-xl border border-white/10 bg-[#0b1526] p-5">
                     <div className="flex items-center gap-2 text-sm font-semibold text-white">
                       {title.toLowerCase().includes('strategy') && <Radar className="h-4 w-4 text-indigo-400" />}
                       {title.toLowerCase().includes('copy') && <ArrowRight className="h-4 w-4 text-fuchsia-400" />}

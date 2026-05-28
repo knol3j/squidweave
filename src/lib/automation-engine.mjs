@@ -47,28 +47,72 @@ export class AutomationEngine {
     return persisted;
   }
 
-  async runCampaign(campaignId, options = {}) {
-    await this.memoryEngine.consolidateCampaign(campaignId);
-    const decision = await this.decisionEngine.run(campaignId);
-    const campaign = this.store.getCampaign(campaignId);
-    const contentPack = this.shouldRefreshContent(campaign, decision)
-      ? await this.generateContentPack(campaignId, {
-          summary: decision.summary,
-          locales: options.locales,
-          decisionId: decision.id,
-          reason: options.reason || "decision-triggered",
-        })
-      : null;
+  async _pushToDlq(campaignId, runId, step, error) {
+    const entry = {
+      id: crypto.randomUUID(),
+      campaignId,
+      runId,
+      step,
+      error: error.message || String(error),
+      stack: error.stack || null,
+      failedAt: new Date().toISOString(),
+    };
+    try {
+      await this.store.addDlqEntry(entry);
+    } catch (dlqErr) {
+      console.error("[automation:dlq] failed to write DLQ entry:", dlqErr.message);
+    }
+  }
 
+  async runCampaign(campaignId, options = {}) {
     const run = {
       id: crypto.randomUUID(),
       campaignId,
       createdAt: new Date().toISOString(),
       reason: options.reason || "manual",
-      decisionId: decision.id,
-      contentPackId: contentPack?.id || null,
-      status: "completed",
+      status: "running",
     };
+
+    try {
+      await this.memoryEngine.consolidateCampaign(campaignId);
+    } catch (memErr) {
+      run.status = "failed";
+      run.error = memErr.message;
+      await this.store.addAutomationRun(run).catch(() => {});
+      await this._pushToDlq(campaignId, run.id, "memory_consolidate", memErr);
+      throw memErr;
+      return; // unreachable but satisfies type checker
+    }
+
+    let decision;
+    try {
+      decision = await this.decisionEngine.run(campaignId);
+    } catch (decErr) {
+      run.status = "failed";
+      run.error = decErr.message;
+      await this.store.addAutomationRun(run).catch(() => {});
+      await this._pushToDlq(campaignId, run.id, "decision", decErr);
+      throw decErr;
+      return;
+    }
+
+    const campaign = this.store.getCampaign(campaignId);
+    let contentPack = null;
+    if (this.shouldRefreshContent(campaign, decision)) {
+      try {
+        contentPack = await this.generateContentPack(campaignId, {
+          summary: decision.summary,
+          locales: options.locales,
+          decisionId: decision.id,
+          reason: options.reason || "decision-triggered",
+        });
+      } catch (cpErr) {
+        run.status = "warned";
+        run.contentPackError = cpErr.message;
+        console.warn(`[automation:warn] content pack generation failed: ${cpErr.message}`);
+        // Non-fatal — continue without contentPack
+      }
+    }
 
     const agentResult = this.agentOrchestrator
       ? await this.agentOrchestrator.runCampaign(campaignId, {
@@ -82,9 +126,13 @@ export class AutomationEngine {
         })
       : { agentRuns: [], lifecycle: { coverage: [], activeAgents: 0 } };
 
+    run.decisionId = decision.id;
+    run.contentPackId = contentPack?.id || null;
     run.agentRunIds = agentResult.agentRuns.map(agentRun => agentRun.id);
     run.agentRunCount = agentResult.agentRuns.length;
     run.lifecycle = agentResult.lifecycle;
+    run.status = "completed";
+
     await this.store.addAutomationRun(run);
     await this.memoryEngine.consolidateCampaign(campaignId);
     return { run, decision, contentPack, agentRuns: agentResult.agentRuns, lifecycle: agentResult.lifecycle };

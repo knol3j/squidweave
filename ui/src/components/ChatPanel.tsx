@@ -234,7 +234,7 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
                         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover/market:opacity-10 transition-opacity">
                           <TrendingUp className="w-16 h-16 text-amber-400" />
                         </div>
-                        <div className="text-[11px] font-bold text-amber-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-2">
                           <BarChart className="w-3 h-3" />
                           Market Realities & Fact Check
                         </div>

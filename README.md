@@ -1,6 +1,11 @@
-# LocaleWeave
+# SquidWeave
 
 Localized marketing automation brain with a LocaleWeave React control surface.
+
+## Full Documentation
+
+- **[skills.md](skills.md)** — Complete technical inventory: all endpoints, architecture decisions, connectors, and notable commits
+- **[docs/index.md](docs/index.md)** — Documentation index with links to all docs
 
 ## Architecture
 
@@ -62,7 +67,12 @@ Useful endpoints:
 - `POST /funding/sequence`
 - `POST /funding/run`
 - `GET /funding/runs?campaignId=...`
+- `GET /funding/runs/:runId`
 - `GET /funding/outreach-events?campaignId=...`
+- `GET /dlq`
+- `DELETE /dlq/:entryId/retry`
+- `DELETE /safety/executions/:receiptId`
+- `GET /dedupe/check?key=...`
 - `GET /state`
 
 ## UI Run

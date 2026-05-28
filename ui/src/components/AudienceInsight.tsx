@@ -92,7 +92,7 @@ export default function AudienceInsight() {
                       </div>
                       <div>
                         <h3 className="text-lg font-bold text-white tracking-tight">{persona.name}</h3>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-0.5">
+                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 mt-0.5">
                           <MapPin className="w-3 h-3" /> {persona.demographics}
                         </div>
                       </div>
