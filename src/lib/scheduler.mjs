@@ -149,15 +149,82 @@ export class AutomationScheduler {
       console.log(
         `[SCHEDULER] Tick completed for ${campaigns.length} campaigns in ${elapsed}ms`,
       );
+
+      // Prune state every 30 ticks (~1 hour at 120s interval) to prevent bloat
+      this._tickCount = (this._tickCount || 0) + 1;
+      if (this._tickCount % 30 === 0) {
+        this.pruneState();
+      }
     } finally {
       this.running = false;
     }
+  }
+
+  /**
+   * Clean up orphaned execution receipts left in "running" state
+   * from crashed or killed processes. Any receipt running longer than
+   * staleThresholdMs is assumed orphaned and marked failed.
+   */
+  cleanupOrphanedReceipts({ staleThresholdMs = 30 * 60 * 1000 } = {}) {
+    const receipts = this.store.listExecutionReceipts({ status: "running" });
+    let cleaned = 0;
+    const now = Date.now();
+    for (const receipt of receipts) {
+      const age = now - new Date(receipt.createdAt).getTime();
+      if (age > staleThresholdMs) {
+        this.store.updateExecutionReceipt(receipt.id, {
+          status: "failed",
+          failedAt: new Date().toISOString(),
+          error: `Orphaned receipt cleaned up after ${Math.round(age / 60000)}min — assumed process crash`,
+        });
+        cleaned++;
+      }
+    }
+    if (cleaned > 0) {
+      console.log(`[SCHEDULER] Cleaned ${cleaned} orphaned execution receipt(s)`);
+    }
+    return cleaned;
+  }
+
+  /**
+   * Prune oversized state collections to keep state.json lean.
+   * Runs once on startup, then can be called periodically.
+   */
+  pruneState({ maxSizes = {
+    agentRuns: 500,
+    decisions: 200,
+    researchRecords: 500,
+    analyticsEvents: 200,
+    targetProfiles: 200,
+    memoryConsolidations: 100,
+    fundingRuns: 50,
+    automationRuns: 200,
+    prospectingRuns: 100,
+  } } = {}) {
+    let pruned = 0;
+    for (const [key, maxLen] of Object.entries(maxSizes)) {
+      const arr = this.store.state[key];
+      if (Array.isArray(arr) && arr.length > maxLen) {
+        const before = arr.length;
+        this.store.state[key] = arr.slice(-maxLen);
+        pruned += before - arr.length;
+      }
+    }
+    if (pruned > 0) {
+      console.log(`[SCHEDULER] Pruned ${pruned} stale entries from state collections`);
+    }
+    return pruned;
   }
 
   start() {
     if (this.timer) {
       return this.getStatus();
     }
+
+    // Startup housekeeping: clean orphans + prune state
+    this.cleanupOrphanedReceipts();
+    this.pruneState();
+
     // Run first tick immediately, then on interval
     this.tick().catch(error => {
       console.error("Scheduler first tick failed:", error.message);
