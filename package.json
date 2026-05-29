@@ -11,6 +11,8 @@
     "start": "node src/server.mjs",
     "dev": "node scripts/dev.mjs",
     "test": "node --test tests/*.test.mjs",
+    "test:coverage": "c8 --reporter=text --reporter=lcov node --test tests/*.test.mjs",
+    "lint": "node --check src/**/*.mjs",
     "ui:dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",
     "ui:lint": "npm --prefix ui run lint",
@@ -24,12 +26,13 @@
     "automation:cron": "node scripts/orchestrate-blueprints.mjs --enrich-only",
     "automation:smoke": "node scripts/automation-smoke.mjs",
     "systemd:install": "bash deploy/install-systemd.sh --user",
-    "systemd:status": "systemctl --user status localeWeave --no-pager -n 10",
-    "systemd:restart": "systemctl --user restart localeWeave",
-    "systemd:stop": "systemctl --user stop localeWeave",
-    "systemd:logs": "journalctl --user -u localeWeave --no-pager -n 50 -f"
+    "systemd:status": "systemctl --user status squidweave --no-pager -n 10",
+    "systemd:restart": "systemctl --user restart squidweave",
+    "systemd:stop": "systemctl --user stop squidweave",
+    "systemd:logs": "journalctl --user -u squidweave --no-pager -n 50 -f"
   },
   "devDependencies": {
+    "c8": "^10.1.0",
     "electron": "^41.7.0",
     "electron-builder": "^26.0.12"
   },

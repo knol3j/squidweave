@@ -95,6 +95,8 @@ import { registerFunnelRoutes, getFunnelCollections } from "./modules/funnel/fun
 import { registerMessagingRoutes, getMessagingCollections } from "./modules/messaging/messaging-routes.mjs";
 import * as adapters from "./adapters/index.mjs";
 import * as calendly from "./adapters/calendly.mjs";
+import { TrackingEngine } from "./lib/tracking-engine.mjs";
+import { RateLimiter } from "./lib/rate-limiter.mjs";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -523,6 +525,11 @@ async function createApp() {
   const funnelHandlers = registerFunnelRoutes({ store, workflowEngine, pipelineEngine });
   const messagingHandlers = registerMessagingRoutes({ store, workflowEngine });
   const executionGuard = new ExecutionGuard({ store, config });
+  const trackingEngine = new TrackingEngine({ store });
+  const rateLimiter = new RateLimiter({
+    windowMs: 60_000,
+    maxRequests: Number(process.env.RATE_LIMIT_MAX || 120),
+  });
   const scheduler = new AutomationScheduler({
     store,
     automationEngine,
@@ -2610,6 +2617,100 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       return;
     }
 
+    // ── Tracking Webhooks ──────────────────────────────────────
+    // Email open tracking pixel
+    if (request.method === "GET" && parts[0] === "webhooks" && parts[1] === "pixel" && parts.length >= 5) {
+      trackingEngine.servePixel(request, response);
+      trackingEngine.recordOpen({
+        campaignId: parts[2],
+        investorId: parts[3],
+        emailId: parts[4],
+        ip: request.headers["x-forwarded-for"] || request.socket?.remoteAddress,
+        userAgent: request.headers["user-agent"],
+      }).catch(() => {});
+      return;
+    }
+
+    // Email click tracking redirect
+    if (request.method === "GET" && parts[0] === "webhooks" && parts[1] === "click" && parts.length >= 5) {
+      const targetUrl = Buffer.from(parts[5] || "", "base64url").toString("utf8");
+      trackingEngine.recordClick({
+        campaignId: parts[2],
+        investorId: parts[3],
+        emailId: parts[4],
+        targetUrl,
+        ip: request.headers["x-forwarded-for"] || request.socket?.remoteAddress,
+        userAgent: request.headers["user-agent"],
+      }).catch(() => {});
+      response.writeHead(302, { location: targetUrl || "https://example.com" });
+      response.end();
+      return;
+    }
+
+    // Brevo (Sendinblue) webhook
+    if (request.method === "POST" && url.pathname === "/webhooks/brevo") {
+      const body = await readBody(request);
+      const result = await trackingEngine.handleBrevoWebhook(body);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    // Mailgun webhook
+    if (request.method === "POST" && url.pathname === "/webhooks/mailgun") {
+      const body = await readBody(request);
+      const result = await trackingEngine.handleMailgunWebhook(body);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    // Generic webhook (reply, bounce detection)
+    if (request.method === "POST" && url.pathname === "/webhooks/email") {
+      const body = await readBody(request);
+      const result = await trackingEngine.handleGenericWebhook(body);
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    // ── Analytics feedback loop ─────────────────────────────────
+    if (request.method === "POST" && url.pathname === "/analytics/apply-refinements") {
+      const body = await readBody(request);
+      if (!body.campaignId) {
+        sendJson(request, response, 400, { error: "campaignId is required." });
+        return;
+      }
+      const refinements = analyticsEngine.recommendRefinements(body.campaignId);
+      if (refinements?.recommendations?.length > 0) {
+        const campaign = store.getCampaign(body.campaignId);
+        if (campaign) {
+          const patch = {};
+          for (const rec of refinements.recommendations) {
+            if (rec.action === "trigger_social_dispatch" && !patch.automationEnabled) {
+              patch.automationEnabled = true;
+            }
+            if (rec.action === "run_enrichment_pipeline" && !patch.automationEnabled) {
+              patch.automationEnabled = true;
+            }
+          }
+          if (Object.keys(patch).length > 0) {
+            await store.upsertCampaign({ ...campaign, ...patch });
+          }
+        }
+      }
+      sendJson(request, response, 200, {
+        campaignId: body.campaignId,
+        refinements,
+        applied: refinements?.recommendations?.length || 0,
+      });
+      return;
+    }
+
+    // ── Rate limit status ──────────────────────────────────────
+    if (request.method === "GET" && url.pathname === "/rate-limit/status") {
+      const key = url.searchParams.get("key") || request.headers["x-api-key"] || "anonymous";
+      sendJson(request, response, 200, rateLimiter.check(key));
+      return;
+    }
+
     if (request.method === "GET" && await serveStaticAsset(request, response, url.pathname, config.staticDir)) {
       return;
     }
@@ -2637,6 +2738,8 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
 
 export async function startServer({ port = config.port, host = process.env.HOST || "127.0.0.1" } = {}) {
   const { server, scheduler } = await createApp();
+  activeServer = server;
+  activeScheduler = scheduler;
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, host, resolve);
@@ -2666,10 +2769,37 @@ process.on('uncaughtException', (err) => {
 
 // Graceful shutdown
 let shuttingDown = false;
+let activeServer = null;
+let activeScheduler = null;
+
 async function gracefulShutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`\n[SHUTDOWN] ${signal} received, exiting...`);
+  console.log(`\n[SHUTDOWN] ${signal} received — draining...`);
+
+  // Stop scheduler first (no new ticks)
+  if (activeScheduler) {
+    activeScheduler.stop();
+    console.log('[SHUTDOWN] Scheduler stopped');
+  }
+
+  // Close HTTP server (stop accepting new connections)
+  if (activeServer) {
+    await new Promise(resolve => activeServer.close(resolve));
+    console.log('[SHUTDOWN] HTTP server closed');
+  }
+
+  // Flush state to disk/postgres
+  try {
+    if (activeServer && typeof activeServer._store?.flush === 'function') {
+      await activeServer._store.flush();
+      console.log('[SHUTDOWN] State flushed');
+    }
+  } catch (err) {
+    console.error('[SHUTDOWN] State flush error:', err.message);
+  }
+
+  console.log('[SHUTDOWN] Clean exit');
   process.exit(0);
 }
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
