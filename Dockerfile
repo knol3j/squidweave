@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY ui/package*.json ./ui/
 
-RUN npm ci && npm --prefix ui ci
+RUN npm ci --omit=optional && npm --prefix ui ci
 
 COPY . .
 
