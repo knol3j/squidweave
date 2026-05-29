@@ -1,4 +1,4 @@
-name: Deploy to Railway
+name: Deploy to sofish.io
 
 on:
   push:
@@ -19,17 +19,25 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --omit=optional
 
       - name: Build UI
         run: npm run ui:build
 
-      - name: Install Railway CLI
-        run: npm i -g @railway/cli
-
-      - name: Deploy to Railway
-        run: railway up --service squidweave-api --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Deploy to sofish.io via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /home/gnul/squidweave
+            git pull origin master
+            npm ci --omit=optional
+            npm run ui:build
+            systemctl --user restart localeWeave
+            systemctl --user is-active --quiet localeWeave && echo "Service is running"
