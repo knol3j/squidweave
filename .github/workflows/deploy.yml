@@ -2,42 +2,59 @@ name: Deploy to sofish.io
 
 on:
   push:
-    branches: [master]
+    branches:
+      - master
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci --omit=optional
+      - name: Install UI dependencies
+        run: npm ci
 
-      - name: Build UI
-        run: npm run ui:build
+      - name: Build site
+        env:
+          VITE_BRAIN_API_BASE: https://squidweave-api-production.up.railway.app
+        run: npm run build
 
-      - name: Deploy to sofish.io via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
-            cd /home/gnul/squidweave
-            git pull origin master
-            npm ci --omit=optional
-            npm run ui:build
-            systemctl --user restart localeWeave
-            systemctl --user is-active --quiet localeWeave && echo "Service is running"
+          path: ui/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

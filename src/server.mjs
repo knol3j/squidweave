@@ -111,6 +111,10 @@ const mimeTypes = {
 
 function buildCorsHeaders(request) {
   const origin = request.headers.origin;
+  const configuredOrigins = (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean);
   const allowedOrigins = new Set([
     "http://127.0.0.1:3000",
     "http://localhost:3000",
@@ -118,6 +122,10 @@ function buildCorsHeaders(request) {
     "http://localhost:5173",
     "http://127.0.0.1:3001",
     "http://localhost:3001",
+    "https://sofish.io",
+    "https://www.sofish.io",
+    "https://knol3j.github.io",
+    ...configuredOrigins,
   ]);
 
   return {

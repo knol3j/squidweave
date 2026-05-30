@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --configLoader runner --port=3000 --host=0.0.0.0",
-    "build": "vite --configLoader runner build",
+    "build": "vite --configLoader runner build && node scripts/prepare-pages.mjs",
     "preview": "vite --configLoader runner preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
