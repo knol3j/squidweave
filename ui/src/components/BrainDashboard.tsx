@@ -28,7 +28,7 @@ import {
   Workflow,
 } from 'lucide-react';
 import { useCollaboration } from './CollaborationProvider';
-import { ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, OpenClawDiagnostic, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
+import { ApiError, ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, OpenClawDiagnostic, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
 import { AGENT_SYSTEM } from '../lib/agentSystem';
 import { formatPercent, formatShortDate } from '../lib/format';
 
@@ -51,6 +51,18 @@ type BrainState = {
 };
 
 const TABS = ['Knowledge Graph', 'Research Feed', 'Memory Recall', 'Reengagement'] as const;
+
+function formatLoadError(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    if (error.status === 401) {
+      return 'Authentication expired. Sign in again to continue.';
+    }
+    if (error.status === 404) {
+      return fallback;
+    }
+  }
+  return error instanceof Error ? error.message : fallback;
+}
 
 function buildGraphNodes(state: BrainState, campaign: any) {
   const latestPack = state.contentPacks?.at(-1);
@@ -152,71 +164,128 @@ export default function BrainDashboard() {
   const [outreachEvents, setOutreachEvents] = useState<any[]>([]);
   const [setupRequirements, setSetupRequirements] = useState<SetupRequirements | null>(null);
   const [openClawDiagnostics, setOpenClawDiagnostics] = useState<OpenClawDiagnostic[]>([]);
+  const [loadWarnings, setLoadWarnings] = useState<string[]>([]);
+  const [runningAutomation, setRunningAutomation] = useState(false);
+
+  const refreshDashboard = React.useCallback(async () => {
+    const warnings: string[] = [];
+    let hardFailure: string | null = null;
+    const results = await Promise.allSettled([
+      dataService.getState(),
+      dataService.getMemoryRecall(campaignState.id || 'main-campaign'),
+      dataService.getReengagementQueue(campaignState.id || 'main-campaign'),
+      dataService.getResearchRecords(campaignState.id || 'main-campaign'),
+      dataService.getTargetDecision(campaignState.id || 'main-campaign'),
+      dataService.getConnectorStatuses(false),
+      dataService.getAnalyticsEvents(campaignState.id || 'main-campaign'),
+      dataService.getOutreachEvents(campaignState.id || 'main-campaign'),
+      dataService.getSetupRequirements(),
+      dataService.getOpenClawDiagnostics(),
+    ]);
+
+    const [stateResult, recallResult, reengagementResult, researchResult, decisionResult, connectorsResult, analyticsResult, outreachResult, requirementsResult, diagnosticsResult] = results;
+
+    if (stateResult.status === 'fulfilled') {
+      setState(stateResult.value);
+    } else {
+      console.error(stateResult.reason);
+      hardFailure = formatLoadError(stateResult.reason, 'Core brain state is unavailable.');
+    }
+
+    if (recallResult.status === 'fulfilled') {
+      setRecall(recallResult.value);
+    } else {
+      console.error(recallResult.reason);
+      warnings.push(formatLoadError(recallResult.reason, 'Memory recall is not available yet.'));
+    }
+
+    if (reengagementResult.status === 'fulfilled') {
+      setReengagement(reengagementResult.value);
+    } else {
+      console.error(reengagementResult.reason);
+      warnings.push(formatLoadError(reengagementResult.reason, 'Reengagement data is not available yet.'));
+    }
+
+    if (researchResult.status === 'fulfilled') {
+      setResearchRecords(researchResult.value);
+    } else {
+      console.error(researchResult.reason);
+      warnings.push(formatLoadError(researchResult.reason, 'Research feed is not available yet.'));
+    }
+
+    if (decisionResult.status === 'fulfilled') {
+      setTargetDecision(decisionResult.value);
+    } else {
+      console.error(decisionResult.reason);
+      warnings.push(formatLoadError(decisionResult.reason, 'Target decisioning is not available yet.'));
+    }
+
+    if (connectorsResult.status === 'fulfilled') {
+      setConnectorStatuses(connectorsResult.value);
+      setConnectorDrafts(current => {
+        const next = { ...current };
+        for (const status of connectorsResult.value) {
+          if (!next[status.connector]) {
+            next[status.connector] = { baseUrl: status.baseUrl || '', token: '' };
+          } else if (!next[status.connector].baseUrl && status.baseUrl) {
+            next[status.connector] = { ...next[status.connector], baseUrl: status.baseUrl };
+          }
+        }
+        return next;
+      });
+    } else {
+      console.error(connectorsResult.reason);
+      warnings.push(formatLoadError(connectorsResult.reason, 'Connector status is not available yet.'));
+    }
+
+    if (analyticsResult.status === 'fulfilled') {
+      setAnalyticsEvents(analyticsResult.value);
+    } else {
+      console.error(analyticsResult.reason);
+      warnings.push(formatLoadError(analyticsResult.reason, 'Analytics events are not available yet.'));
+    }
+
+    if (outreachResult.status === 'fulfilled') {
+      setOutreachEvents(outreachResult.value);
+    } else {
+      console.error(outreachResult.reason);
+      warnings.push(formatLoadError(outreachResult.reason, 'Outreach events are not available yet.'));
+    }
+
+    if (requirementsResult.status === 'fulfilled') {
+      setSetupRequirements(requirementsResult.value);
+    } else {
+      console.error(requirementsResult.reason);
+      warnings.push(formatLoadError(requirementsResult.reason, 'Setup requirements are not available yet.'));
+    }
+
+    if (diagnosticsResult.status === 'fulfilled') {
+      setOpenClawDiagnostics(diagnosticsResult.value.diagnostics || []);
+    } else {
+      console.error(diagnosticsResult.reason);
+      warnings.push(formatLoadError(diagnosticsResult.reason, 'Connector diagnostics are not available yet.'));
+    }
+
+    setLoadWarnings([...new Set(warnings)]);
+    setLoadError(hardFailure);
+    setInitialLoading(false);
+  }, [campaignState.id]);
 
   useEffect(() => {
     let active = true;
     const run = async () => {
-      try {
-        const [nextState, nextRecall, nextReengagement, nextResearch, nextDecision, nextConnectors, nextAnalytics, nextOutreach, nextRequirements, nextDiagnostics] = await Promise.all([
-          dataService.getState(),
-          dataService.getMemoryRecall(campaignState.id || 'main-campaign'),
-          dataService.getReengagementQueue(campaignState.id || 'main-campaign'),
-          dataService.getResearchRecords(campaignState.id || 'main-campaign'),
-          dataService.getTargetDecision(campaignState.id || 'main-campaign'),
-          dataService.getConnectorStatuses(false),
-          dataService.getAnalyticsEvents(campaignState.id || 'main-campaign'),
-          dataService.getOutreachEvents(campaignState.id || 'main-campaign'),
-          dataService.getSetupRequirements(),
-          dataService.getOpenClawDiagnostics(),
-        ]);
-        if (active) {
-          setState(nextState);
-          setRecall(nextRecall);
-          setReengagement(nextReengagement);
-          setResearchRecords(nextResearch);
-          setTargetDecision(nextDecision);
-          setConnectorStatuses(nextConnectors);
-          setConnectorDrafts(current => {
-            const next = { ...current };
-            for (const status of nextConnectors) {
-              if (!next[status.connector]) {
-                next[status.connector] = {
-                  baseUrl: status.baseUrl || '',
-                  token: '',
-                };
-              } else if (!next[status.connector].baseUrl && status.baseUrl) {
-                next[status.connector] = {
-                  ...next[status.connector],
-                  baseUrl: status.baseUrl,
-                };
-              }
-            }
-            return next;
-          });
-          setAnalyticsEvents(nextAnalytics);
-          setOutreachEvents(nextOutreach);
-          setSetupRequirements(nextRequirements);
-          setOpenClawDiagnostics(nextDiagnostics.diagnostics || []);
-          setLoadError(null);
-        }
-      } catch (error) {
-        console.error(error);
-        if (active) {
-          setLoadError(error instanceof Error ? error.message : 'Failed to load brain data');
-        }
-      } finally {
-        if (active) {
-          setInitialLoading(false);
-        }
-      }
+      if (!active) return;
+      await refreshDashboard();
     };
-    run();
-    const timer = window.setInterval(run, 4000);
+    void run();
+    const timer = window.setInterval(() => {
+      void run();
+    }, 4000);
     return () => {
       active = false;
       window.clearInterval(timer);
     };
-  }, [campaignState.id]);
+  }, [refreshDashboard]);
 
   const decisionSeries = useMemo(() => {
     const decisions = state.decisions || [];
@@ -297,7 +366,7 @@ export default function BrainDashboard() {
           <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
           <p className="text-red-400 text-sm font-medium">Failed to load brain data</p>
           <p className="text-slate-500 text-xs">{loadError}</p>
-          <button onClick={() => window.location.reload()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
+          <button onClick={() => void refreshDashboard()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
             Retry
           </button>
         </div>
@@ -342,6 +411,20 @@ export default function BrainDashboard() {
     }
   };
 
+  const triggerBrain = async () => {
+    setRunningAutomation(true);
+    setConnectorMessage(null);
+    try {
+      await dataService.runAutomation(campaignState.id || 'main-campaign', 'brain-dashboard');
+      await refreshDashboard();
+      setConnectorMessage('Automation triggered and the dashboard has been refreshed.');
+    } catch (error) {
+      setConnectorMessage(formatLoadError(error, 'Failed to trigger automation.'));
+    } finally {
+      setRunningAutomation(false);
+    }
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-[#08111f] px-6 py-5 text-slate-100 custom-scrollbar">
       <div className="mx-auto max-w-7xl space-y-5">
@@ -354,13 +437,28 @@ export default function BrainDashboard() {
             </p>
           </div>
           <button
-            onClick={() => dataService.runAutomation(campaignState.id || 'main-campaign', 'brain-dashboard')}
-            className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm hover:bg-indigo-500/15"
+            onClick={() => void triggerBrain()}
+            disabled={runningAutomation}
+            className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Play className="h-4 w-4" />
-            Trigger Brain
+            {runningAutomation ? 'Running Brain...' : 'Trigger Brain'}
           </button>
         </div>
+
+        {!!loadWarnings.length && (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Some live brain feeds are still empty or unavailable.</span>
+            </div>
+            <div className="mt-2 space-y-1 text-xs text-amber-200/90">
+              {loadWarnings.map(warning => (
+                <div key={warning}>{warning}</div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {cards.map(card => (
@@ -385,11 +483,12 @@ export default function BrainDashboard() {
               Run the brain or trigger an automation cycle to populate the knowledge graph, memory recall, and decision history.
             </p>
             <button
-              onClick={() => dataService.runAutomation(campaignState.id || 'main-campaign', 'brain-dashboard')}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm transition hover:bg-indigo-500/15"
+              onClick={() => void triggerBrain()}
+              disabled={runningAutomation}
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm transition hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Play className="h-4 w-4" />
-              Trigger Brain
+              {runningAutomation ? 'Running Brain...' : 'Trigger Brain'}
             </button>
           </div>
         )}

@@ -24,6 +24,7 @@ import ReactMarkdown from 'react-markdown';
 import { useCollaboration } from './CollaborationProvider';
 import {
   ActivationRun,
+  ApiError,
   dataService,
   FundingOutreachEvent,
   FundingPipeline,
@@ -376,6 +377,18 @@ function parseContactImportRows(rows: string): Partial<SourcedContact>[] {
     .filter(contact => contact.company || contact.fullName || contact.email);
 }
 
+function formatLoadError(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    if (error.status === 401) {
+      return 'Authentication expired. Sign in again to continue.';
+    }
+    if (error.status === 404) {
+      return fallback;
+    }
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function CampaignPreview() {
   const { messages, campaignState, updateCampaignState } = useCollaboration();
   const [researchRecords, setResearchRecords] = React.useState<ResearchRecord[]>([]);
@@ -405,6 +418,7 @@ export default function CampaignPreview() {
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [initialLoading, setInitialLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [loadWarnings, setLoadWarnings] = React.useState<string[]>([]);
 
   const refreshResearch = React.useCallback(async () => {
     const records = await dataService.getResearchRecords(campaignState.id || 'main-campaign');
@@ -468,23 +482,72 @@ export default function CampaignPreview() {
     campaignState.researchObjectives,
   ]);
 
-  React.useEffect(() => {
-    refreshResearch().catch(error => console.error(error));
-  }, [refreshResearch]);
-
-  React.useEffect(() => {
+  const refreshAll = React.useCallback(async () => {
     setProspectingLoading(true);
     setLoadError(null);
-    Promise.all([refreshProspecting(), refreshActivation(), refreshFunding()])
-      .catch(error => {
-        console.error(error);
-        setLoadError(error instanceof Error ? error.message : 'Failed to load campaign data');
-      })
-      .finally(() => {
-        setProspectingLoading(false);
-        setInitialLoading(false);
-      });
-  }, [refreshProspecting, refreshActivation, refreshFunding]);
+    const warnings: string[] = [];
+    let hardFailure: string | null = null;
+
+    const [researchResult, prospectingResult, activationResult, fundingResult] = await Promise.allSettled([
+      refreshResearch(),
+      refreshProspecting(),
+      refreshActivation(),
+      refreshFunding(),
+    ]);
+
+    if (researchResult.status === 'rejected') {
+      console.error(researchResult.reason);
+      const message = formatLoadError(researchResult.reason, 'Research records are not available yet.');
+      if (message.includes('Authentication expired')) {
+        hardFailure = message;
+      } else {
+        warnings.push(message);
+      }
+    }
+
+    if (prospectingResult.status === 'rejected') {
+      console.error(prospectingResult.reason);
+      const message = formatLoadError(prospectingResult.reason, 'Prospecting data is not available yet.');
+      if (message.includes('Authentication expired')) {
+        hardFailure = message;
+      } else {
+        warnings.push(message);
+      }
+    }
+
+    if (activationResult.status === 'rejected') {
+      console.error(activationResult.reason);
+      const message = formatLoadError(activationResult.reason, 'Activation data is not available yet.');
+      if (message.includes('Authentication expired')) {
+        hardFailure = message;
+      } else {
+        warnings.push(message);
+      }
+    }
+
+    if (fundingResult.status === 'rejected') {
+      console.error(fundingResult.reason);
+      const message = formatLoadError(fundingResult.reason, 'Funding data is not available yet.');
+      if (message.includes('Authentication expired')) {
+        hardFailure = message;
+      } else {
+        warnings.push(message);
+      }
+    }
+
+    if (!hardFailure && researchResult.status === 'rejected' && prospectingResult.status === 'rejected' && activationResult.status === 'rejected' && fundingResult.status === 'rejected') {
+      hardFailure = 'Campaign data could not be loaded from the live API.';
+    }
+
+    setLoadError(hardFailure);
+    setLoadWarnings([...new Set(warnings)]);
+    setProspectingLoading(false);
+    setInitialLoading(false);
+  }, [refreshResearch, refreshProspecting, refreshActivation, refreshFunding]);
+
+  React.useEffect(() => {
+    void refreshAll();
+  }, [refreshAll]);
 
   const lastCampaign = React.useMemo(
     () => [...messages].reverse().find(message => message.role === 'assistant' && message.content.includes('[Campaign Strategy]')),
@@ -537,10 +600,11 @@ export default function CampaignPreview() {
         researchObjectives,
         intakeStatus: 'ready',
       });
+      setLoadError(null);
       setStatusMessage('Client intake saved. The brain now has a concrete mission brief.');
     } catch (error) {
       console.error(error);
-      setStatusMessage('Failed to save the client intake.');
+      setStatusMessage(formatLoadError(error, 'Failed to save the client intake.'));
     } finally {
       setIntakeSaving(false);
     }
@@ -770,7 +834,7 @@ export default function CampaignPreview() {
           <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
           <p className="text-red-400 text-sm font-medium">Failed to load campaign data</p>
           <p className="text-slate-500 text-xs">{loadError}</p>
-          <button onClick={() => window.location.reload()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
+          <button onClick={() => void refreshAll()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
             Retry
           </button>
         </div>
@@ -815,6 +879,20 @@ export default function CampaignPreview() {
           <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span>{statusMessage}</span>
+          </div>
+        )}
+
+        {!!loadWarnings.length && (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Some live sections are still empty or unavailable.</span>
+            </div>
+            <div className="mt-2 space-y-1 text-xs text-amber-200/90">
+              {loadWarnings.map(warning => (
+                <div key={warning}>{warning}</div>
+              ))}
+            </div>
           </div>
         )}
 
