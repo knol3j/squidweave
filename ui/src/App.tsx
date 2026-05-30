@@ -5,23 +5,36 @@
 
 import Layout from './components/Layout';
 import Sidebar from './components/Sidebar';
-import ChatPanel from './components/ChatPanel';
 import { Activity, Bot, Download, FileCode, FileJson, FileText, Share2, User as UserIcon, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { CTRChart, ConversionChart } from './components/PerformanceChart';
-import Onboarding from './components/Onboarding';
-import ABTestingPanel from './components/ABTestingPanel';
-import CampaignPreview from './components/CampaignPreview';
 import { formatShortDateTime } from './lib/format';
-import AudienceInsight from './components/AudienceInsight';
-import Performance from './components/Performance';
 import { CollaborationProvider, useCollaboration } from './components/CollaborationProvider';
-import { jsPDF } from 'jspdf';
-import BrainDashboard from './components/BrainDashboard';
-import FundingDashboard from './components/FundingDashboard';
 import { dataService, getApiUrl, getAuthEventName, setAuthCredentials, clearAuthCredentials, hasAuthCredentials } from './services/dataService';
 import { SquidCompatProvider } from './lib/squid';
+
+const Onboarding = lazy(() => import('./components/Onboarding'));
+const BrainDashboard = lazy(() => import('./components/BrainDashboard'));
+const ChatPanel = lazy(() => import('./components/ChatPanel'));
+const CampaignPreview = lazy(() => import('./components/CampaignPreview'));
+const ABTestingPanel = lazy(() => import('./components/ABTestingPanel'));
+const AudienceInsight = lazy(() => import('./components/AudienceInsight'));
+const Performance = lazy(() => import('./components/Performance'));
+const FundingDashboard = lazy(() => import('./components/FundingDashboard'));
+
+function PanelFallback({ label = 'Loading module...' }: { label?: string }) {
+  return (
+    <div className="flex h-full items-center justify-center rounded-[28px] border border-white/10 bg-[#08111f]/92">
+      <div className="text-center space-y-4">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10">
+          <Zap className="w-8 h-8 text-indigo-400 animate-pulse" />
+        </div>
+        <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{label}</div>
+      </div>
+    </div>
+  );
+}
 
 // ── Login Gate ──────────────────────────────────────────────
 // Shows a simple login form when the server returns 401.
@@ -136,11 +149,12 @@ function AppContent() {
     }
   };
 
-  const handleExport = (format: 'txt' | 'json' | 'pdf') => {
+  const handleExport = async (format: 'txt' | 'json' | 'pdf') => {
     const fileName = `squidweave-campaign-export.${format}`;
     setExportMenuOpen(false);
 
     if (format === 'pdf') {
+      const { jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, 210, 297, 'F');
@@ -232,7 +246,11 @@ function AppContent() {
   return (
     <Layout sidebar={<Sidebar onSelectTemplate={handleTemplateSelect} activeTab={activeTab} onSelectTab={setActiveTab} />}>
       <AnimatePresence>
-        {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
+        {showOnboarding && (
+          <Suspense fallback={<PanelFallback label="Loading onboarding..." />}>
+            <Onboarding onComplete={handleOnboardingComplete} />
+          </Suspense>
+        )}
       </AnimatePresence>
 
       <div className="flex h-full flex-1 gap-4 overflow-hidden bg-transparent p-4">
@@ -358,14 +376,16 @@ function AppContent() {
                   exit={{ opacity: 0, y: -10 }}
                   className="absolute inset-0 overflow-hidden rounded-[28px] border border-white/10 bg-[#08111f]/92 shadow-[0_14px_40px_rgba(2,6,23,0.35)]"
                 >
-                  <div className="grid h-full min-h-0 xl:grid-cols-[1.5fr_0.7fr]">
-                    <div className="min-h-0 overflow-hidden">
-                      <BrainDashboard />
+                  <Suspense fallback={<PanelFallback label="Loading engine..." />}>
+                    <div className="grid h-full min-h-0 xl:grid-cols-[1.5fr_0.7fr]">
+                      <div className="min-h-0 overflow-hidden">
+                        <BrainDashboard />
+                      </div>
+                      <div className="min-h-0 border-l border-white/10 bg-[#091425]">
+                        <ChatPanel externalPrompt={activePrompt} />
+                      </div>
                     </div>
-                    <div className="min-h-0 border-l border-white/10 bg-[#091425]">
-                      <ChatPanel externalPrompt={activePrompt} />
-                    </div>
-                  </div>
+                  </Suspense>
                 </motion.div>
               ) : activeTab === 'campaigns' ? (
                 <motion.div 
@@ -375,7 +395,9 @@ function AppContent() {
                   exit={{ opacity: 0, y: -10 }}
                   className="absolute inset-0 overflow-hidden rounded-[28px] border border-white/10 bg-[#08111f]/92 shadow-[0_14px_40px_rgba(2,6,23,0.35)]"
                 >
-                  <CampaignPreview />
+                  <Suspense fallback={<PanelFallback label="Loading campaign workspace..." />}>
+                    <CampaignPreview />
+                  </Suspense>
                 </motion.div>
               ) : activeTab === 'ab-test' ? (
                 <motion.div 
@@ -385,12 +407,14 @@ function AppContent() {
                   exit={{ opacity: 0, y: -10 }}
                   className="absolute inset-0 overflow-hidden rounded-[28px]"
                 >
-                  <ABTestingPanel 
-                    onNavigatePerformance={() => setActiveTab('performance')} 
-                    onNavigateEngine={(context) => {
-                      updateCampaignState({ activePrompt: context, activeTab: 'engine' });
-                    }}
-                  />
+                  <Suspense fallback={<PanelFallback label="Loading AB testing..." />}>
+                    <ABTestingPanel 
+                      onNavigatePerformance={() => setActiveTab('performance')} 
+                      onNavigateEngine={(context) => {
+                        updateCampaignState({ activePrompt: context, activeTab: 'engine' });
+                      }}
+                    />
+                  </Suspense>
                 </motion.div>
               ) : activeTab === 'audience' ? (
                 <motion.div 
@@ -400,7 +424,9 @@ function AppContent() {
                   exit={{ opacity: 0, y: -10 }}
                   className="absolute inset-0 overflow-hidden rounded-[28px]"
                 >
-                  <AudienceInsight />
+                  <Suspense fallback={<PanelFallback label="Loading audience insights..." />}>
+                    <AudienceInsight />
+                  </Suspense>
                 </motion.div>
               ) : activeTab === 'performance' ? (
                 <motion.div 
@@ -410,7 +436,9 @@ function AppContent() {
                   exit={{ opacity: 0, y: -10 }}
                   className="absolute inset-0 overflow-hidden rounded-[28px]"
                 >
-                  <Performance />
+                  <Suspense fallback={<PanelFallback label="Loading performance..." />}>
+                    <Performance />
+                  </Suspense>
                 </motion.div>
               ) : activeTab === 'funding' ? (
                 <motion.div 
@@ -420,7 +448,9 @@ function AppContent() {
                   exit={{ opacity: 0, y: -10 }}
                   className="absolute inset-0 overflow-hidden rounded-[28px] border border-white/10 bg-[#08111f]/92 shadow-[0_14px_40px_rgba(2,6,23,0.35)]"
                 >
-                  <FundingDashboard />
+                  <Suspense fallback={<PanelFallback label="Loading funding workspace..." />}>
+                    <FundingDashboard />
+                  </Suspense>
                 </motion.div>
               ) : (
                 <motion.div 
