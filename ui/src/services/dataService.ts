@@ -10,6 +10,7 @@ const API_BASE = import.meta.env.VITE_BRAIN_API_BASE || (isDev ? 'http://127.0.0
 // This avoids the browser limitation where fetch() fails when the
 // page URL contains embedded credentials (user:pass@host).
 const AUTH_KEY = 'squidweave_auth';
+const AUTH_EVENT = 'squidweave-auth-changed';
 
 function getAuthHeaders(): Record<string, string> {
   const stored = sessionStorage.getItem(AUTH_KEY);
@@ -19,16 +20,42 @@ function getAuthHeaders(): Record<string, string> {
   return {};
 }
 
+function notifyAuthChange() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(AUTH_EVENT));
+  }
+}
+
 export function setAuthCredentials(user: string, pass: string) {
   sessionStorage.setItem(AUTH_KEY, btoa(`${user}:${pass}`));
+  notifyAuthChange();
 }
 
 export function clearAuthCredentials() {
   sessionStorage.removeItem(AUTH_KEY);
+  notifyAuthChange();
 }
 
 export function hasAuthCredentials(): boolean {
   return !!sessionStorage.getItem(AUTH_KEY);
+}
+
+export function getApiUrl(path: string) {
+  return `${API_BASE}${path}`;
+}
+
+export function getAuthEventName() {
+  return AUTH_EVENT;
+}
+
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
 }
 
 export interface Campaign {
@@ -418,7 +445,7 @@ export interface FundingRun {
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(getApiUrl(path), {
     ...init,
     headers: {
       'content-type': 'application/json',
@@ -428,7 +455,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `API error ${response.status}`);
+    if (response.status === 401) {
+      clearAuthCredentials();
+    }
+    throw new ApiError(response.status, text || `API error ${response.status}`);
   }
   return response.json() as Promise<T>;
 }
@@ -493,6 +523,10 @@ function poll<T>(fetcher: () => Promise<T>, callback: (data: T) => void, interva
 }
 
 export const dataService = {
+  async verifyCredentials() {
+    return api<any>('/state');
+  },
+
   async getCampaign(campaignId: string) {
     return api<Campaign | null>(`/campaigns/${campaignId}`);
   },

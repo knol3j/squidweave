@@ -20,7 +20,7 @@ import { CollaborationProvider, useCollaboration } from './components/Collaborat
 import { jsPDF } from 'jspdf';
 import BrainDashboard from './components/BrainDashboard';
 import FundingDashboard from './components/FundingDashboard';
-import { dataService, setAuthCredentials, hasAuthCredentials } from './services/dataService';
+import { dataService, getApiUrl, getAuthEventName, setAuthCredentials, clearAuthCredentials, hasAuthCredentials } from './services/dataService';
 import { SquidCompatProvider } from './lib/squid';
 
 // ── Login Gate ──────────────────────────────────────────────
@@ -31,28 +31,29 @@ function LoginGate({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState('');
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setAuthenticated(hasAuthCredentials());
+    };
+    window.addEventListener(getAuthEventName(), handleAuthChange);
+    return () => window.removeEventListener(getAuthEventName(), handleAuthChange);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSubmitting(true);
     try {
       setAuthCredentials(username, password);
-      // Verify credentials by hitting /state
-      const resp = await fetch('/state', {
-        headers: {
-          'Authorization': 'Basic ' + btoa(`${username}:${password}`),
-          'Content-Type': 'application/json',
-        },
-      });
-      if (resp.ok) {
-        setAuthenticated(true);
-      } else {
-        sessionStorage.removeItem('squidweave_auth');
-        setError('Invalid credentials');
-      }
+      await dataService.verifyCredentials();
+      setAuthenticated(true);
     } catch (err) {
-      sessionStorage.removeItem('squidweave_auth');
-      setError('Connection error');
+      clearAuthCredentials();
+      setError(err instanceof Error ? err.message : 'Connection error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -65,6 +66,7 @@ function LoginGate({ children }: { children: React.ReactNode }) {
           <img src="/logo-login.png" alt="SquidWeave" style={{ height: '100px', margin: '0 auto 1rem', display: 'block', objectFit: 'contain' }} />
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '0.25rem' }}>Welcome Back</h2>
           <p style={{ fontSize: '0.75rem', color: '#64748b', letterSpacing: '0.05em' }}>Sign in to SquidWeave</p>
+          <p style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.5rem', wordBreak: 'break-all' }}>API: {getApiUrl('/state')}</p>
         </div>
         {error && <div style={{ color: '#f87171', marginBottom: '0.75rem', textAlign: 'center', fontSize: '0.875rem' }}>{error}</div>}
         <div style={{ marginBottom: '1rem' }}>
@@ -75,7 +77,7 @@ function LoginGate({ children }: { children: React.ReactNode }) {
           <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', color: '#94a3b8' }}>Password</label>
           <input type="password" value={password} onChange={e => setPassword(e.target.value)} autoFocus style={{ width: '100%', padding: '0.5rem', background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.375rem', color: '#e2e8f0', boxSizing: 'border-box' }} />
         </div>
-        <button type="submit" style={{ width: '100%', padding: '0.625rem', background: 'linear-gradient(135deg, #7c3aed, #2563eb)', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', letterSpacing: '0.03em', boxShadow: '0 0 20px -5px rgba(124, 58, 237, 0.3)' }}>Sign In</button>
+        <button type="submit" disabled={submitting} style={{ width: '100%', padding: '0.625rem', background: 'linear-gradient(135deg, #7c3aed, #2563eb)', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: submitting ? 'wait' : 'pointer', fontWeight: 600, fontSize: '0.875rem', letterSpacing: '0.03em', boxShadow: '0 0 20px -5px rgba(124, 58, 237, 0.3)', opacity: submitting ? 0.8 : 1 }}>{submitting ? 'Signing In...' : 'Sign In'}</button>
       </form>
     </div>
   );
@@ -507,11 +509,11 @@ function AppContent() {
 export default function App() {
   return (
     <SquidCompatProvider>
-      <CollaborationProvider>
-        <LoginGate>
+      <LoginGate>
+        <CollaborationProvider>
           <AppContent />
-        </LoginGate>
-      </CollaborationProvider>
+        </CollaborationProvider>
+      </LoginGate>
     </SquidCompatProvider>
   );
 }

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Campaign, dataService } from '../services/dataService';
+import { ApiError, Campaign, dataService } from '../services/dataService';
 import { getAllAgentIds } from '../lib/agentSystem';
 
 type LocalUser = {
@@ -32,6 +32,33 @@ const CAMPAIGN_ID = 'main-campaign';
 const STORAGE_KEY = 'squidweave-local-messages';
 const LEGACY_STORAGE_KEY = 'localeweave-local-messages';
 
+const DEFAULT_CAMPAIGN: Campaign = {
+  id: CAMPAIGN_ID,
+  name: 'Main Campaign',
+  connector: 'openclaw',
+  connectors: ['openclaw', 'clawdbot'],
+  activePrompt: 'Build a localized outbound campaign that turns market intelligence into qualified pipeline.',
+  activeTab: 'engine',
+  locales: ['en-US'],
+  objective: 'Generate qualified meetings from localized outbound campaigns.',
+  audience: 'Revenue leaders at growth-stage B2B companies',
+  offer: 'A focused campaign strategy and outbound execution plan',
+  brandVoice: 'Direct, credible, and operationally sharp',
+  channel: 'multichannel',
+  clientName: 'SquidWeave',
+  clientNeed: 'Operationalize campaign planning, targeting, and automation from one control surface.',
+  intakeStatus: 'ready',
+  successDefinition: 'Produce a campaign that can be launched and measured without manual state stitching.',
+  constraints: '',
+  differentiators: 'Persistent memory, localized content orchestration, live operator visibility',
+  researchNotes: '',
+  markets: ['United States'],
+  researchObjectives: ['Prioritize the highest-conviction targets', 'Adapt messaging by market'],
+  successMetrics: ['Meetings booked', 'Reply rate', 'Pipeline generated'],
+  automationEnabled: false,
+  enabledModules: getAllAgentIds(),
+};
+
 export const useCollaboration = () => {
   const context = useContext(CollaborationContext);
   if (!context) {
@@ -57,29 +84,7 @@ export function CollaborationProvider({ children }: { children: React.ReactNode 
   });
   const [loading, setLoading] = useState(true);
   const [campaignState, setCampaignState] = useState<Campaign>({
-    id: CAMPAIGN_ID,
-    connector: 'openclaw',
-    connectors: ['openclaw', 'clawdbot'],
-    activePrompt: '',
-    activeTab: 'engine',
-    locales: [],
-    objective: '',
-    audience: '',
-    offer: '',
-    brandVoice: '',
-    channel: '',
-    clientName: '',
-    clientNeed: '',
-    intakeStatus: 'draft',
-    successDefinition: '',
-    constraints: '',
-    differentiators: '',
-    researchNotes: '',
-    markets: [],
-    researchObjectives: [],
-    successMetrics: [],
-    automationEnabled: false,
-    enabledModules: getAllAgentIds(),
+    ...DEFAULT_CAMPAIGN,
   });
   const [messages, setMessages] = useState<ChatMessage[]>(() => readStoredMessages());
 
@@ -103,7 +108,18 @@ export function CollaborationProvider({ children }: { children: React.ReactNode 
             }));
           }
         } else {
-          await dataService.updateCampaign(CAMPAIGN_ID, campaignState);
+          const created = await dataService.updateCampaign(CAMPAIGN_ID, DEFAULT_CAMPAIGN);
+          if (active) {
+            setCampaignState(prev => ({
+              ...prev,
+              ...created,
+              id: CAMPAIGN_ID,
+            }));
+          }
+        }
+      } catch (error) {
+        if (!(error instanceof ApiError && error.status === 401)) {
+          console.error('Failed to bootstrap collaboration state', error);
         }
       } finally {
         if (active) {
