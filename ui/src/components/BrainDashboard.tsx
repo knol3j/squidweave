@@ -71,8 +71,11 @@ function buildGraphNodes(state: BrainState, campaign: any) {
   const modules = campaign?.enabledModules?.slice(0, 5) || [];
   const playbooks = state.memory?.playbooks?.slice(0, 2) || [];
 
+  const activeProvider = (state as any).activeProvider || 'local';
+  const providerLabel = activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1);
+
   const nodes = [
-    { id: 'brain', label: 'Local Brain', x: 50, y: 48, size: 18, tone: 'bg-violet-500' },
+    { id: 'brain', label: `${providerLabel} Brain`, x: 50, y: 48, size: 18, tone: 'bg-violet-500' },
     { id: 'campaign', label: campaign?.name || campaign?.id || 'Campaign', x: 27, y: 32, size: 14, tone: 'bg-indigo-500' },
   ];
 

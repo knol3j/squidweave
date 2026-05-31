@@ -2155,6 +2155,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     if (request.method === "GET" && url.pathname === "/state") {
       sendJson(request, response, 200, {
         ...store.snapshot(),
+        activeProvider: llmProvider.providerName || "none",
         memory: {
           targetProfiles: store.listTargetProfiles(),
           tacticObservations: store.listTacticObservations(),
