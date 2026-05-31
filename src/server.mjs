@@ -464,6 +464,8 @@ async function createApp() {
     defaultBrandVoice: config.defaultBrandVoice,
     defaultOffer: config.defaultOffer,
     llmProvider,
+    ollamaBaseUrl: config.ollama.baseUrl,
+    ollamaModel: config.ollama.model,
   });
   const connectorAliases = {
     moltbot: "openclaw",
@@ -568,10 +570,19 @@ async function createApp() {
         dryRun: config.dryRun,
         model: config.lmStudioModel,
         localizationModel: config.localizationModel,
+        activeProvider: llmProvider.providerName || "none",
+        gemini: {
+          configured: Boolean(config.gemini.apiKey),
+          model: config.gemini.model,
+        },
         llmProvider: {
           configured: Boolean(config.llm.baseUrl && config.llm.apiKey),
           model: config.llm.model,
           baseUrl: config.llm.baseUrl ? config.llm.baseUrl.replace(/\/\/[^@]*@/, "//***@") : null,
+        },
+        ollama: {
+          baseUrl: config.ollama.baseUrl,
+          model: config.ollama.model,
         },
         scheduler: scheduler.getStatus(),
       });

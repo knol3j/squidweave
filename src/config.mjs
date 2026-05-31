@@ -33,6 +33,15 @@ export const config = {
     model: process.env.LLM_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
     timeoutMs: toNumber(process.env.LLM_TIMEOUT_MS, 60000),
   },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || "",
+    model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    timeoutMs: toNumber(process.env.GEMINI_TIMEOUT_MS, 60000),
+  },
+  ollama: {
+    baseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
+    model: process.env.OLLAMA_MODEL || "gemma3n",
+  },
   schedulerIntervalSeconds: toNumber(process.env.SCHEDULER_INTERVAL_SECONDS, 120),
   maxDailyBudgetDelta: toNumber(process.env.MAX_DAILY_BUDGET_DELTA, 0.2),
   maxOutreachBatch: toNumber(process.env.MAX_OUTREACH_BATCH, 50),

@@ -162,7 +162,9 @@ export class LocalPlanner {
     this.defaultBrandVoice = options.defaultBrandVoice || "direct, credible, concise, and conversion-focused";
     this.defaultOffer = options.defaultOffer || "";
     this.lmStudioBaseUrl = options.lmStudioBaseUrl || process.env.LMSTUDIO_BASE_URL || "http://127.0.0.1:1234";
-    this.llmProvider = options.llmProvider || null; // LlmProvider instance
+    this.ollamaBaseUrl = options.ollamaBaseUrl || process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
+    this.ollamaModel = options.ollamaModel || process.env.OLLAMA_MODEL || "gemma3n";
+    this.llmProvider = options.llmProvider || null; // LlmProvider / GeminiProvider instance
     this.clientPromise = null;
   }
 
@@ -202,11 +204,33 @@ export class LocalPlanner {
   }
 
   /**
+   * Call Ollama HTTP API as a local fallback.
+   * @returns {string} Raw text response.
+   */
+  async callOllama(prompt) {
+    const url = `${this.ollamaBaseUrl.replace(/\/$/, "")}/api/generate`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: this.ollamaModel,
+        prompt,
+        stream: false,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`Ollama HTTP ${response.status} at ${url}`);
+    }
+    const payload = await response.json();
+    return payload.response || "";
+  }
+
+  /**
    * Generate LLM response using the configured backend.
-   * Tries: llmProvider → LM Studio → fallback to null.
+   * Tries: llmProvider → LM Studio → Ollama → error.
    */
   async generateLlmResponse(prompt, options = {}) {
-    // Path 1: Use the OpenAI-compatible provider (preferred)
+    // Path 1: Use the cloud provider (Gemini / OpenAI-compatible — preferred)
     if (this.llmProvider?.isConfigured?.()) {
       const result = await this.llmProvider.generate(prompt, {
         temperature: options.temperature ?? 0.7,
@@ -223,22 +247,34 @@ export class LocalPlanner {
           // fall through to LM Studio
         }
       }
-      // Provider failed — fall through to LM Studio if available
+      // Provider failed — fall through to local backends
     }
 
-    // Path 2: LM Studio SDK (fallback)
+    // Path 2: LM Studio SDK (local fallback #1)
+    let lmStudioError = null;
     try {
       const client = await this.getClient();
       const model = await client.llm.model(this.modelName);
       const result = await model.respond(prompt);
       return extractJson(result.content);
     } catch (error) {
-      throw new Error(`All LLM backends unavailable. Provider: ${this.llmProvider?.isConfigured?.() ? 'configured' : 'not-configured'}, LM Studio: ${error.message}`);
+      lmStudioError = error.message;
+    }
+
+    // Path 3: Ollama HTTP (local fallback #2)
+    try {
+      const text = await this.callOllama(prompt);
+      return extractJson(text);
+    } catch (ollamaError) {
+      throw new Error(
+        `All LLM backends unavailable. Provider: ${this.llmProvider?.isConfigured?.() ? "configured" : "not-configured"}, LM Studio: ${lmStudioError}, Ollama: ${ollamaError.message}`
+      );
     }
   }
 
   /**
    * Generate structured LLM response with retry logic.
+   * Tries: llmProvider → LM Studio → Ollama, with retries.
    */
   async generateLlmResponseWithRetry(promptBuilder, maxAttempts = 2) {
     let retryInstruction = "";
@@ -248,23 +284,35 @@ export class LocalPlanner {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const prompt = attempt === 0 ? promptBuilder() : `${promptBuilder()}\nRetryInstructions: ${retryInstruction}`;
       try {
-        // Path 1: OpenAI-compatible provider
+        // Path 1: Cloud provider (Gemini / OpenAI-compatible)
         if (this.llmProvider?.isConfigured?.()) {
           const result = await this.llmProvider.generateStructured(prompt, {}, { maxRetries: 1 });
           if (result.ok && result.parsed) {
-            return { parsed: result.parsed, source: "provider" };
+            return { parsed: result.parsed, source: this.llmProvider.providerName || "provider" };
           }
           lastError = result.error || "Unknown error";
           retryInstruction = `The previous response failed. ${lastError}`;
-          continue;
+          // fall through to local backends
         }
 
         // Path 2: LM Studio
-        const client = await this.getClient();
-        const model = await client.llm.model(this.modelName);
-        const result = await model.respond(prompt);
-        parsed = extractJson(result.content);
-        return { parsed, source: "lmstudio" };
+        try {
+          const client = await this.getClient();
+          const model = await client.llm.model(this.modelName);
+          const result = await model.respond(prompt);
+          parsed = extractJson(result.content);
+          return { parsed, source: "lmstudio" };
+        } catch (lmError) {
+          // Path 3: Ollama
+          try {
+            const text = await this.callOllama(prompt);
+            parsed = extractJson(text);
+            return { parsed, source: "ollama" };
+          } catch (ollamaError) {
+            lastError = `LM Studio: ${lmError.message}, Ollama: ${ollamaError.message}`;
+            retryInstruction = `The previous response failed. ${lastError}`;
+          }
+        }
       } catch (error) {
         lastError = error.message;
         retryInstruction = `The previous response failed. ${lastError}`;

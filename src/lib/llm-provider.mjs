@@ -4,15 +4,18 @@
  * Uses a standard /v1/chat/completions endpoint (OpenAI, OpenRouter, DeepSeek, etc.)
  * with configurable model, base URL, and API key.
  *
- * Two modes:
- *   1. Direct mode: LLM_BASE_URL + LLM_API_KEY + LLM_MODEL
- *   2. OpenClaw gateway: OPENCLAW_BASE_URL + OPENCLAW_TOKEN (fallback)
+ * Provider priority (via createLlmProvider factory):
+ *   1. Gemini API        — if GEMINI_API_KEY is set
+ *   2. Direct mode       — LLM_BASE_URL + LLM_API_KEY + LLM_MODEL
+ *   3. OpenClaw gateway  — OPENCLAW_BASE_URL + OPENCLAW_TOKEN (fallback)
  *
  * Usage:
  *   import { createLlmProvider } from './llm-provider.mjs';
  *   const llm = createLlmProvider(config);
  *   const result = await llm.generate("Write a poem", { schema: {...} });
  */
+
+import { GeminiProvider } from './gemini-provider.mjs';
 
 // ── Response parsing ──────────────────────────────────────────────
 
@@ -73,6 +76,13 @@ export class LlmProvider {
     this.apiKey = opts.apiKey || '';
     this.model = opts.model || 'gpt-4o-mini';
     this.timeoutMs = opts.timeoutMs || 60000;
+  }
+
+  /**
+   * Returns a human-readable label for the active provider.
+   */
+  get providerName() {
+    return 'openai-compatible';
   }
 
   isConfigured() {
@@ -189,9 +199,19 @@ export class LlmProvider {
 
 /**
  * Factory — creates an LlmProvider from app config.
+ * Priority: Gemini → Direct OpenAI-compatible → OpenClaw gateway → no-op.
  */
 export function createLlmProvider(config) {
-  // 1. Direct OpenAI-compatible provider
+  // 1. Google Gemini (primary cloud model)
+  if (config.gemini?.apiKey) {
+    return new GeminiProvider({
+      apiKey: config.gemini.apiKey,
+      model: config.gemini.model || 'gemini-2.0-flash',
+      timeoutMs: config.gemini.timeoutMs,
+    });
+  }
+
+  // 2. Direct OpenAI-compatible provider
   if (config.llm?.baseUrl && config.llm?.apiKey) {
     return new LlmProvider({
       baseUrl: config.llm.baseUrl,
@@ -201,7 +221,7 @@ export function createLlmProvider(config) {
     });
   }
 
-  // 2. OpenClaw gateway (OpenAI-compatible fallback)
+  // 3. OpenClaw gateway (OpenAI-compatible fallback)
   if (config.connectors?.openclaw?.baseUrl && config.connectors?.openclaw?.token) {
     return new LlmProvider({
       baseUrl: config.connectors.openclaw.baseUrl,
@@ -211,6 +231,7 @@ export function createLlmProvider(config) {
     });
   }
 
-  // 3. Not configured — return a no-op provider
+  // 4. Not configured — return a no-op provider
   return new LlmProvider({});
 }
+
