@@ -19,6 +19,7 @@ const TELEGRAM_ALERT_LEVELS = new Set((process.env.TELEGRAM_ALERT_LEVELS || 'err
   .filter(Boolean));
 const AUTOMATION_ARGS = normalizeArgs(process.env.CLAWDBOT_AUTOMATION_ARGS || defaultAutomationArgs(ROLE));
 const COMMAND_TIMEOUT_MS = Number(process.env.CLAWDBOT_COMMAND_TIMEOUT_MS || 15 * 60 * 1000);
+const REQUEST_TIMEOUT_MS = Number(process.env.CLAWDBOT_REQUEST_TIMEOUT_MS || 30000);
 
 const rolePlan = {
   supervisor: [checkHealth, checkGithubRuns, checkRepoAudit, runBootstrap, runEnrichment, runFunding],
@@ -158,7 +159,11 @@ async function requestJson(url, options = {}) {
     ...(options.body ? { 'content-type': 'application/json' } : {}),
     ...(options.headers || {}),
   };
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    signal: options.signal || AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
   const text = await response.text();
   let body = null;
   try {

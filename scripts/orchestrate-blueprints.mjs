@@ -34,6 +34,9 @@ const FUNDING_RETRY_ATTEMPTS = Number.isFinite(Number(process.env.SQUIDWEAVE_FUN
 const FUNDING_RETRY_BASE_MS = Number.isFinite(Number(process.env.SQUIDWEAVE_FUNDING_RETRY_BASE_MS))
   ? Number(process.env.SQUIDWEAVE_FUNDING_RETRY_BASE_MS)
   : 15000;
+const API_TIMEOUT_MS = Number.isFinite(Number(process.env.SQUIDWEAVE_API_TIMEOUT_MS))
+  ? Number(process.env.SQUIDWEAVE_API_TIMEOUT_MS)
+  : 30000;
 
 // ---------------------------------------------------------------------------
 // API helpers
@@ -47,6 +50,7 @@ async function api(path, init = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers,
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
   const text = await response.text();
   if (!response.ok) {
