@@ -11,7 +11,9 @@ const API_KEY = process.env.SQUIDWEAVE_API_KEY || process.env.SQUIDWEAVE_AUTH_TO
 const SITE_URL = process.env.SQUIDWEAVE_SITE_URL || 'https://knol3j.github.io/squidweave/';
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY || 'knol3j/squidweave';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
-const AUTOMATION_ARGS = (process.env.CLAWDBOT_AUTOMATION_ARGS || '--enrich-only').split(/\s+/).filter(Boolean);
+const AUTOMATION_ARGS = (process.env.CLAWDBOT_AUTOMATION_ARGS || '')
+  .split(/\s+/)
+  .filter(value => value && value !== '--full');
 const COMMAND_TIMEOUT_MS = Number(process.env.CLAWDBOT_COMMAND_TIMEOUT_MS || 15 * 60 * 1000);
 
 const rolePlan = {
