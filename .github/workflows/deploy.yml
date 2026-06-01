@@ -1,4 +1,4 @@
-name: Deploy to sofish.io
+name: Deploy to GitHub Pages
 
 on:
   push:
