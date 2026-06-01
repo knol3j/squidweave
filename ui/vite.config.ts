@@ -8,7 +8,14 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
+  const pagesBase =
+    process.env.GITHUB_ACTIONS === 'true' &&
+    process.env.GITHUB_REPOSITORY === 'knol3j/squidweave'
+      ? '/squidweave/'
+      : env.VITE_BASE_PATH || '/';
+
   return {
+    base: pagesBase,
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
