@@ -20,4 +20,4 @@ ENV UI_PASS=squidweave
 
 EXPOSE 4010
 
-CMD ["node", "src/server.mjs"]
+CMD ["node", "scripts/start-railway.mjs"]
