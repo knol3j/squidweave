@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG SQUIDWEAVE_REPO=https://github.com/knol3j/squidweave.git
 ARG SQUIDWEAVE_REF=master
 
+ADD https://api.github.com/repos/knol3j/squidweave/commits/master /tmp/squidweave-version.json
 RUN git clone --depth 1 --branch "$SQUIDWEAVE_REF" "$SQUIDWEAVE_REPO" /app
 
 # Root: skip devDependencies (electron/electron-builder — not needed on Railway)
