@@ -1,12 +1,16 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { Store, Contact, Pipeline, Opportunity } from '../src/lib/store.mjs';
 
 describe('Store', () => {
   let store;
 
   beforeEach(async () => {
-    store = await new Store('file:///tmp/test-store-' + Date.now() + '.json').init();
+    const tempFile = join(tmpdir(), 'test-store-' + Date.now() + '.json');
+    store = await new Store(pathToFileURL(tempFile).href, { persistDebounceMs: 1 }).init();
   });
 
   it('creates and retrieves a campaign', async () => {

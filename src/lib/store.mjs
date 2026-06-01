@@ -338,6 +338,7 @@ export class Store {
   async upsertCampaign(campaign) {
     const current = this.getCampaign(campaign.id);
     this.state.campaigns[campaign.id] = {
+      createdAt: current?.createdAt || new Date().toISOString(),
       ...current,
       ...campaign,
       lastUpdatedAt: new Date().toISOString(),

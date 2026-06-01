@@ -1,5 +1,8 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { Store } from '../src/lib/store.mjs';
 import { CampaignAnalyticsEngine } from '../src/lib/campaign-analytics-engine.mjs';
 import { TrackingEngine } from '../src/lib/tracking-engine.mjs';
@@ -10,7 +13,8 @@ describe('Integration: Full campaign cycle', () => {
   let tracking;
 
   beforeEach(async () => {
-    store = await new Store(`file:///tmp/test-integration-${Date.now()}.json`).init();
+    const tempFile = join(tmpdir(), `test-integration-${Date.now()}.json`);
+    store = await new Store(pathToFileURL(tempFile).href, { persistDebounceMs: 1 }).init();
     analytics = new CampaignAnalyticsEngine({ store });
     tracking = new TrackingEngine({ store });
   });

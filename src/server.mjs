@@ -301,8 +301,13 @@ async function serveStaticAsset(request, response, pathname, staticDir) {
     }
 
     const contents = await readFile(assetPath);
+    const ext = extname(assetPath);
+    const contentType = Object.prototype.hasOwnProperty.call(mimeTypes, ext) 
+      ? mimeTypes[ext] 
+      : "application/octet-stream";
+
     response.writeHead(200, {
-      "content-type": mimeTypes[extname(assetPath)] || "application/octet-stream",
+      "content-type": contentType,
       ...buildCorsHeaders(request),
     });
     response.end(contents);
@@ -470,7 +475,8 @@ async function createApp() {
   const connectorAliases = {
     moltbot: "openclaw",
   };
-  const resolveConnectorName = value => connectorAliases[value] || value;
+  const resolveConnectorName = value => 
+    Object.prototype.hasOwnProperty.call(connectorAliases, value) ? connectorAliases[value] : value;
   const connectors = {
     openclaw: new OpenclawConnector({ ...config.connectors.openclaw, dryRun: config.dryRun }),
     clawdbot: new ClawdbotConnector({ ...config.connectors.clawdbot, dryRun: config.dryRun }),
@@ -1205,7 +1211,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 200, { exists: false, key: idempotencyKey });
         return;
       }
-      const latest = receipts[receipts.length - 1];
+      const latest = receipts.at(-1);
       sendJson(request, response, 200, {
         exists: true,
         key: idempotencyKey,
@@ -1395,7 +1401,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         closed: "closed",
         follow_up: undefined, // no status change
       };
-      const newStatus = statusMap[body.type];
+      const newStatus = Object.prototype.hasOwnProperty.call(statusMap, body.type) ? statusMap[body.type] : undefined;
       if (newStatus) {
         await store.updateInvestorRecord(body.campaignId, body.investorId, {
           status: newStatus,
@@ -2196,6 +2202,9 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
 
     async function handleGhlRoute(body, methodName) {
       if (ghlBridge.isConfigured()) {
+        if (typeof ghlBridge[methodName] !== "function") {
+          return { ok: false, error: "Invalid GHL sync method." };
+        }
         return await ghlBridge[methodName](body.campaignId, body.options || {});
       }
       return GHL_NOT_CONFIGURED_RESPONSE;

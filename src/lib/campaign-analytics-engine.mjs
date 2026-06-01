@@ -212,6 +212,7 @@ export class CampaignAnalyticsEngine {
    */
   generateReport(campaignId) {
     const insights = this.generateInsights(campaignId);
+    if (!insights) return null;
     const refinements = this.recommendRefinements(campaignId);
     return {
       reportId: crypto.randomUUID(),
