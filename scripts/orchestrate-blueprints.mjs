@@ -23,7 +23,17 @@ const args = process.argv.slice(2);
 const ENRICH_ONLY = args.includes('--enrich-only');
 const BOOTSTRAP_ONLY = args.includes('--bootstrap-only');
 const FUNDING_ONLY = args.includes('--funding-only');
+const SKIP_FUNDING = args.includes('--skip-funding');
 const SINGLE_CAMPAIGN = args.find(a => a.startsWith('--campaign='))?.split('=')[1] || null;
+const FUNDING_LIMIT = Number.isFinite(Number(process.env.SQUIDWEAVE_FUNDING_LIMIT))
+  ? Number(process.env.SQUIDWEAVE_FUNDING_LIMIT)
+  : 10;
+const FUNDING_RETRY_ATTEMPTS = Number.isFinite(Number(process.env.SQUIDWEAVE_FUNDING_RETRY_ATTEMPTS))
+  ? Number(process.env.SQUIDWEAVE_FUNDING_RETRY_ATTEMPTS)
+  : 3;
+const FUNDING_RETRY_BASE_MS = Number.isFinite(Number(process.env.SQUIDWEAVE_FUNDING_RETRY_BASE_MS))
+  ? Number(process.env.SQUIDWEAVE_FUNDING_RETRY_BASE_MS)
+  : 15000;
 
 // ---------------------------------------------------------------------------
 // API helpers
@@ -43,6 +53,14 @@ async function api(path, init = {}) {
     throw new Error(`${path} -> ${response.status} ${text}`);
   }
   return text ? JSON.parse(text) : null;
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isConcurrencyLimit(error) {
+  return /Concurrent execution safety limit reached|409/.test(error?.message || "");
 }
 
 // ---------------------------------------------------------------------------
@@ -155,20 +173,34 @@ async function runEnrichment(campaignId) {
 }
 
 async function runFunding(campaignId) {
-  try {
-    const result = await api('/funding/run', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, limit: 20 }),
-    });
-    return {
-      fundingProcessed: result?.sequence?.run?.processedInvestors || 0,
-      fundingError: null,
-    };
-  } catch (err) {
-    return {
-      fundingProcessed: 0,
-      fundingError: err.message,
-    };
+  for (let attempt = 1; attempt <= FUNDING_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      const result = await api('/funding/run', {
+        method: 'POST',
+        body: JSON.stringify({
+          campaignId,
+          limit: FUNDING_LIMIT,
+          maxPerRun: FUNDING_LIMIT,
+          reason: `clawdbot-funding-${attempt}`,
+        }),
+      });
+      return {
+        fundingProcessed: result?.sequence?.run?.processedInvestors || 0,
+        fundingError: null,
+        fundingAttempts: attempt,
+      };
+    } catch (err) {
+      if (!isConcurrencyLimit(err) || attempt === FUNDING_RETRY_ATTEMPTS) {
+        return {
+          fundingProcessed: 0,
+          fundingError: err.message,
+          fundingAttempts: attempt,
+        };
+      }
+      const waitMs = FUNDING_RETRY_BASE_MS * attempt;
+      console.log(`    funding busy for ${campaignId}; retrying in ${Math.round(waitMs / 1000)}s (attempt ${attempt + 1}/${FUNDING_RETRY_ATTEMPTS})`);
+      await sleep(waitMs);
+    }
   }
 }
 
@@ -306,7 +338,9 @@ async function main() {
     process.stdout.write(`  → ${bp.campaignId}... `);
     try {
       const result = await runEnrichment(bp.campaignId);
-      const funding = await runFunding(bp.campaignId);
+      const funding = SKIP_FUNDING
+        ? { fundingProcessed: 0, fundingError: null, fundingSkipped: 'skip-funding' }
+        : await runFunding(bp.campaignId);
       const p = await pipelineSummary(bp.campaignId);
       results.push({
         campaignId: bp.campaignId,

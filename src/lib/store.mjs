@@ -200,6 +200,7 @@ const defaultState = () => ({
   investorRecords: [],
   fundingOutreachEvents: [],
   fundingRuns: [],
+  agentHeartbeats: {},
   executionReceipts: [],
   /** Collection-based entity storage (mirrors GHL Firestore collections) */
   collections: {
@@ -545,6 +546,34 @@ export class Store {
       return [...this.state.agentRuns];
     }
     return this.state.agentRuns.filter(run => run.campaignId === campaignId);
+  }
+
+  async upsertAgentHeartbeat(heartbeat) {
+    if (!this.state.agentHeartbeats || Array.isArray(this.state.agentHeartbeats)) {
+      this.state.agentHeartbeats = {};
+    }
+    const key = heartbeat.agent || heartbeat.name || heartbeat.id;
+    if (!key) {
+      throw new Error("agent is required for heartbeat");
+    }
+    const current = this.state.agentHeartbeats[key] || {};
+    const updated = {
+      ...current,
+      ...heartbeat,
+      agent: key,
+      updatedAt: new Date().toISOString(),
+    };
+    this.state.agentHeartbeats[key] = updated;
+    await this.persist();
+    this.emitChange("agentHeartbeats", current.agent ? "update" : "insert", { key, item: updated });
+    return updated;
+  }
+
+  listAgentHeartbeats() {
+    if (!this.state.agentHeartbeats || Array.isArray(this.state.agentHeartbeats)) {
+      return [];
+    }
+    return Object.values(this.state.agentHeartbeats);
   }
 
   async addProspectingRun(run) {

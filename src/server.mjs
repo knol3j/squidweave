@@ -2082,6 +2082,32 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/agents/heartbeats") {
+      sendJson(request, response, 200, store.listAgentHeartbeats());
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/agents/heartbeats") {
+      const body = await readBody(request);
+      if (!body.agent) {
+        sendJson(request, response, 400, { error: "agent is required." });
+        return;
+      }
+      const heartbeat = await store.upsertAgentHeartbeat({
+        agent: String(body.agent),
+        role: String(body.role || ""),
+        status: String(body.status || "unknown"),
+        lastEvent: body.lastEvent || null,
+        nextRunAt: body.nextRunAt || null,
+        details: body.details || {},
+        deploymentId: body.deploymentId || process.env.RAILWAY_DEPLOYMENT_ID || null,
+        serviceName: body.serviceName || process.env.RAILWAY_SERVICE_NAME || null,
+        observedAt: new Date().toISOString(),
+      });
+      sendJson(request, response, 200, heartbeat);
+      return;
+    }
+
     if (request.method === "GET" && parts[0] === "jobs" && parts[1] && parts[2] === "status") {
       const job = jobManager.getJob(parts[1]);
       if (!job) {

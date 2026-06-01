@@ -7,7 +7,9 @@ Recommended services:
 | Service | Role | Purpose |
 | --- | --- | --- |
 | `clawdbot-health` | `health` | Checks SquidWeave API health, source health, and the GitHub Pages site asset path. |
-| `clawdbot-automation` | `automation` | Runs `scripts/orchestrate-blueprints.mjs` on a schedule against the production API. |
+| `clawdbot-bootstrap` | `bootstrap` | Imports/updates blueprint campaigns without running outreach. |
+| `clawdbot-enrichment` | `enrichment` | Runs contact enrichment and sequencing without funding. |
+| `clawdbot-funding` | `funding` | Runs funding outreach separately with retry/backoff. |
 | `clawdbot-ci` | `ci` | Watches GitHub Actions deploy/CI runs and can rerun failed jobs if enabled. |
 | `clawdbot-audit` | `audit` | Audits Pages config, repo metadata, and Dependabot alerts when `GITHUB_TOKEN` is set. |
 
@@ -24,7 +26,8 @@ Optional variables:
 
 - `GITHUB_TOKEN`: enables Dependabot alert checks and authenticated GitHub API limits
 - `CLAWDBOT_RERUN_FAILED=true`: allows the CI agent to rerun failed GitHub Actions jobs
-- `CLAWDBOT_AUTOMATION_ARGS`: defaults to `--enrich-only`; use `--funding-only` or an empty value for full orchestration
+- `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`: enable Telegram alerts
+- `CLAWDBOT_AUTOMATION_ARGS`: optional override for the legacy `automation` role
 - `CLAWDBOT_INTERVAL_SECONDS`: loop interval
 
 Railway CLI sketch:

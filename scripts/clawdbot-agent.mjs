@@ -11,15 +11,22 @@ const API_KEY = process.env.SQUIDWEAVE_API_KEY || process.env.SQUIDWEAVE_AUTH_TO
 const SITE_URL = process.env.SQUIDWEAVE_SITE_URL || 'https://knol3j.github.io/squidweave/';
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY || 'knol3j/squidweave';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
-const AUTOMATION_ARGS = (process.env.CLAWDBOT_AUTOMATION_ARGS || '')
-  .split(/\s+/)
-  .filter(value => value && value !== '--full');
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
+const TELEGRAM_ALERT_LEVELS = new Set((process.env.TELEGRAM_ALERT_LEVELS || 'error')
+  .split(',')
+  .map(value => value.trim().toLowerCase())
+  .filter(Boolean));
+const AUTOMATION_ARGS = normalizeArgs(process.env.CLAWDBOT_AUTOMATION_ARGS || defaultAutomationArgs(ROLE));
 const COMMAND_TIMEOUT_MS = Number(process.env.CLAWDBOT_COMMAND_TIMEOUT_MS || 15 * 60 * 1000);
 
 const rolePlan = {
-  supervisor: [checkHealth, checkGithubRuns, checkRepoAudit, runAutomation],
+  supervisor: [checkHealth, checkGithubRuns, checkRepoAudit, runBootstrap, runEnrichment, runFunding],
   health: [checkHealth],
   automation: [runAutomation],
+  bootstrap: [runBootstrap],
+  enrichment: [runEnrichment],
+  funding: [runFunding],
   ci: [checkGithubRuns],
   audit: [checkRepoAudit],
 };
@@ -30,8 +37,26 @@ function defaultInterval(role) {
     ci: 180,
     audit: 900,
     automation: 1800,
+    bootstrap: 21600,
+    enrichment: 1800,
+    funding: 7200,
     supervisor: 300,
   }[role] || 300;
+}
+
+function defaultAutomationArgs(role) {
+  return {
+    automation: '',
+    bootstrap: '--bootstrap-only',
+    enrichment: '--enrich-only --skip-funding',
+    funding: '--funding-only',
+  }[role] || '';
+}
+
+function normalizeArgs(value) {
+  return value
+    .split(/\s+/)
+    .filter(arg => arg && arg !== '--full');
 }
 
 function normalizeBase(value) {
@@ -39,14 +64,92 @@ function normalizeBase(value) {
 }
 
 function log(level, event, fields = {}) {
-  console.log(JSON.stringify({
+  const entry = {
     ts: new Date().toISOString(),
     level,
     agent: AGENT_NAME,
     role: ROLE,
     event,
     ...fields,
-  }));
+  };
+  console.log(JSON.stringify(entry));
+  if (shouldAlert(level, event)) {
+    void sendTelegramAlert(entry).catch(error => {
+      console.error(JSON.stringify({
+        ts: new Date().toISOString(),
+        level: 'error',
+        agent: AGENT_NAME,
+        role: ROLE,
+        event: 'telegram.alert_failed',
+        error: error.message,
+      }));
+    });
+  }
+  return entry;
+}
+
+function shouldAlert(level, event) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    return false;
+  }
+  if (event === 'telegram.alert_failed') {
+    return false;
+  }
+  return TELEGRAM_ALERT_LEVELS.has(String(level).toLowerCase());
+}
+
+async function sendTelegramAlert(entry) {
+  const text = [
+    `[${entry.level.toUpperCase()}] ${entry.agent}`,
+    `role: ${entry.role}`,
+    `event: ${entry.event}`,
+    entry.error ? `error: ${entry.error}` : '',
+    entry.status ? `status: ${entry.status}` : '',
+    entry.failing?.length ? `failing: ${entry.failing.length}` : '',
+  ].filter(Boolean).join('\n').slice(0, 3500);
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: TELEGRAM_CHAT_ID,
+      text,
+      disable_web_page_preview: true,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Telegram alert failed: ${response.status} ${await response.text()}`);
+  }
+}
+
+async function heartbeat(status, fields = {}) {
+  try {
+    const details = {
+      role: ROLE,
+      event: fields.event || null,
+      ...fields.details,
+    };
+    const nextRunAt = fields.nextRunAt || (
+      ONCE ? null : new Date(Date.now() + INTERVAL_SECONDS * 1000).toISOString()
+    );
+    const result = await requestApi('/agents/heartbeats', {
+      method: 'POST',
+      body: JSON.stringify({
+        agent: AGENT_NAME,
+        role: ROLE,
+        status,
+        lastEvent: fields.event || null,
+        nextRunAt,
+        details,
+        deploymentId: process.env.RAILWAY_DEPLOYMENT_ID || null,
+        serviceName: process.env.RAILWAY_SERVICE_NAME || null,
+      }),
+    });
+    if (!result.ok) {
+      log('error', 'heartbeat.failed', { status: result.status, body: result.body });
+    }
+  } catch (error) {
+    log('error', 'heartbeat.failed', { error: error.message });
+  }
 }
 
 async function requestJson(url, options = {}) {
@@ -107,11 +210,27 @@ async function checkHealth() {
 
 async function runAutomation() {
   const args = ['scripts/orchestrate-blueprints.mjs', ...AUTOMATION_ARGS];
+  return runAutomationCommand('automation.run', args);
+}
+
+async function runBootstrap() {
+  return runAutomationCommand('automation.bootstrap', ['scripts/orchestrate-blueprints.mjs', '--bootstrap-only']);
+}
+
+async function runEnrichment() {
+  return runAutomationCommand('automation.enrichment', ['scripts/orchestrate-blueprints.mjs', '--enrich-only', '--skip-funding']);
+}
+
+async function runFunding() {
+  return runAutomationCommand('automation.funding', ['scripts/orchestrate-blueprints.mjs', '--funding-only']);
+}
+
+async function runAutomationCommand(event, args) {
   const result = await runCommand('node', args, {
     SQUIDWEAVE_API_BASE: API_BASE,
     SQUIDWEAVE_API_KEY: API_KEY,
   });
-  log(result.exitCode === 0 ? 'info' : 'error', 'automation.run', {
+  log(result.exitCode === 0 ? 'info' : 'error', event, {
     command: `node ${args.join(' ')}`,
     exitCode: result.exitCode,
     signal: result.signal,
@@ -218,6 +337,7 @@ async function tick() {
   if (!tasks) {
     throw new Error(`Unknown CLAWDBOT_ROLE "${ROLE}". Expected one of: ${Object.keys(rolePlan).join(', ')}`);
   }
+  await heartbeat('running', { event: 'tick.start' });
   for (const task of tasks) {
     try {
       await task();
@@ -225,6 +345,7 @@ async function tick() {
       log('error', 'task.failed', { task: task.name, error: error.message, stack: error.stack });
     }
   }
+  await heartbeat('idle', { event: 'tick.complete' });
 }
 
 log('info', 'agent.start', {
@@ -234,6 +355,7 @@ log('info', 'agent.start', {
   intervalSeconds: INTERVAL_SECONDS,
   once: ONCE,
 });
+await heartbeat('starting', { event: 'agent.start' });
 
 do {
   await tick();
