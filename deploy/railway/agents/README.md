@@ -32,9 +32,9 @@ Railway CLI sketch:
 ```bash
 railway link
 railway add --service clawdbot-health --variables "SQUIDWEAVE_PROCESS=agent" --variables "CLAWDBOT_ROLE=health" --variables "CLAWDBOT_NAME=clawdbot-health" --variables "CLAWDBOT_INTERVAL_SECONDS=60"
-railway up --service clawdbot-health --detach
+railway up --service clawdbot-health deploy/railway/agents --path-as-root --detach
 ```
 
 Repeat for `clawdbot-automation`, `clawdbot-ci`, and `clawdbot-audit` with their role-specific variables.
 
-The root Dockerfile is service-selectable via `SQUIDWEAVE_PROCESS=agent`, which keeps the CLI path simple. `deploy/railway/agents/Dockerfile` is also available if you prefer setting a per-service Dockerfile path in the Railway dashboard.
+The root Dockerfile is service-selectable via `SQUIDWEAVE_PROCESS=agent`. The agent Dockerfile is intentionally standalone and clones the current repo during the Railway build so CLI uploads stay small.
