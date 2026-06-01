@@ -5,11 +5,13 @@ WORKDIR /app
 # Install system dependencies needed for native modules (if any)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency manifests first (layer caching)
-COPY package*.json ./
-COPY ui/package*.json ./ui/
+ARG SQUIDWEAVE_REPO=https://github.com/knol3j/squidweave.git
+ARG SQUIDWEAVE_REF=master
+
+RUN git clone --depth 1 --branch "$SQUIDWEAVE_REF" "$SQUIDWEAVE_REPO" /app
 
 # Root: skip devDependencies (electron/electron-builder — not needed on Railway)
 RUN npm ci --omit=dev
