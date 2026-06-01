@@ -2791,6 +2791,10 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
   return { server, scheduler };
 }
 
+let shuttingDown = false;
+let activeServer = null;
+let activeScheduler = null;
+
 export async function startServer({ port = config.port, host = process.env.HOST || "127.0.0.1" } = {}) {
   const { server, scheduler } = await createApp();
   activeServer = server;
@@ -2823,10 +2827,6 @@ process.on('uncaughtException', (err) => {
 });
 
 // Graceful shutdown
-let shuttingDown = false;
-let activeServer = null;
-let activeScheduler = null;
-
 async function gracefulShutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
