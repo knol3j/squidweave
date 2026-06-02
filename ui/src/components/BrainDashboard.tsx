@@ -276,17 +276,45 @@ export default function BrainDashboard() {
 
   useEffect(() => {
     let active = true;
+    let timer: ReturnType<typeof window.setInterval> | null = null;
+
     const run = async () => {
       if (!active) return;
       await refreshDashboard();
     };
+
+    const startTimer = () => {
+      timer = window.setInterval(() => {
+        if (!document.hidden) {
+          void run();
+        }
+      }, 15000);
+    };
+
+    const stopTimer = () => {
+      if (timer !== null) {
+        window.clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopTimer();
+      } else {
+        void run();
+        startTimer();
+      }
+    };
+
     void run();
-    const timer = window.setInterval(() => {
-      void run();
-    }, 4000);
+    startTimer();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       active = false;
-      window.clearInterval(timer);
+      stopTimer();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [refreshDashboard]);
 

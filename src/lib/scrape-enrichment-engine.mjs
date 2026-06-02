@@ -1,4 +1,5 @@
-import fs from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import { renameSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -274,7 +275,7 @@ async function tryResolveLinkedIn(name, domain) {
 }
 
 export async function runScrapeEnrichment({ dryRun = false } = {}) {
-  const state = JSON.parse(fs.readFileSync(STATE_PATH, "utf8"));
+  const state = JSON.parse(await readFile(STATE_PATH, "utf8"));
   const contacts = state.sourcedContacts || [];
 
   const contactIndex = {};
@@ -382,9 +383,9 @@ export async function runScrapeEnrichment({ dryRun = false } = {}) {
       const enrichedNow = state.sourcedContacts.filter(c => c.enrichmentStatus === "enriched").length;
       console.log(`  [checkpoint] writing state with ${enrichedNow} enriched contacts...`);
       const cpPath = STATE_PATH + ".tmp";
-      fs.writeFileSync(cpPath, JSON.stringify(state, null, 2), "utf8");
-      fs.renameSync(cpPath, STATE_PATH);
-      const verify = JSON.parse(fs.readFileSync(STATE_PATH, "utf8"));
+      await writeFile(cpPath, JSON.stringify(state, null, 2), "utf8");
+      renameSync(cpPath, STATE_PATH);
+      const verify = JSON.parse(await readFile(STATE_PATH, "utf8"));
       const verifyEnriched = verify.sourcedContacts.filter(c => c.enrichmentStatus === "enriched").length;
       console.log(`  [checkpoint] saved after domain ${i + 1} — verified ${verifyEnriched} enriched in file`);
     }
@@ -430,10 +431,10 @@ export async function runScrapeEnrichment({ dryRun = false } = {}) {
   console.log(`LinkedIn URLs resolved for all other contacts: ${linkedInResolvedAll}`);
 
   const tmpPath = STATE_PATH + ".tmp";
-  fs.writeFileSync(tmpPath, JSON.stringify(state, null, 2), "utf8");
-  fs.renameSync(tmpPath, STATE_PATH);
+  await writeFile(tmpPath, JSON.stringify(state, null, 2), "utf8");
+  renameSync(tmpPath, STATE_PATH);
 
-  const verify = JSON.parse(fs.readFileSync(STATE_PATH, "utf8"));
+  const verify = JSON.parse(await readFile(STATE_PATH, "utf8"));
   const enrichedCount = verify.sourcedContacts.filter(c => c.enrichmentStatus === "enriched").length;
   const attemptedCount = verify.sourcedContacts.filter(c => c.enrichmentStatus === "scrape-attempted").length;
 

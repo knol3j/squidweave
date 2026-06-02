@@ -25,8 +25,11 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const lastInjectedRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
-    if (externalPrompt) {
+    if (externalPrompt !== undefined && externalPrompt !== lastInjectedRef.current) {
+      lastInjectedRef.current = externalPrompt;
       setInput(externalPrompt);
     }
   }, [externalPrompt]);
@@ -377,7 +380,6 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
               <Paperclip className="w-3.5 h-3.5" />
               Reference
             </button>
-            <div className="ml-auto font-mono text-[9px] opacity-30 hidden sm:block">CMD+K FOR SHORTCUTS</div>
           </div>
 
           <div className="max-w-none relative flex items-center gap-4 px-2">

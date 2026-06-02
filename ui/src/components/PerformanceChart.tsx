@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import {
   AreaChart,
   Area,
@@ -10,30 +10,7 @@ import {
   Bar,
   Cell,
 } from 'recharts';
-import { dataService, Metric } from '../services/dataService';
-import { useCollaboration } from './CollaborationProvider';
-import { formatShortDate } from '../lib/format';
-
-function useLiveMetrics() {
-  const { campaignState } = useCollaboration();
-  const [metrics, setMetrics] = useState<Metric[]>([]);
-
-  useEffect(() => {
-    if (!campaignState.id) {
-      setMetrics([]);
-      return;
-    }
-
-    const unsubscribe = dataService.subscribeToMetrics(campaignState.id, setMetrics);
-    return () => unsubscribe();
-  }, [campaignState.id]);
-
-  return useMemo(() => metrics.map(metric => ({
-    name: formatShortDate(metric.timestamp.toDate()),
-    ctr: metric.ctr,
-    conv: metric.conv,
-  })), [metrics]);
-}
+import { useMetrics } from '../hooks/useMetrics';
 
 function EmptyState() {
   return (
@@ -44,9 +21,9 @@ function EmptyState() {
 }
 
 export function CTRChart() {
-  const data = useLiveMetrics();
+  const { chartData } = useMetrics();
 
-  if (data.length === 0) {
+  if (chartData.length === 0) {
     return (
       <div className="w-full h-40">
         <EmptyState />
@@ -57,7 +34,7 @@ export function CTRChart() {
   return (
     <div className="w-full h-40">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data}>
+        <AreaChart data={chartData}>
           <defs>
             <linearGradient id="colorCtr" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3} />
@@ -90,9 +67,9 @@ export function CTRChart() {
 }
 
 export function ConversionChart() {
-  const data = useLiveMetrics();
+  const { chartData } = useMetrics();
 
-  if (data.length === 0) {
+  if (chartData.length === 0) {
     return (
       <div className="w-full h-40">
         <EmptyState />
@@ -103,7 +80,7 @@ export function ConversionChart() {
   return (
     <div className="w-full h-40">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data}>
+        <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(15,23,42,0.08)" />
           <XAxis
             dataKey="name"
@@ -117,8 +94,8 @@ export function ConversionChart() {
             itemStyle={{ color: '#d946ef' }}
           />
           <Bar dataKey="conv" radius={[4, 4, 0, 0]}>
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={index === data.length - 1 ? '#d946ef' : '#d946ef44'} />
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={index === chartData.length - 1 ? '#d946ef' : '#d946ef44'} />
             ))}
           </Bar>
         </BarChart>
@@ -126,3 +103,4 @@ export function ConversionChart() {
     </div>
   );
 }
+

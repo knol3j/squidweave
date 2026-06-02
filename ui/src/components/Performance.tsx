@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   BarChart3, TrendingUp, DollarSign, MousePointer2, 
@@ -9,38 +9,33 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer
 } from 'recharts';
-import { dataService, Metric } from '../services/dataService';
 import { useCollaboration } from './CollaborationProvider';
+import { useMetrics } from '../hooks/useMetrics';
 import { formatPercent, formatCurrency, formatShortDate, formatDate } from '../lib/format';
 
 export default function Performance() {
   const { campaignState } = useCollaboration();
-  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const { metrics, chartData: displayDataRaw } = useMetrics();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState('7d');
   const [filterOpen, setFilterOpen] = useState(false);
   const [metricFilter, setMetricFilter] = useState<string>('all');
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!campaignState.id) {
       setLoading(false);
       return;
     }
-    const unsubscribe = dataService.subscribeToMetrics(campaignState.id, (data) => {
-      setMetrics(data);
-      setLoadError(null);
+    // Mark loading done once metrics arrive (or timeout)
+    if (metrics.length > 0) {
       setLoading(false);
-    });
-    // If no data arrives within a timeout, mark loading as done
+    }
     const timeout = setTimeout(() => {
       setLoading(false);
     }, 5000);
-    return () => {
-      unsubscribe();
-      clearTimeout(timeout);
-    };
-  }, [campaignState.id]);
+    return () => clearTimeout(timeout);
+  }, [campaignState.id, metrics.length]);
 
   const now = new Date();
   const filteredMetrics = metrics.filter(m => {

@@ -42,7 +42,7 @@ function PanelFallback({ label = 'Loading module...' }: { label?: string }) {
 function LoginGate({ children }: { children: React.ReactNode }) {
   const [authenticated, setAuthenticated] = useState(hasAuthCredentials());
   const [error, setError] = useState('');
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -79,7 +79,6 @@ function LoginGate({ children }: { children: React.ReactNode }) {
           <img src="/logo-login.png" alt="SquidWeave" style={{ height: '100px', margin: '0 auto 1rem', display: 'block', objectFit: 'contain' }} />
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '0.25rem' }}>Welcome Back</h2>
           <p style={{ fontSize: '0.75rem', color: '#64748b', letterSpacing: '0.05em' }}>Sign in to SquidWeave</p>
-          <p style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.5rem', wordBreak: 'break-all' }}>API: {getApiUrl('/state')}</p>
         </div>
         {error && <div style={{ color: '#f87171', marginBottom: '0.75rem', textAlign: 'center', fontSize: '0.875rem' }}>{error}</div>}
         <div style={{ marginBottom: '1rem' }}>
@@ -106,6 +105,19 @@ function AppContent() {
   const [runningBrain, setRunningBrain] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+
+  // D4(a): Read URL query params on mount and apply to active tab
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    const campaignIdParam = params.get('campaignId');
+    const updates: Record<string, string> = {};
+    if (tabParam) updates.activeTab = tabParam;
+    if (campaignIdParam) updates.id = campaignIdParam;
+    if (Object.keys(updates).length > 0) {
+      void updateCampaignState(updates as any);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -142,8 +154,10 @@ function AppContent() {
   const runBrain = async () => {
     setRunningBrain(true);
     try {
-      await updateCampaignState({ automationEnabled: true, activeTab: 'engine' });
       await dataService.runAutomation(campaignState.id || 'main-campaign', 'top-bar-run');
+      await updateCampaignState({ automationEnabled: true, activeTab: 'engine' });
+    } catch (err) {
+      console.error('runBrain error:', err);
     } finally {
       setRunningBrain(false);
     }
@@ -345,7 +359,12 @@ function AppContent() {
 
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
+                  const base = window.location.origin + window.location.pathname;
+                  const params = new URLSearchParams({
+                    tab: activeTab,
+                    campaignId: campaignState.id || 'main-campaign',
+                  });
+                  navigator.clipboard.writeText(`${base}?${params.toString()}`);
                   setLinkCopied(true);
                   setTimeout(() => setLinkCopied(false), 2000);
                 }}

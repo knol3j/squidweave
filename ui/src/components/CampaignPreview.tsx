@@ -654,7 +654,7 @@ export default function CampaignPreview() {
 
   const handleProspectingRun = async () => {
     setProspectingRunning(true);
-    setStatusMessage(null);
+    setStatus(null);
     try {
       const campaignId = campaignState.id || 'main-campaign';
       const result = await dataService.generateProspects(campaignId, {
@@ -664,10 +664,10 @@ export default function CampaignPreview() {
       setProspectingPlan(result.plan);
       setProspects(result.candidates);
       setProspectingRuns(current => [result.run, ...current]);
-      setStatusMessage(`Generated ${result.candidates.length} candidate contacts for enrichment and outreach review.`);
+      setStatus({ type: 'success', text: `Generated ${result.candidates.length} candidate contacts for enrichment and outreach review.` });
     } catch (error) {
       console.error(error);
-      setStatusMessage('Failed to generate candidate contacts.');
+      setStatus({ type: 'error', text: 'Failed to generate candidate contacts.' });
     } finally {
       setProspectingRunning(false);
     }
@@ -676,12 +676,12 @@ export default function CampaignPreview() {
   const handleContactImport = async () => {
     const contacts = parseContactImportRows(contactImportDraft.rows);
     if (!contacts.length) {
-      setStatusMessage('Add at least one contact row to import.');
+      setStatus({ type: 'error', text: 'Add at least one contact row to import.' });
       return;
     }
 
     setContactImporting(true);
-    setStatusMessage(null);
+    setStatus(null);
     try {
       const imported = await dataService.importProspects(
         campaignState.id || 'main-campaign',
@@ -691,10 +691,10 @@ export default function CampaignPreview() {
       setProspects(current => [...imported, ...current]);
       setContactImportDraft(emptyContactImportDraft());
       await Promise.all([refreshProspecting(), refreshActivation()]);
-      setStatusMessage(`Imported ${imported.length} validated contacts into the sourcing queue.`);
+      setStatus({ type: 'success', text: `Imported ${imported.length} validated contacts into the sourcing queue.` });
     } catch (error) {
       console.error(error);
-      setStatusMessage('Failed to import contacts.');
+      setStatus({ type: 'error', text: 'Failed to import contacts.' });
     } finally {
       setContactImporting(false);
     }
@@ -702,7 +702,7 @@ export default function CampaignPreview() {
 
   const handleProspectEnrichment = async () => {
     setEnrichingProspects(true);
-    setStatusMessage(null);
+    setStatus(null);
     try {
       const result = await dataService.enrichProspects(campaignState.id || 'main-campaign', {
         provider: 'internal-waterfall',
@@ -711,10 +711,10 @@ export default function CampaignPreview() {
       setProspects(result.contacts);
       setProspectPipeline(result.pipeline);
       setActivationRuns(current => [result.run, ...current]);
-      setStatusMessage(`Enrichment advanced ${result.run.processedContacts} contacts toward sequencing.`);
+      setStatus({ type: 'success', text: `Enrichment advanced ${result.run.processedContacts} contacts toward sequencing.` });
     } catch (error) {
       console.error(error);
-      setStatusMessage('Failed to enrich prospect queue.');
+      setStatus({ type: 'error', text: 'Failed to enrich prospect queue.' });
     } finally {
       setEnrichingProspects(false);
     }
@@ -722,7 +722,7 @@ export default function CampaignPreview() {
 
   const handleSequenceBuild = async () => {
     setSequencingProspects(true);
-    setStatusMessage(null);
+    setStatus(null);
     try {
       const result = await dataService.sequenceProspects(campaignState.id || 'main-campaign', {
         limit: 24,
@@ -730,10 +730,10 @@ export default function CampaignPreview() {
       setProspects(result.contacts);
       setProspectPipeline(result.pipeline);
       setActivationRuns(current => [result.run, ...current]);
-      setStatusMessage(`Built sequence plans for ${result.run.processedContacts} contacts.`);
+      setStatus({ type: 'success', text: `Built sequence plans for ${result.run.processedContacts} contacts.` });
     } catch (error) {
       console.error(error);
-      setStatusMessage('Failed to build sequence plans.');
+      setStatus({ type: 'error', text: 'Failed to build sequence plans.' });
     } finally {
       setSequencingProspects(false);
     }
@@ -742,22 +742,22 @@ export default function CampaignPreview() {
   const handleFundingImport = async () => {
     const records = parseFundingImportRows(fundingImportDraft.rows);
     if (!records.length) {
-      setStatusMessage('Add at least one investor row to import.');
+      setStatus({ type: 'error', text: 'Add at least one investor row to import.' });
       return;
     }
 
     setFundingImporting(true);
-    setStatusMessage(null);
+    setStatus(null);
     try {
       const campaignId = campaignState.id || 'main-campaign';
       const imported = await dataService.importFundingInvestors(campaignId, records);
       setFundingInvestors(current => [...imported, ...current]);
       setFundingImportDraft(emptyFundingImportDraft());
       await refreshFunding();
-      setStatusMessage(`Imported ${imported.length} investor records into the funding pipeline.`);
+      setStatus({ type: 'success', text: `Imported ${imported.length} investor records into the funding pipeline.` });
     } catch (error) {
       console.error(error);
-      setStatusMessage('Failed to import investor records.');
+      setStatus({ type: 'error', text: 'Failed to import investor records.' });
     } finally {
       setFundingImporting(false);
     }
@@ -765,17 +765,17 @@ export default function CampaignPreview() {
 
   const handleFundingSequence = async () => {
     setFundingSequencing(true);
-    setStatusMessage(null);
+    setStatus(null);
     try {
       const campaignId = campaignState.id || 'main-campaign';
       const result = await dataService.runFundingSequence(campaignId, { limit: 20 });
       setFundingPipeline(result.pipeline);
       setFundingRuns(current => [result.run, ...current]);
       setFundingEvents(current => [...result.events, ...current]);
-      setStatusMessage(`Queued ${result.events.length} funding outreach steps.`);
+      setStatus({ type: 'success', text: `Queued ${result.events.length} funding outreach steps.` });
     } catch (error) {
       console.error(error);
-      setStatusMessage('Failed to queue funding outreach.');
+      setStatus({ type: 'error', text: 'Failed to queue funding outreach.' });
     } finally {
       setFundingSequencing(false);
     }
@@ -783,17 +783,17 @@ export default function CampaignPreview() {
 
   const handleFundingRun = async () => {
     setFundingRunning(true);
-    setStatusMessage(null);
+    setStatus(null);
     try {
       const campaignId = campaignState.id || 'main-campaign';
       const result = await dataService.runFundingCampaign(campaignId, { limit: 20 });
       setFundingPipeline(result.pipeline);
       setFundingRuns(current => [result.sequence.run, ...current]);
       setFundingEvents(current => [...result.sequence.events, ...current]);
-      setStatusMessage(`Funding automation run completed: ${result.sequence.run.processedInvestors} investors processed.`);
+      setStatus({ type: 'success', text: `Funding automation run completed: ${result.sequence.run.processedInvestors} investors processed.` });
     } catch (error) {
       console.error(error);
-      setStatusMessage('Funding automation run failed.');
+      setStatus({ type: 'error', text: 'Funding automation run failed.' });
     } finally {
       setFundingRunning(false);
     }
@@ -876,10 +876,16 @@ export default function CampaignPreview() {
           </div>
         </div>
 
-        {statusMessage && (
-          <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span>{statusMessage}</span>
+        {status && (
+          <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
+            status.type === 'success'
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
+              : 'border-red-500/30 bg-red-500/10 text-red-400'
+          }`}>
+            {status.type === 'success'
+              ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+              : <XCircle className="h-4 w-4 shrink-0" />}
+            <span>{status.text}</span>
           </div>
         )}
 

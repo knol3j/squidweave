@@ -3,6 +3,15 @@ from typing import Any
 
 from app.config import settings
 
+_chroma_client = None
+
+def get_chroma_client():
+    global _chroma_client
+    if _chroma_client is None:
+        import chromadb
+        _chroma_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+    return _chroma_client
+
 
 async def store_memory(
     category: str,
@@ -12,8 +21,7 @@ async def store_memory(
     tags: list[str] | None = None,
 ) -> dict[str, Any]:
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+        client = get_chroma_client()
         collection = client.get_or_create_collection("memories")
         doc_id = f"{category}-{title}"
         collection.add(
@@ -28,8 +36,7 @@ async def store_memory(
 
 async def search_memory(query: str, k: int = 5) -> list[dict[str, Any]]:
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+        client = get_chroma_client()
         collection = client.get_or_create_collection("memories")
         results = collection.query(query_texts=[query], n_results=k)
         output = []
@@ -51,8 +58,7 @@ async def search_memory(query: str, k: int = 5) -> list[dict[str, Any]]:
 
 async def list_memories(k: int = 20) -> list[dict[str, Any]]:
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+        client = get_chroma_client()
         collection = client.get_or_create_collection("memories")
         results = collection.get(limit=k)
         output = []
@@ -74,8 +80,7 @@ async def list_memories(k: int = 20) -> list[dict[str, Any]]:
 
 async def hermes_upsert(campaign_id: str, entries: list[dict[str, Any]]) -> dict[str, Any]:
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+        client = get_chroma_client()
         collection = client.get_or_create_collection("hermes_memories")
         ids = []
         documents = []
@@ -100,8 +105,7 @@ async def hermes_upsert(campaign_id: str, entries: list[dict[str, Any]]) -> dict
 
 async def hermes_recall(campaign_id: str, query: str = "", target_id: str | None = None, limit: int = 8) -> list[dict[str, Any]]:
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+        client = get_chroma_client()
         collection = client.get_or_create_collection("hermes_memories")
         if query:
             results = collection.query(query_texts=[query], n_results=limit * 3)

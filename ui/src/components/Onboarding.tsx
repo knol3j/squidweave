@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Image as ImageIcon, Zap, Target, ChevronRight, X } from 'lucide-react';
+import { Sparkles, Database, Zap, Target, ChevronRight, X, ClipboardList } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -8,29 +8,29 @@ interface OnboardingProps {
 
 const steps = [
   {
-    title: "Welcome to SquidWeave",
-    description: "Your agent platform for campaign strategy, automation, and privacy-first execution.",
-    icon: Zap,
+    title: "Set Up Your Campaign",
+    description: "Enter your client name, campaign objective, and target locales. This brief drives everything: messaging, targeting, and agent configuration.",
+    icon: ClipboardList,
     color: "text-indigo-400",
   },
   {
-    title: "Campaign Generation",
-    description: "Describe your goals to generate full-funnel strategies, SEO copy, and social media plans in seconds.",
-    icon: Sparkles,
+    title: "Ingest Research",
+    description: "Add market research records — company signals, competitor intel, and ICP evidence — to feed the AI brain with structured context before it runs.",
+    icon: Database,
+    color: "text-amber-400",
+  },
+  {
+    title: "Run the Agent Engine",
+    description: "Execute the agent swarm: targeting, localized content generation, and reengagement sequencing — all orchestrated from a single control surface.",
+    icon: Zap,
     color: "text-fuchsia-400",
   },
   {
-    title: "Multimodal Asset Analysis",
-    description: "Upload product photos or brand assets. The engine analyzes visuals to generate context-aware marketing copy.",
-    icon: ImageIcon,
-    color: "text-blue-400",
-  },
-  {
-    title: "Build Visualization",
-    description: "Watch your build in real-time. See the architecture mapping vision tokens to marketing logic as it executes.",
+    title: "Track Funding Pipeline",
+    description: "Manage investor outreach and VC sourcing. Import investor records, run enrichment, and track each fund through your pipeline from sourced to closed.",
     icon: Target,
     color: "text-emerald-400",
-  }
+  },
 ];
 
 export default function Onboarding({ onComplete }: OnboardingProps) {

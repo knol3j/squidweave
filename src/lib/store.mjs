@@ -242,7 +242,6 @@ export class Store {
     this.events = new EventEmitter();
     this.sequence = 0;
     this._persistTimer = null;
-    this._persistPromise = null;
     this._persistDebounceMs = options.persistDebounceMs ?? 500;
     this._maxEventsPerCollection = options.maxEventsPerCollection ?? 50_000;
     this._indexes = new Map();
@@ -259,25 +258,15 @@ export class Store {
     }
     return new Promise((resolve, reject) => {
       this._persistTimer = setTimeout(async () => {
+        this._persistTimer = null;
         try {
           this._compactEventArrays();
           await this.backend.save(this.state);
-          this._persistPromise = null;
           resolve();
         } catch (err) {
-          this._persistPromise = null;
           reject(err);
         }
       }, this._persistDebounceMs);
-      this._persistPromise ??= new Promise((res) => {
-        const orig = this._persistTimer;
-        const check = setInterval(() => {
-          if (this._persistTimer !== orig) {
-            clearInterval(check);
-            res();
-          }
-        }, 10);
-      });
     });
   }
 

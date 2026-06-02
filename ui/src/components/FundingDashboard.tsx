@@ -372,6 +372,7 @@ export default function FundingDashboard() {
   const [activeTab, setActiveTab] = useState('pipeline'); // pipeline | timeline | config
   const [enrichingAll, setEnrichingAll] = useState(false);
   const [sendingDeck, setSendingDeck] = useState(null);
+  const [runningPipeline, setRunningPipeline] = useState(false);
   const campaignId = campaignState.id || 'main-campaign';
 
   const loadData = async () => {
@@ -434,11 +435,14 @@ export default function FundingDashboard() {
   }, [pipeline]);
 
   const runFunding = async () => {
+    setRunningPipeline(true);
     try {
       await dataService.runFunding(campaignId);
       await loadData();
     } catch (err) {
       console.error('runFunding error:', err);
+    } finally {
+      setRunningPipeline(false);
     }
   };
 
@@ -506,7 +510,7 @@ export default function FundingDashboard() {
           <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
           <p className="text-red-400 text-sm font-medium">Failed to load investors</p>
           <p className="text-slate-500 text-xs">{loadError}</p>
-          <button onClick={() => window.location.reload()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
+          <button onClick={() => void loadData()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
             Retry
           </button>
         </div>
@@ -574,10 +578,11 @@ export default function FundingDashboard() {
             </button>
             <button
               onClick={runFunding}
-              className="inline-flex items-center gap-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm transition hover:bg-indigo-500/15"
+              disabled={runningPipeline}
+              className="inline-flex items-center gap-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm transition hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Send className="h-4 w-4" />
-              Run Pipeline
+              {runningPipeline ? 'Running...' : 'Run Pipeline'}
             </button>
           </div>
         </div>

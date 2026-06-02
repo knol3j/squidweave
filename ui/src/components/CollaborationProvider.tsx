@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, Campaign, dataService } from '../services/dataService';
 import { getAllAgentIds } from '../lib/agentSystem';
 
@@ -133,26 +133,30 @@ export function CollaborationProvider({ children }: { children: React.ReactNode 
     };
   }, []);
 
-  const updateCampaignState = async (updates: Partial<Campaign>) => {
-    const merged = {
-      ...campaignState,
-      ...updates,
-      connector: updates.connector || campaignState.connector || 'openclaw',
-      connectors: updates.connectors?.length ? updates.connectors : campaignState.connectors || ['openclaw', 'clawdbot'],
-      id: CAMPAIGN_ID,
-    };
-    setCampaignState(merged);
-    const persisted = await dataService.updateCampaign(CAMPAIGN_ID, merged);
+  const updateCampaignState = useCallback(async (updates: Partial<Campaign>) => {
+    let merged: Campaign & { id: string };
+    setCampaignState(prev => {
+      merged = {
+        ...prev,
+        ...updates,
+        connector: updates.connector || prev.connector || 'openclaw',
+        connectors: updates.connectors?.length ? updates.connectors : prev.connectors || ['openclaw', 'clawdbot'],
+        id: CAMPAIGN_ID,
+      } as Campaign & { id: string };
+      return merged;
+    });
+    // merged is synchronously assigned inside the setState updater
+    const persisted = await dataService.updateCampaign(CAMPAIGN_ID, merged!);
     setCampaignState(prev => ({
       ...prev,
       ...persisted,
-      connector: persisted.connector || merged.connector,
-      connectors: persisted.connectors?.length ? persisted.connectors : merged.connectors,
+      connector: persisted.connector || merged!.connector,
+      connectors: persisted.connectors?.length ? persisted.connectors : merged!.connectors,
       id: CAMPAIGN_ID,
     }));
-  };
+  }, []);
 
-  const sendMessage = async (role: 'user' | 'assistant', content: string, image?: string) => {
+  const sendMessage = useCallback(async (role: 'user' | 'assistant', content: string, image?: string) => {
     setMessages(prev => [
       ...prev,
       {
@@ -163,15 +167,19 @@ export function CollaborationProvider({ children }: { children: React.ReactNode 
         createdAt: new Date().toISOString(),
       },
     ]);
-  };
+  }, []);
 
-  const toggleModule = async (moduleId: string) => {
-    const currentModules = campaignState.enabledModules || [];
-    const newModules = currentModules.includes(moduleId)
-      ? currentModules.filter(id => id !== moduleId)
-      : [...currentModules, moduleId];
-    await updateCampaignState({ enabledModules: newModules });
-  };
+  const toggleModule = useCallback(async (moduleId: string) => {
+    setCampaignState(prev => {
+      const currentModules = prev.enabledModules || [];
+      const newModules = currentModules.includes(moduleId)
+        ? currentModules.filter(id => id !== moduleId)
+        : [...currentModules, moduleId];
+      // fire-and-forget the async update
+      void updateCampaignState({ enabledModules: newModules });
+      return prev;
+    });
+  }, [updateCampaignState]);
 
   const value = useMemo(() => ({
     user,
@@ -182,7 +190,7 @@ export function CollaborationProvider({ children }: { children: React.ReactNode 
     sendMessage,
     toggleModule,
     replaceMessages: setMessages,
-  }), [user, loading, campaignState, messages]);
+  }), [user, loading, campaignState, messages, updateCampaignState, sendMessage, toggleModule]);
 
   return (
     <CollaborationContext.Provider value={value}>

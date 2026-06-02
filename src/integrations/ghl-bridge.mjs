@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import { normalizeEvent } from "../lib/analytics.mjs";
+import { normalizeOutreachEvent } from "../lib/targeting-engine.mjs";
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 
@@ -260,7 +262,7 @@ export class GhlBridge {
         },
       };
 
-      const normalized = (await import("../lib/analytics.mjs")).normalizeEvent(event);
+      const normalized = normalizeEvent(event);
       await this.store.addEvent(normalized);
       results.push({ action: "added_analytics_event" });
 
@@ -408,7 +410,7 @@ export class GhlBridge {
       const analyticsType = isInbound ? "reply" : "click";
 
       if (campaignId) {
-        const outreachEvent = (await import("../lib/targeting-engine.mjs")).normalizeOutreachEvent({
+        const outreachEvent = normalizeOutreachEvent({
           campaignId, targetId, type: outreachType,
           channel: msg.channelType || "email",
           metadata: {
@@ -420,7 +422,7 @@ export class GhlBridge {
         await this.store.addOutreachEvent(outreachEvent);
         results.push({ action: "added_outreach_event", type: outreachType });
 
-        const analyticsEvent = (await import("../lib/analytics.mjs")).normalizeEvent({
+        const analyticsEvent = normalizeEvent({
           campaignId, type: analyticsType, value: 1,
           metadata: { source: `ghl-${eventType}`, conversationId: data.id, messageId: msg.id },
         });
@@ -456,7 +458,7 @@ export class GhlBridge {
     if (!mapping) return { action: "ignored", reason: `unknown log type: ${logType}` };
 
     if (campaignId && targetId) {
-      const outreachEvent = (await import("../lib/targeting-engine.mjs")).normalizeOutreachEvent({
+      const outreachEvent = normalizeOutreachEvent({
         campaignId, targetId, type: mapping.outreach,
         channel: logType.startsWith("sms") ? "sms" : "email",
         metadata: { source: `ghl-${eventType}`, logType, campaignLogId: data.id, messageId: data.messageId },
@@ -464,7 +466,7 @@ export class GhlBridge {
       await this.store.addOutreachEvent(outreachEvent);
       results.push({ action: "added_outreach_event", type: mapping.outreach });
 
-      const analyticsEvent = (await import("../lib/analytics.mjs")).normalizeEvent({
+      const analyticsEvent = normalizeEvent({
         campaignId, type: mapping.analytics, value: 1,
         metadata: { source: `ghl-${eventType}`, logType },
       });
@@ -570,7 +572,7 @@ export class GhlBridge {
         });
       }
 
-      const event = (await import("../lib/analytics.mjs")).normalizeEvent({
+      const event = normalizeEvent({
         campaignId, type: "conversion", value: opp.monetaryValue || 1,
         metadata: {
           source: "ghl-api-pull", opportunityId: opp.id,

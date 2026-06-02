@@ -7,6 +7,8 @@ import { config } from "./config.mjs";
 // ── Auth middleware ───────────────────────────────────────────────
 const API_KEY = process.env.SQUIDWEAVE_API_KEY || null;
 
+function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 function requireApiKey(request, response) {
   if (!API_KEY) return true;
   const provided = request.headers["x-api-key"];
@@ -108,6 +110,15 @@ const mimeTypes = {
   ".woff": "font/woff",
   ".woff2": "font/woff2",
 };
+
+function guessInvestorEmail(inv) {
+  if (inv.partnerName && inv.domain) {
+    const firstName = inv.partnerName.split(" ")[0]?.toLowerCase() || "";
+    const lastName = inv.partnerName.split(" ").slice(1).join("").toLowerCase() || "";
+    return `${firstName}.${lastName}@${inv.domain}`;
+  }
+  return null;
+}
 
 function buildCorsHeaders(request) {
   const origin = request.headers.origin;
@@ -689,6 +700,7 @@ async function createApp() {
       const body = await readBody(request);
       const events = Array.isArray(body.events) ? body.events : [body];
       const normalized = events.map(normalizeEvent);
+      if (!normalized.length) { sendJson(request, response, 400, { error: "events array is empty" }); return; }
       for (const event of normalized) {
         await store.addEvent(event);
       }
@@ -706,6 +718,7 @@ async function createApp() {
       const body = await readBody(request);
       const records = Array.isArray(body.records) ? body.records : [body];
       const normalized = records.map(normalizeResearchRecord);
+      if (!normalized.length) { sendJson(request, response, 400, { error: "events array is empty" }); return; }
       for (const record of normalized) {
         await store.addResearchRecord(record);
       }
@@ -723,6 +736,7 @@ async function createApp() {
       const body = await readBody(request);
       const events = Array.isArray(body.events) ? body.events : [body];
       const normalized = events.map(normalizeOutreachEvent);
+      if (!normalized.length) { sendJson(request, response, 400, { error: "events array is empty" }); return; }
       for (const event of normalized) {
         await store.addOutreachEvent(event);
       }
@@ -980,7 +994,7 @@ async function createApp() {
       response.end(`
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${deck.title || 'Fundraising Deck'}</title>
+<title>${escapeHtml(deck.title) || 'Fundraising Deck'}</title>
 <style>
   body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #1a1a2e; }
   h1 { font-size: 1.8rem; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; }
@@ -989,8 +1003,8 @@ async function createApp() {
   hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
 </style>
 </head><body>
-<h1>${deck.title}</h1>
-<div class="meta">Generated ${new Date(deck.createdAt).toLocaleDateString()} &bull; For ${deck.investor?.fundName || 'Investor'}${deck.investor?.partnerName ? ' / ' + deck.investor.partnerName : ''}</div>
+<h1>${escapeHtml(deck.title)}</h1>
+<div class="meta">Generated ${new Date(deck.createdAt).toLocaleDateString()} &bull; For ${escapeHtml(deck.investor?.fundName || 'Investor')}${deck.investor?.partnerName ? ' / ' + escapeHtml(deck.investor.partnerName) : ''}</div>
 ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
 </body></html>`);
       return;
@@ -1007,7 +1021,6 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       // 1. Seed data import
       if (body.useSeedData !== false) {
         try {
-          const { readFile } = await import("node:fs/promises");
           const seedText = await readFile(new URL("../data/seed-investors.json", import.meta.url), "utf-8");
           const seedRecords = JSON.parse(seedText);
           const imported = fundingEngine.importInvestors(body.campaignId, seedRecords);
@@ -1163,7 +1176,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
 
     // ── Dead Letter Queue: pop (retry) ──────────────────────────────
     if (request.method === "DELETE" && parts[0] === "dlq" && parts[1] && parts[2] === "retry") {
-      const entryId = parts[2];
+      const entryId = parts[1];
       const entry = await store.popDlqEntry(entryId);
       if (!entry) {
         sendJson(request, response, 404, { error: "DLQ entry not found." });
@@ -1562,32 +1575,16 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
           enriched.push(inv);
           continue;
         }
-        // Pattern-based email guess: partnerName@domain
-        if (inv.partnerName && inv.domain) {
-          const firstName = inv.partnerName.split(" ")[0]?.toLowerCase() || "";
-          const lastName = inv.partnerName.split(" ").slice(1).join("").toLowerCase() || "";
-          const guessed = `${firstName}.${lastName}@${inv.domain}`;
-          await store.updateInvestorRecord(body.campaignId, inv.id, {
-            email: guessed,
-            enrichmentSource: "pattern-guess",
-            enrichmentConfidence: 0.4,
-            enrichedAt: new Date().toISOString(),
-          });
-          enriched.push({ ...inv, email: guessed, enrichmentSource: "pattern-guess" });
-        } else if (inv.fundName && inv.website) {
-          // Fallback: fund info@domain
-          const domain = inv.domain || (inv.website ? inv.website.replace(/^https?:\/\//, "").split("/")[0] : null);
-          if (domain) {
-            const guessed = `info@${domain}`;
-            await store.updateInvestorRecord(body.campaignId, inv.id, {
-              email: guessed,
-              enrichmentSource: "pattern-fallback",
-              enrichmentConfidence: 0.2,
-              enrichedAt: new Date().toISOString(),
-            });
-            enriched.push({ ...inv, email: guessed, enrichmentSource: "pattern-fallback" });
-          }
-        }
+         const guessed = guessInvestorEmail(inv);
+         if (guessed) {
+           await store.updateInvestorRecord(body.campaignId, inv.id, {
+             email: guessed,
+             enrichmentSource: "pattern-guess",
+             enrichmentConfidence: 0.4,
+             enrichedAt: new Date().toISOString(),
+           });
+           enriched.push({ ...inv, email: guessed, enrichmentSource: "pattern-guess" });
+         }
       }
 
       sendJson(request, response, 200, {
@@ -1626,18 +1623,16 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       const enrichments = [];
       for (const inv of enrichmentResult) {
         if (inv.email) continue;
-        if (inv.partnerName && inv.domain) {
-          const first = inv.partnerName.split(" ")[0]?.toLowerCase() || "";
-          const last = inv.partnerName.split(" ").slice(1).join("").toLowerCase() || "";
-          const guess = `${first}.${last}@${inv.domain}`;
-          await store.updateInvestorRecord(body.campaignId, inv.id, {
-            email: guess,
-            enrichmentSource: "pattern-guess",
-            enrichmentConfidence: 0.4,
-            enrichedAt: new Date().toISOString(),
-          });
-          enrichments.push({ id: inv.id, email: guess });
-        }
+         const guess = guessInvestorEmail(inv);
+         if (guess) {
+           await store.updateInvestorRecord(body.campaignId, inv.id, {
+             email: guess,
+             enrichmentSource: "pattern-guess",
+             enrichmentConfidence: 0.4,
+             enrichedAt: new Date().toISOString(),
+           });
+           enrichments.push({ id: inv.id, email: guess });
+         }
       }
 
       // Step 4: Generate and send deck

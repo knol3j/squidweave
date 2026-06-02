@@ -179,7 +179,7 @@ export class WorkflowEngine {
   }
 
   async getWorkflowVersions(workflowId) {
-    return this.store.listDocuments("workflowVersions", { workflowId });
+    return this.store.listDocuments("workflowVersions", doc => doc.workflowId === workflowId);
   }
 
   async getLatestVersion(workflowId) {
@@ -533,7 +533,7 @@ export class WorkflowEngine {
   }
 
   getWorkflowStatusesForContact(contactId, locationId) {
-    const executions = this.store.listDocuments("workflowExecutions", { contactId, locationId });
+    const executions = this.store.listDocuments("workflowExecutions", doc => doc.contactId === contactId && doc.locationId === locationId);
     const workflowIds = [...new Set(executions.map(e => e.workflowId))];
     return workflowIds.map(wfId => {
       const wf = this.store.getDocument("workflows", wfId);
@@ -552,7 +552,7 @@ export class WorkflowEngine {
   }
 
   async stopWorkflowExecution(contactId, locationId, workflowId, userId, source = "web_app") {
-    const executions = this.store.listDocuments("workflowExecutions", { workflowId, contactId, locationId, status: "running" });
+    const executions = this.store.listDocuments("workflowExecutions", doc => doc.workflowId === workflowId && doc.contactId === contactId && doc.locationId === locationId && doc.status === "running");
     for (const exec of executions) {
       exec.status = "stopped";
       exec.stoppedAt = new Date().toISOString();
@@ -614,16 +614,16 @@ export class WorkflowEngine {
   }
 
   getActiveTriggersByType(locationId, type) {
-    return this.store.listDocuments("triggers", { locationId, type, active: true, deleted: false })
+    return this.store.listDocuments("triggers", doc => doc.locationId === locationId && doc.type === type && doc.active === true && doc.deleted === false)
       .filter(t => t.deleted === false);
   }
 
   getTriggersForWorkflow(workflowId) {
-    return this.store.listDocuments("triggers", { workflowId }).filter(t => !t.deleted);
+    return this.store.listDocuments("triggers", doc => doc.workflowId === workflowId).filter(t => !t.deleted);
   }
 
   getTriggersByLocation(locationId) {
-    return this.store.listDocuments("triggers", { locationId }).filter(t => !t.deleted);
+    return this.store.listDocuments("triggers", doc => doc.locationId === locationId).filter(t => !t.deleted);
   }
 
   toggleTrigger(triggerId) {
