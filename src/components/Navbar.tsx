@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play, Loader2, Squid } from 'lucide-react';
+import { Play, Loader2, Orbit } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
 
@@ -13,7 +13,7 @@ export default function Navbar() {
     <nav className="h-14 border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between px-4 shrink-0" style={{ backgroundColor: '#08111f' }}>
       {/* Left: Logo */}
       <div className="flex items-center gap-2.5">
-        <Squid className="w-6 h-6 text-[#6366f1]" />
+        <Orbit className="w-6 h-6 text-[#6366f1]" />
         <span className="font-bold text-sm tracking-[0.15em] text-[#e2e8f0]">
           SQUIDWEAVE
         </span>

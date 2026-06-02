@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Brain, TrendingUp, TrendingDown, Minus, Target, Users, Upload } from 'lucide-react';
-import type { Target, Investor, TacticScore } from '@/types';
+import type { Target as TargetType, Investor, TacticScore } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  targets: Target[];
+  targets: TargetType[];
   investors: Investor[];
   tacticScores: TacticScore[];
   expanded: boolean;
