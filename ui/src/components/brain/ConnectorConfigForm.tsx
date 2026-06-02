@@ -8,13 +8,18 @@ interface ConnectorConfigFormProps {
   connectorSaving: string | null;
   connectorMessage: string | null;
   openClawDiagnostics: OpenClawDiagnostic[];
-  onDraftChange: (connector: string, updates: { baseUrl?: string; token?: string }) => void;
+  onDraftChange: (connector: string, field: 'baseUrl' | 'token', value: string) => void;
   onSave: (connector: string) => void;
 }
 
-export function ConnectorConfigForm({
-  connectorStatuses, connectorDrafts, connectorSaving, connectorMessage,
-  openClawDiagnostics, onDraftChange, onSave,
+export default function ConnectorConfigForm({
+  connectorStatuses,
+  connectorDrafts,
+  connectorSaving,
+  connectorMessage,
+  openClawDiagnostics,
+  onDraftChange,
+  onSave,
 }: ConnectorConfigFormProps) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
@@ -28,10 +33,13 @@ export function ConnectorConfigForm({
             <div className="flex items-center justify-between">
               <div className="text-xs font-semibold text-slate-200">{status.connector}</div>
               <div className={`text-[11px] font-semibold uppercase tracking-[0.15em] ${
-                status.mode === 'live' || status.mode === 'ready' ? 'text-emerald-400'
-                : status.mode === 'dry-run' ? 'text-amber-400'
-                : status.mode === 'auth-error' ? 'text-rose-400'
-                : 'text-slate-400'
+                status.mode === 'live' || status.mode === 'ready'
+                  ? 'text-emerald-400'
+                  : status.mode === 'dry-run'
+                    ? 'text-amber-400'
+                    : status.mode === 'auth-error'
+                      ? 'text-rose-400'
+                      : 'text-slate-400'
               }`}>
                 {status.mode}
               </div>
@@ -43,17 +51,22 @@ export function ConnectorConfigForm({
               <div className="mt-1 text-[11px] text-rose-500">Token rejected by connector. Replace it below.</div>
             )}
             {status.error && <div className="mt-1 text-[11px] text-rose-500">{status.error}</div>}
+            {status.diagnosis?.recommendations?.length ? (
+              <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-300">
+                {status.diagnosis.recommendations[0]}
+              </div>
+            ) : null}
             <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/[0.04] p-3">
               <input
                 value={connectorDrafts[status.connector]?.baseUrl || ''}
-                onChange={event => onDraftChange(status.connector, { baseUrl: event.target.value })}
+                onChange={event => onDraftChange(status.connector, 'baseUrl', event.target.value)}
                 placeholder={`${status.connector} base URL`}
                 className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-3 py-2 text-xs text-slate-200 outline-none focus:border-violet-400"
               />
               <input
                 type="password"
                 value={connectorDrafts[status.connector]?.token || ''}
-                onChange={event => onDraftChange(status.connector, { token: event.target.value })}
+                onChange={event => onDraftChange(status.connector, 'token', event.target.value)}
                 placeholder={`New ${status.connector} token`}
                 className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-3 py-2 text-xs text-slate-200 outline-none focus:border-violet-400"
               />

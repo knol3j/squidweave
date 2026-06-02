@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Send, Paperclip, X, Image as ImageIcon, Sparkles, Loader2, Camera, Copy, Check, 
   Smartphone, Share2, Video, Linkedin, Instagram, Twitter, Columns, Zap,
@@ -8,9 +8,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { useCollaboration } from './CollaborationProvider';
 import { dataService, Keyword } from '../services/dataService';
+import { renderContent } from '../lib/renderChatContent';
+import { buildAssistantReport } from '../lib/buildAssistantReport';
 
 interface ChatPanelProps {
   externalPrompt?: string;
+}
+
+function MemoizedMessageContent({ content }: { content: string }) {
+  const rendered = React.useMemo(() => renderContent(content), [content]);
+  return rendered;
 }
 
 export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
@@ -48,55 +55,6 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
     return () => unsubscribe();
   }, [campaignState.id]);
 
-  const buildAssistantReport = (prompt: string, result: any) => {
-    const campaign = result?.campaign || result?.automation?.decision?.execution?.payload?.context?.campaign || result?.automation?.decision?.execution?.context?.campaign || result?.decision?.execution?.payload?.context?.campaign || result?.decision?.execution?.context?.campaign || campaignState;
-    const decision = result?.automation?.decision || result?.decision;
-    const contentPack = result?.automation?.contentPack || result?.contentPack;
-    const action = decision?.plan?.recommendedAction;
-    const policy = result?.policy;
-    const executionLog = Array.isArray(result?.executionLog) ? result.executionLog : [];
-    const variants = contentPack?.variants || [];
-    const firstVariant = variants[0];
-    const liveKeywords = keywords.map((keyword) => `- ${keyword.term}`).join('\n');
-    const topTargets = decision?.targeting?.topTargets?.slice?.(0, 3) || [];
-    const reengagementQueue = decision?.targeting?.reengagementQueue?.slice?.(0, 3) || [];
-
-    return [
-      '[Campaign Strategy]:',
-      `Campaign objective: ${campaign?.objective || 'Not configured'}.`,
-      `Prompt: ${prompt}`,
-      `Primary action: ${action?.type || 'No live action'}${action?.reason ? ` because ${action.reason}` : ''}.`,
-      `Locales targeted: ${(campaign?.locales || []).join(', ') || 'No locales configured'}.`,
-      `Autopilot policy: objective=${policy?.classification?.objectiveMode || 'n/a'}, budget=${policy?.classification?.budgetMode || 'n/a'}${policy?.classification?.budgetAmount != null ? ` (${policy.classification.budgetAmount})` : ''}.`,
-      '',
-      '[Autopilot Execution Log]:',
-      executionLog.length
-        ? executionLog.map((entry: any) => `- ${entry.stage}: ${entry.status}${entry.reason ? ` (${entry.reason})` : ''}${entry.processedContacts != null ? ` contacts=${entry.processedContacts}` : ''}${entry.processedInvestors != null ? ` investors=${entry.processedInvestors}` : ''}${entry.channels ? ` channels=${entry.channels.join(',')}` : ''}`).join('\n')
-        : '- No execution log available.',
-      '',
-      '#### Market Realities',
-      `Current decision status: ${decision?.policyResult?.status || 'No live status'}.`,
-      `ROAS: ${Number((decision?.summary?.derived?.roas || 0)).toFixed(2)}.`,
-      `CTR: ${Number(((decision?.summary?.derived?.ctr || 0) * 100)).toFixed(2)}%.`,
-      `Top ranked targets: ${topTargets.map((target: any) => `${target.company || target.targetId} (${target.recommendation})`).join(', ') || 'No ranked targets yet'}.`,
-      `Reengagement queue: ${reengagementQueue.map((target: any) => `${target.company || target.targetId} via ${target.recommendedChannel || 'unassigned channel'}`).join(', ') || 'No reengagement candidates yet'}.`,
-      '',
-      '[Ad Copy]:',
-      variants.map((variant: any) => `- ${variant.locale}: ${variant.subject} | ${variant.headline}`).join('\n') || '- No localized variants generated yet.',
-      '',
-      '[Social Media Posts]:',
-      variants.map((variant: any) => `- ${variant.locale}: ${variant.body}`).join('\n') || '- Awaiting content generation.',
-      '',
-      '[Social Media Kit]:',
-      firstVariant
-        ? `[Instagram Reel]\nHook: ${firstVariant.headline}\nCTA: ${firstVariant.cta}\n\n[Carousel Post]\nSlide 1: ${firstVariant.subject}\nSlide 2: ${firstVariant.preheader}\n\n[LinkedIn Video/Image]\nAngle: ${firstVariant.body}`
-        : 'No creative kit generated yet.',
-      '',
-      '[SEO Keywords]:',
-      liveKeywords || '- No live keyword feed connected.',
-    ].join('\n');
-  };
-
   const handleSend = async () => {
     if (!input.trim() && !selectedImage) return;
 
@@ -124,7 +82,7 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
         reason: currentImage ? 'asset-assisted-ui-request' : 'ui-request',
         locales: campaignState.locales,
       });
-      const responseText = buildAssistantReport(currentInput, result);
+      const responseText = buildAssistantReport(currentInput, result, campaignState, keywords);
       await syncMessage('assistant', responseText);
     } catch (error) {
       console.error(error);
@@ -171,116 +129,6 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
     if (file) handleFile(file);
   };
 
-  const renderContent = (content: string) => {
-    const toolActionRegex = /\[TOOL_ACTION: .*?\]/g;
-    const partsWithTools = content.split(toolActionRegex);
-    const tools = content.match(toolActionRegex);
-
-    const sections = content.split(/(\[.*?\]:)/g);
-    if (sections.length <= 1) {
-      // If no main sections, still try to render tool actions in a simple way
-      const subParts = content.split(/(\[TOOL_ACTION: .*?\])/g);
-      return (
-        <div className="space-y-2">
-          {subParts.map((part, i) => {
-            if (part.startsWith('[TOOL_ACTION:')) {
-              const actionText = part.replace('[TOOL_ACTION: ', '').replace(']', '');
-              return (
-                <div key={i} className="my-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3">
-                  <Zap className="w-4 h-4 text-emerald-400" />
-                  <div>
-                    <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">MCP Automation Triggered</div>
-                    <div className="text-xs text-white font-mono">{actionText}</div>
-                  </div>
-                </div>
-              );
-            }
-            return <ReactMarkdown key={i}>{part}</ReactMarkdown>;
-          })}
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        {sections.map((part, index) => {
-          if (part.startsWith('[TOOL_ACTION:')) return null; // Handled by splitting differently if needed, but here we use split by section mostly
-
-          if (part.startsWith('[') && part.endsWith(']:')) {
-            const title = part.replace(/[\[\]:]/g, '');
-            const isKit = title.includes('Kit') || title.includes('Mixed Media');
-            const isStrategy = title.toLowerCase().includes('strategy');
-            
-            return (
-              <div key={index} className={`mt-6 mb-3 flex items-center gap-2 ${isKit ? 'text-indigo-400' : isStrategy ? 'text-emerald-400' : 'text-slate-400'}`}>
-                {isStrategy && <Sparkles className="w-3 h-3" />}
-                {title.toLowerCase().includes('social') && <Share2 className="w-3 h-3" />}
-                {isKit && <Smartphone className="w-4 h-4" />}
-                <span className="text-[10px] font-bold uppercase tracking-widest leading-none bg-white/5 px-2 py-1.5 rounded-md border border-white/10 shadow-sm shadow-black/20">
-                  {title}
-                </span>
-              </div>
-            );
-          }
-          
-          // Check for sub-sections like [Instagram] inside the text part
-          if (part.includes('[Instagram') || part.includes('[Carousel') || part.includes('[LinkedIn') || part.includes('[TOOL_ACTION') || part.includes('#### Market Realities')) {
-            const subParts = part.split(/(\[.*?\]|#### .*?\n)/g);
-            return (
-              <div key={index} className="space-y-4">
-                {subParts.map((sub, sIdx) => {
-                  if (!sub.trim()) return null;
-
-                  if (sub.startsWith('#### Market Realities')) {
-                    return (
-                      <div key={sIdx} className="my-4 p-5 bg-amber-500/5 border border-amber-500/10 rounded-2xl relative overflow-hidden group/market">
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover/market:opacity-10 transition-opacity">
-                          <TrendingUp className="w-16 h-16 text-amber-400" />
-                        </div>
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-3 flex items-center gap-2">
-                          <BarChart className="w-3 h-3" />
-                          Market Realities & Fact Check
-                        </div>
-                        <div className="prose prose-invert prose-xs max-w-none text-slate-300">
-                          <ReactMarkdown>{sub.replace('#### Market Realities', '')}</ReactMarkdown>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (sub.startsWith('[TOOL_ACTION:')) {
-                    const actionText = sub.replace('[TOOL_ACTION: ', '').replace(']', '');
-                    return (
-                      <div key={sIdx} className="my-1 p-2.5 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-center gap-3">
-                        <Zap className="w-3 h-3 text-emerald-400 animate-pulse" />
-                        <div className="text-[9px] text-white font-mono">{actionText}</div>
-                      </div>
-                    );
-                  }
-                  if (sub.startsWith('[') && sub.endsWith(']')) {
-                    const subTitle = sub.replace(/[\[\]]/g, '');
-                    return (
-                      <div key={sIdx} className="flex items-center gap-2 text-indigo-400 mt-6 first:mt-2">
-                        {subTitle.includes('Instagram') && <Instagram className="w-3 h-3 text-fuchsia-400" />}
-                        {subTitle.includes('TikTok') && <Video className="w-3 h-3 text-emerald-400" />}
-                        {subTitle.includes('LinkedIn') && <Linkedin className="w-3 h-3 text-blue-400" />}
-                        {subTitle.includes('Carousel') && <Columns className="w-3 h-3 text-indigo-400" />}
-                        <span className="text-[9px] font-bold underline underline-offset-4 decoration-indigo-500/30 uppercase tracking-widest">{subTitle}</span>
-                      </div>
-                    );
-                  }
-                  return <div key={sIdx} className="bg-white/[0.02] border border-white/5 rounded-xl p-4 shadow-inner"><ReactMarkdown>{sub}</ReactMarkdown></div>;
-                })}
-              </div>
-            );
-          }
-
-          return <ReactMarkdown key={index}>{part}</ReactMarkdown>;
-        })}
-      </div>
-    );
-  };
-
   return (
     <div 
       className={`flex flex-col h-full transition-colors ${isDragging ? 'bg-indigo-500/5' : 'bg-transparent'}`}
@@ -312,7 +160,7 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
                   />
                 )}
                 <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed group/msg relative">
-                  {msg.role === 'assistant' ? renderContent(msg.content) : <ReactMarkdown>{msg.content}</ReactMarkdown>}
+                  {msg.role === 'assistant' ? <MemoizedMessageContent content={msg.content} /> : <ReactMarkdown>{msg.content}</ReactMarkdown>}
                   
                   {msg.role === 'assistant' && (
                     <button 

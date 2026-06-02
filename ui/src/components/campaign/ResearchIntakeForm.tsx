@@ -1,6 +1,6 @@
 import React from 'react';
 import { Upload, Database, Search } from 'lucide-react';
-import { dataService, ResearchRecord } from '../../services/dataService';
+import { ResearchRecord } from '../../services/dataService';
 import { formatPercent, formatDate } from '../../lib/format';
 import {
   AUDIENCE_OPTIONS,

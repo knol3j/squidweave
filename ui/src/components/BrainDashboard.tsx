@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion } from 'motion/react';
 import {
   Area,
   AreaChart,
@@ -14,10 +13,8 @@ import {
   AlertTriangle,
   Bot,
   BrainCircuit,
-  Cable,
   ClipboardList,
   FolderKanban,
-  ExternalLink,
   Globe2,
   Inbox,
   MemoryStick,
@@ -31,6 +28,11 @@ import { useCollaboration } from './CollaborationProvider';
 import { ApiError, ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, OpenClawDiagnostic, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
 import { AGENT_SYSTEM } from '../lib/agentSystem';
 import { formatPercent, formatShortDate } from '../lib/format';
+import KnowledgeGraph from './brain/KnowledgeGraph';
+import ConnectorConfigForm from './brain/ConnectorConfigForm';
+import MemoryRecallPanel, { MemoryRecallSidebar } from './brain/MemoryRecallPanel';
+import ResearchFeedPanel from './brain/ResearchFeedPanel';
+import AgentStudioOutput from './brain/AgentStudioOutput';
 
 type BrainState = {
   campaigns?: Record<string, any>;
@@ -582,103 +584,19 @@ export default function BrainDashboard() {
           <div className="grid gap-0 xl:grid-cols-[1.8fr_0.9fr]">
             <div className="min-h-[470px] border-r border-white/10 p-5">
               {activeTab === 'Knowledge Graph' && (
-                <div className="relative h-full min-h-[430px] overflow-hidden rounded-[24px] bg-[#0b1526]">
-                  <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
-                    {edges.map(([from, to], index) => {
-                      const a = nodes.find(node => node.id === from);
-                      const b = nodes.find(node => node.id === to);
-                      if (!a || !b) return null;
-                      return <line key={`${from}-${to}-${index}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#6366f1" strokeWidth="0.35" />;
-                    })}
-                  </svg>
-                  {nodes.map(node => (
-                    <motion.div
-                      key={node.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="absolute -translate-x-1/2 -translate-y-1/2"
-                      style={{ left: `${node.x}%`, top: `${node.y}%` }}
-                    >
-                      <div className={`rounded-full ${node.tone} shadow-[0_0_0_12px_rgba(167,139,250,0.06)]`} style={{ width: node.size * 2, height: node.size * 2 }} />
-                      <div className="mt-2 whitespace-nowrap text-center text-[11px] font-medium text-slate-300">{node.label}</div>
-                    </motion.div>
-                  ))}
-                </div>
+                <KnowledgeGraph nodes={nodes} edges={edges as [string, string][]} />
               )}
 
               {activeTab === 'Memory Recall' && (
-                <div className="space-y-3">
-                  {playbooks.length === 0 ? (
-                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-white/[0.04] text-sm text-slate-400">
-                      No procedural memory has been promoted yet.
-                    </div>
-                  ) : (
-                    playbooks.map(playbook => (
-                      <div key={playbook.id} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm font-medium text-white">{playbook.segment} · {playbook.region}</div>
-                          <div className="text-xs font-semibold text-violet-400">{formatPercent(playbook.confidence)}</div>
-                        </div>
-                        <div className="mt-2 text-xs text-slate-400">
-                          {playbook.recommendedChannel} every {playbook.cadenceDays} days · win rate {formatPercent(playbook.winRate)} · risk {formatPercent(playbook.riskRate)}
-                        </div>
-                        <div className="mt-2 text-sm text-slate-400">{playbook.rationale}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                <MemoryRecallPanel
+                  playbooks={playbooks}
+                  targetProfiles={targetProfiles}
+                  episodicEventsCount={episodicEvents.length}
+                />
               )}
 
               {activeTab === 'Research Feed' && (
-                <div className="space-y-3">
-                  {researchRecords.length === 0 ? (
-                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-white/[0.04] text-sm text-slate-400">
-                      No sourced research records have been ingested yet.
-                    </div>
-                  ) : (
-                    researchRecords
-                      .slice()
-                      .sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
-                      .map(record => (
-                        <div key={record.id} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <div className="text-sm font-medium text-white">{record.company || record.targetId}</div>
-                              <div className="mt-1 text-xs text-slate-400">
-                                {record.segment || 'No segment'} · {record.region || 'No region'} · {record.preferredChannel || 'No preferred channel'}
-                              </div>
-                            </div>
-                            {record.metadata?.sourceUrl && (
-                              <a
-                                href={record.metadata.sourceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-xs font-medium text-violet-400 hover:text-violet-300"
-                              >
-                                Source
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
-                            )}
-                          </div>
-                          <div className="mt-3 text-sm text-slate-400">{record.notes || 'No analyst note recorded.'}</div>
-                          <div className="mt-3 grid gap-2 md:grid-cols-3">
-                            <div className="rounded-xl bg-white/[0.06] px-3 py-2 text-xs text-slate-400">Fit {formatPercent(record.fitScore)}</div>
-                            <div className="rounded-xl bg-white/[0.06] px-3 py-2 text-xs text-slate-400">Intent {formatPercent(record.intentScore)}</div>
-                            <div className="rounded-xl bg-white/[0.06] px-3 py-2 text-xs text-slate-400">Recency {formatPercent(record.recencyScore)}</div>
-                          </div>
-                          {!!record.metadata?.evidence?.length && (
-                            <div className="mt-3 space-y-1">
-                              {record.metadata.evidence.slice(0, 3).map((item, index) => (
-                                <div key={`${record.id}-evidence-${index}`} className="text-xs text-slate-500">
-                                  {item}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))
-                  )}
-                </div>
+                <ResearchFeedPanel researchRecords={researchRecords} />
               )}
 
               {activeTab === 'Reengagement' && (
@@ -727,26 +645,11 @@ export default function BrainDashboard() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                  <MemoryStick className="h-4 w-4 text-violet-500" />
-                  Memory Recall
-                </div>
-                <div className="mt-4 space-y-2 text-sm text-slate-400">
-                  <div className="flex justify-between">
-                    <span>Playbooks</span>
-                    <span>{playbooks.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Target Profiles</span>
-                    <span>{targetProfiles.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Episodic Events</span>
-                    <span>{episodicEvents.length}</span>
-                  </div>
-                </div>
-              </div>
+              <MemoryRecallSidebar
+                playbooks={playbooks}
+                targetProfiles={targetProfiles}
+                episodicEventsCount={episodicEvents.length}
+              />
 
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
@@ -769,94 +672,21 @@ export default function BrainDashboard() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                  <Cable className="h-4 w-4 text-violet-500" />
-                  Connector Rails
-                </div>
-                <div className="mt-4 space-y-2">
-                  {connectorStatuses.map(status => (
-                    <div key={status.connector} className="rounded-xl bg-white/[0.06] px-3 py-2">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs font-semibold text-slate-200">{status.connector}</div>
-                        <div className={`text-[11px] font-semibold uppercase tracking-[0.15em] ${
-                          status.mode === 'live' || status.mode === 'ready'
-                            ? 'text-emerald-400'
-                            : status.mode === 'dry-run'
-                              ? 'text-amber-400'
-                              : status.mode === 'auth-error'
-                                ? 'text-rose-400'
-                                : 'text-slate-400'
-                        }`}>
-                          {status.mode}
-                        </div>
-                      </div>
-                      <div className="mt-1 text-xs text-slate-400">
-                        {status.configured ? status.baseUrl || 'Configured' : 'Missing base URL or token'}
-                      </div>
-                      {status.tokenLikelyRotated && (
-                        <div className="mt-1 text-[11px] text-rose-500">Token rejected by connector. Replace it below.</div>
-                      )}
-                      {status.error && <div className="mt-1 text-[11px] text-rose-500">{status.error}</div>}
-                      {status.diagnosis?.recommendations?.length ? (
-                        <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-300">
-                          {status.diagnosis.recommendations[0]}
-                        </div>
-                      ) : null}
-                      <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                        <input
-                          value={connectorDrafts[status.connector]?.baseUrl || ''}
-                          onChange={event => setConnectorDrafts(current => ({
-                            ...current,
-                            [status.connector]: {
-                              baseUrl: event.target.value,
-                              token: current[status.connector]?.token || '',
-                            },
-                          }))}
-                          placeholder={`${status.connector} base URL`}
-                          className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-3 py-2 text-xs text-slate-200 outline-none focus:border-violet-400"
-                        />
-                        <input
-                          type="password"
-                          value={connectorDrafts[status.connector]?.token || ''}
-                          onChange={event => setConnectorDrafts(current => ({
-                            ...current,
-                            [status.connector]: {
-                              baseUrl: current[status.connector]?.baseUrl || status.baseUrl || '',
-                              token: event.target.value,
-                            },
-                          }))}
-                          placeholder={`New ${status.connector} token`}
-                          className="w-full rounded-xl border border-white/10 bg-[#0b1526] px-3 py-2 text-xs text-slate-200 outline-none focus:border-violet-400"
-                        />
-                        <button
-                          onClick={() => saveConnector(status.connector)}
-                          disabled={connectorSaving === status.connector}
-                          className="w-full rounded-xl border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-200 transition hover:bg-violet-500/15 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {connectorSaving === status.connector ? 'Saving...' : `Update ${status.connector}`}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {connectorStatuses.length === 0 && (
-                    <div className="text-xs text-slate-400">No connector rails discovered.</div>
-                  )}
-                  {openClawDiagnostics.some(item => !item.ready) && (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-xs text-amber-300">
-                      {openClawDiagnostics.filter(item => !item.ready).map(item => (
-                        <div key={`diagnostic-${item.connector}`} className="mb-2 last:mb-0">
-                          <div className="font-semibold">{item.connector}: {item.summary}</div>
-                          {item.recommendations[0] ? <div className="mt-1">{item.recommendations[0]}</div> : null}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {connectorMessage && (
-                    <div className="text-xs text-slate-500">{connectorMessage}</div>
-                  )}
-                </div>
-              </div>
+              <ConnectorConfigForm
+                connectorStatuses={connectorStatuses}
+                connectorDrafts={connectorDrafts}
+                connectorSaving={connectorSaving}
+                connectorMessage={connectorMessage}
+                openClawDiagnostics={openClawDiagnostics}
+                onDraftChange={(connector, field, value) => setConnectorDrafts(current => ({
+                  ...current,
+                  [connector]: {
+                    ...current[connector],
+                    [field]: value,
+                  },
+                }))}
+                onSave={saveConnector}
+              />
 
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
@@ -926,23 +756,7 @@ export default function BrainDashboard() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                  <Sparkles className="h-4 w-4 text-violet-500" />
-                  Agent Studio Output
-                </div>
-                <div className="mt-4 space-y-2">
-                  {(latestPack?.variants || []).slice(0, 3).map((variant: any) => (
-                    <div key={variant.locale} className="rounded-xl bg-white/[0.06] px-3 py-2">
-                      <div className="text-xs font-semibold text-slate-200">{variant.locale}</div>
-                      <div className="mt-1 text-xs text-slate-400">{variant.cta}</div>
-                    </div>
-                  ))}
-                  {!(latestPack?.variants || []).length && (
-                    <div className="text-xs text-slate-400">No live content pack available.</div>
-                  )}
-                </div>
-              </div>
+              <AgentStudioOutput variants={latestPack?.variants || []} />
             </div>
           </div>
         </div>
