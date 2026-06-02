@@ -865,11 +865,15 @@ export class Store {
 
   // ── Entity-specific convenience methods ──
 
+  async _upsertEntity(EntityClass, collectionName, data) {
+    const id = data.id || `${collectionName}-${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`;
+    const entity = new EntityClass({ ...data, id });
+    return this.upsertDocument(collectionName, id, entity.toJSON());
+  }
+
   async upsertContact(contactData) {
-    const id = contactData.id || contactData.contactId || `contact-${crypto.randomUUID()}`;
-    const contact = new Contact(contactData);
-    contact.id = id;
-    return this.upsertDocument("contacts", id, contact.toJSON());
+    const data = contactData.id ? contactData : { ...contactData, id: contactData.contactId || `contact-${crypto.randomUUID()}` };
+    return this._upsertEntity(Contact, "contacts", data);
   }
 
   listContacts(locationId, campaignId) {
@@ -880,10 +884,7 @@ export class Store {
   }
 
   async upsertPipeline(pipelineData) {
-    const id = pipelineData.id || `pipeline-${crypto.randomUUID()}`;
-    const pipeline = new Pipeline(pipelineData);
-    pipeline.id = id;
-    return this.upsertDocument("pipelines", id, pipeline.toJSON());
+    return this._upsertEntity(Pipeline, "pipelines", pipelineData);
   }
 
   listPipelines(locationId) {
@@ -893,10 +894,7 @@ export class Store {
   }
 
   async upsertOpportunity(oppData) {
-    const id = oppData.id || `opp-${crypto.randomUUID()}`;
-    const opp = new Opportunity(oppData);
-    opp.id = id;
-    return this.upsertDocument("opportunities", id, opp.toJSON());
+    return this._upsertEntity(Opportunity, "opportunities", { id: oppData.id || `opp-${crypto.randomUUID()}`, ...oppData });
   }
 
   listOpportunities(campaignId, pipelineId) {
@@ -907,10 +905,7 @@ export class Store {
   }
 
   async upsertWorkflow(wfData) {
-    const id = wfData.id || `workflow-${crypto.randomUUID()}`;
-    const wf = new Workflow(wfData);
-    wf.id = id;
-    return this.upsertDocument("workflows", id, wf.toJSON());
+    return this._upsertEntity(Workflow, "workflows", wfData);
   }
 
   listWorkflows(locationId, campaignId) {
@@ -933,10 +928,7 @@ export class Store {
   }
 
   async upsertNote(noteData) {
-    const id = noteData.id || `note-${crypto.randomUUID()}`;
-    const note = new Note(noteData);
-    note.id = id;
-    return this.upsertDocument("notes", id, note.toJSON());
+    return this._upsertEntity(Note, "notes", noteData);
   }
 
   listNotes(contactId, campaignId) {
@@ -947,10 +939,7 @@ export class Store {
   }
 
   async upsertTask(taskData) {
-    const id = taskData.id || `task-${crypto.randomUUID()}`;
-    const task = new Task(taskData);
-    task.id = id;
-    return this.upsertDocument("tasks", id, task.toJSON());
+    return this._upsertEntity(Task, "tasks", taskData);
   }
 
   listTasks(contactId, campaignId, status) {
@@ -962,10 +951,7 @@ export class Store {
   }
 
   async upsertCalendarEvent(eventData) {
-    const id = eventData.id || `event-${crypto.randomUUID()}`;
-    const event = new CalendarEvent(eventData);
-    event.id = id;
-    return this.upsertDocument("calendarEvents", id, event.toJSON());
+    return this._upsertEntity(CalendarEvent, "calendarEvents", { id: eventData.id || `event-${crypto.randomUUID()}`, ...eventData });
   }
 
   listCalendarEvents(contactId, campaignId, status) {
@@ -977,10 +963,7 @@ export class Store {
   }
 
   async upsertTag(tagData) {
-    const id = tagData.id || `tag-${crypto.randomUUID()}`;
-    const tag = new Tag(tagData);
-    tag.id = id;
-    return this.upsertDocument("tags", id, tag.toJSON());
+    return this._upsertEntity(Tag, "tags", tagData);
   }
 
   listTags(locationId) {

@@ -3,7 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.events import startup, shutdown
-from app.api import health, tasks, memory, social, config, finance, dashboard, agents
+from app.api import health, tasks, memory, social, config, finance, dashboard
+from app.api.v1.agents import router as agents_router
 
 
 @asynccontextmanager
@@ -30,4 +31,4 @@ app.include_router(social.router, prefix="/api/v1")
 app.include_router(config.router, prefix="/api/v1")
 app.include_router(finance.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")
-app.include_router(agents.router, prefix="/api/v1")
+app.include_router(agents_router, prefix="/api/v1")

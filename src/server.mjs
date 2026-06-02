@@ -111,6 +111,13 @@ const mimeTypes = {
   ".woff2": "font/woff2",
 };
 
+const ENTITY_COLLECTIONS = new Set([
+  "contacts","opportunities","pipelines","workflows",
+  "workflowVersions","workflowExecutions","triggers","triggerStatus",
+  "notes","tasks","calendarEvents","tags",
+  "funnels","funnelSteps","funnelSubmissions","messageTemplates","messageSequences",
+]);
+
 function guessInvestorEmail(inv) {
   if (inv.partnerName && inv.domain) {
     const firstName = inv.partnerName.split(" ")[0]?.toLowerCase() || "";
@@ -2316,7 +2323,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     }
 
     // ── Entity CRUD API ────────────────────────────────────────────
-    if (request.method === "GET" && parts.length === 2 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags","funnels","funnelSteps","funnelSubmissions","messageTemplates","messageSequences"].includes(parts[0])) {
+    if (request.method === "GET" && parts.length === 2 && ENTITY_COLLECTIONS.has(parts[0])) {
       const [collection, id] = parts;
       const doc = store.getDocument(collection, id);
       if (!doc) { sendJson(request, response, 404, { error: "Not found" }); return; }
@@ -2324,7 +2331,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       return;
     }
 
-    if (request.method === "GET" && parts.length === 1 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags","funnels","funnelSteps","funnelSubmissions","messageTemplates","messageSequences"].includes(parts[0])) {
+    if (request.method === "GET" && parts.length === 1 && ENTITY_COLLECTIONS.has(parts[0])) {
       const collection = parts[0];
       const locationId = url.searchParams.get("locationId");
       const campaignId = url.searchParams.get("campaignId");
@@ -2337,7 +2344,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       return;
     }
 
-    if (request.method === "POST" && parts.length === 1 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags","funnels","funnelSteps","funnelSubmissions","messageTemplates","messageSequences"].includes(parts[0])) {
+    if (request.method === "POST" && parts.length === 1 && ENTITY_COLLECTIONS.has(parts[0])) {
       const body = await readBody(request);
       const collection = parts[0];
       const id = body.id || null;
@@ -2346,7 +2353,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       return;
     }
 
-    if (request.method === "DELETE" && parts.length === 2 && ["contacts","opportunities","pipelines","workflows","workflowVersions","workflowExecutions","triggers","triggerStatus","notes","tasks","calendarEvents","tags","funnels","funnelSteps","funnelSubmissions","messageTemplates","messageSequences"].includes(parts[0])) {
+    if (request.method === "DELETE" && parts.length === 2 && ENTITY_COLLECTIONS.has(parts[0])) {
       const [collection, id] = parts;
       await store.deleteDocument(collection, id);
       sendJson(request, response, 200, { deleted: true, id });
@@ -2642,10 +2649,6 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     if (parts[0] === "message-templates" && parts.length === 2) {
       await messagingHandlers.handleTemplateById(request.method, { id: parts[1] }, request, response, sendJson, readBody);
       return;
-    }
-
-    if (url.pathname === "/message-templates/render" && request.method === "POST") {
-      // fallback: handled by parts-based match below
     }
 
     if (parts[0] === "message-templates" && parts[1] && parts[2] === "render") {

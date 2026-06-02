@@ -1,21 +1,27 @@
 import React from 'react';
 import { Bot, Layers3 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { AGENT_STAGES, AGENT_SYSTEM, getAllAgentIds } from '../../lib/agentSystem';
 
 interface AgentModuleGridProps {
-  modules: string[];
-  onToggle: (agentId: string) => void;
+  enabledModules: string[];
+  onUpdateModules: (modules: string[]) => void;
 }
 
-export function AgentModuleGrid({ modules, onToggle }: AgentModuleGridProps) {
-  const enabledSet = new Set(modules);
+export default function AgentModuleGrid({ enabledModules, onUpdateModules }: AgentModuleGridProps) {
   const agentGroups = AGENT_STAGES.map(stage => ({
     stage,
     agents: AGENT_SYSTEM.filter(agent => agent.stage === stage),
   }));
+  const enabledSet = new Set(enabledModules);
 
   return (
-    <div>
+    <motion.section
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 }}
+      className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_60px_rgba(2,6,23,0.35)]"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
@@ -25,7 +31,7 @@ export function AgentModuleGrid({ modules, onToggle }: AgentModuleGridProps) {
           <h3 className="mt-2 text-xl font-semibold text-white">One agent for each marketing job</h3>
         </div>
         <button
-          onClick={() => getAllAgentIds().forEach(id => { if (!enabledSet.has(id)) onToggle(id); })}
+          onClick={() => onUpdateModules(getAllAgentIds())}
           className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-fuchsia-100 transition hover:bg-fuchsia-500/15"
         >
           Enable All
@@ -51,7 +57,13 @@ export function AgentModuleGrid({ modules, onToggle }: AgentModuleGridProps) {
                 return (
                   <button
                     key={agent.id}
-                    onClick={() => onToggle(agent.id)}
+                    onClick={() =>
+                      onUpdateModules(
+                        active
+                          ? enabledModules.filter(id => id !== agent.id)
+                          : [...enabledModules, agent.id],
+                      )
+                    }
                     className={`w-full rounded-xl border px-4 py-3 text-left transition ${
                       active
                         ? 'border-emerald-500/20 bg-emerald-500/10'
@@ -77,6 +89,6 @@ export function AgentModuleGrid({ modules, onToggle }: AgentModuleGridProps) {
           </div>
         ))}
       </div>
-    </div>
+    </motion.section>
   );
 }

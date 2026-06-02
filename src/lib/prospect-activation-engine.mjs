@@ -141,6 +141,28 @@ function buildPersonalizationAngles(contact) {
 function nowIso() {
   return new Date().toISOString();
 }
+async function _dispatchToConnectors(campaignId, campaign, selected, operation, store, connectorMap) {
+  const connectorResults = [];
+  const connectorIssues = [];
+  const connectorNames = Array.isArray(operation.connectors) && operation.connectors.length
+    ? operation.connectors
+    : [campaign.connector || (store && store.config && store.config.defaultConnector) || operation.defaultConnector];
+  for (const connectorName of connectorNames) {
+    const connector = connectorMap[connectorName];
+    if (!connector) {
+      connectorIssues.push({ connector: connectorName, reason: "missing-connector" });
+      continue;
+    }
+    if (typeof connector.isConfigured === "function" && !connector.isConfigured()) {
+      connectorIssues.push({ connector: connectorName, reason: "not-configured" });
+    }
+    connectorResults.push(await connector.execute(operation.payload, {
+      campaign,
+      contacts: selected,
+    }));
+  }
+  return { connectorResults, connectorIssues };
+}
 
 export class ProspectActivationEngine {
   constructor({ store, connectors, config }) {
@@ -220,28 +242,25 @@ export class ProspectActivationEngine {
     const connectorResults = [];
     const connectorIssues = [];
     if (options.dispatch && selected.length) {
-      const connectorNames = Array.isArray(options.connectors) && options.connectors.length
-        ? options.connectors
-        : [campaign.connector || this.config.defaultConnector];
-      for (const connectorName of connectorNames) {
-        const connector = this.connectors[connectorName];
-        if (!connector) {
-          connectorIssues.push({ connector: connectorName, reason: "missing-connector" });
-          continue;
-        }
-        if (typeof connector.isConfigured === "function" && !connector.isConfigured()) {
-          connectorIssues.push({ connector: connectorName, reason: "not-configured" });
-        }
-        connectorResults.push(await connector.execute({
-          type: "enrich_contact_batch",
-          provider: options.provider || "internal-waterfall",
-          campaignId,
-          limit: selected.length,
-        }, {
-          campaign,
-          contacts: selected,
-        }));
-      }
+      const { connectorResults: cr, connectorIssues: ci } = await _dispatchToConnectors(
+        campaignId,
+        campaign,
+        selected,
+        {
+          connectors: options.connectors,
+          defaultConnector: this.config.defaultConnector,
+          payload: {
+            type: "enrich_contact_batch",
+            provider: options.provider || "internal-waterfall",
+            campaignId,
+            limit: selected.length,
+          },
+        },
+        this.store,
+        this.connectors,
+      );
+      connectorResults.push(...cr);
+      connectorIssues.push(...ci);
     }
 
     const run = {
@@ -296,27 +315,24 @@ export class ProspectActivationEngine {
     const connectorResults = [];
     const connectorIssues = [];
     if (options.dispatch && selected.length) {
-      const connectorNames = Array.isArray(options.connectors) && options.connectors.length
-        ? options.connectors
-        : [campaign.connector || this.config.defaultConnector];
-      for (const connectorName of connectorNames) {
-        const connector = this.connectors[connectorName];
-        if (!connector) {
-          connectorIssues.push({ connector: connectorName, reason: "missing-connector" });
-          continue;
-        }
-        if (typeof connector.isConfigured === "function" && !connector.isConfigured()) {
-          connectorIssues.push({ connector: connectorName, reason: "not-configured" });
-        }
-        connectorResults.push(await connector.execute({
-          type: "queue_outreach_sequence",
-          campaignId,
-          limit: selected.length,
-        }, {
-          campaign,
-          contacts: updatedContacts,
-        }));
-      }
+      const { connectorResults: cr, connectorIssues: ci } = await _dispatchToConnectors(
+        campaignId,
+        campaign,
+        updatedContacts,
+        {
+          connectors: options.connectors,
+          defaultConnector: this.config.defaultConnector,
+          payload: {
+            type: "queue_outreach_sequence",
+            campaignId,
+            limit: selected.length,
+          },
+        },
+        this.store,
+        this.connectors,
+      );
+      connectorResults.push(...cr);
+      connectorIssues.push(...ci);
     }
 
     const run = {
