@@ -5,6 +5,7 @@ import {
   Bot,
   BriefcaseBusiness,
   CheckCircle2,
+  XCircle,
   ClipboardList,
   Database,
   Globe2,
@@ -415,7 +416,7 @@ export default function CampaignPreview() {
   const [contactImporting, setContactImporting] = React.useState(false);
   const [enrichingProspects, setEnrichingProspects] = React.useState(false);
   const [sequencingProspects, setSequencingProspects] = React.useState(false);
-  const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const [status, setStatus] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [initialLoading, setInitialLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [loadWarnings, setLoadWarnings] = React.useState<string[]>([]);
@@ -576,7 +577,7 @@ export default function CampaignPreview() {
 
   const handleIntakeSave = async () => {
     setIntakeSaving(true);
-    setStatusMessage(null);
+    setStatus(null);
     try {
       const markets = splitList(intakeDraft.markets);
       const researchObjectives = splitList(intakeDraft.researchObjectives);
@@ -601,10 +602,10 @@ export default function CampaignPreview() {
         intakeStatus: 'ready',
       });
       setLoadError(null);
-      setStatusMessage('Client intake saved. The brain now has a concrete mission brief.');
+      setStatus({ type: 'success', text: 'Client intake saved. The brain now has a concrete mission brief.' });
     } catch (error) {
       console.error(error);
-      setStatusMessage(formatLoadError(error, 'Failed to save the client intake.'));
+      setStatus({ type: 'error', text: formatLoadError(error, 'Failed to save the client intake.') });
     } finally {
       setIntakeSaving(false);
     }
@@ -612,12 +613,12 @@ export default function CampaignPreview() {
 
   const handleResearchSubmit = async () => {
     if (!researchDraft.targetId.trim()) {
-      setStatusMessage('Research records require a target ID.');
+      setStatus({ type: 'error', text: 'Research records require a target ID.' });
       return;
     }
 
     setResearchSaving(true);
-    setStatusMessage(null);
+    setStatus(null);
     try {
       await dataService.addResearchRecord({
         campaignId: campaignState.id || 'main-campaign',
@@ -642,10 +643,10 @@ export default function CampaignPreview() {
       });
       await refreshResearch();
       setResearchDraft(emptyResearchDraft());
-      setStatusMessage('Research record ingested into the brain.');
+      setStatus({ type: 'success', text: 'Research record ingested into the brain.' });
     } catch (error) {
       console.error(error);
-      setStatusMessage('Failed to ingest the research record.');
+      setStatus({ type: 'error', text: 'Failed to ingest the research record.' });
     } finally {
       setResearchSaving(false);
     }

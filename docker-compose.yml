@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql://squidweave:squidweave@postgres:5432/squidweave
+      - DATABASE_URL=postgresql://squidweave:${POSTGRES_PASSWORD:-squidweave}@postgres:5432/squidweave
       - STATE_BACKEND=postgres
       - PORT=4010
     depends_on:

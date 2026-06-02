@@ -37,7 +37,8 @@ jobs:
 
       - name: Build site
         env:
-          VITE_BRAIN_API_BASE: https://squidweave-api-production.up.railway.app
+          # Set VITE_BRAIN_API_BASE in GitHub repository variables (Settings > Variables)
+          VITE_BRAIN_API_BASE: ${{ vars.VITE_BRAIN_API_BASE }}
         run: npm run build
 
       - name: Configure Pages

@@ -2,24 +2,12 @@ FROM node:22-slim
 
 WORKDIR /app
 
-# Install system dependencies needed for native modules (if any)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-ARG SQUIDWEAVE_REPO=https://github.com/knol3j/squidweave.git
-ARG SQUIDWEAVE_REF=master
-
-ADD https://api.github.com/repos/knol3j/squidweave/commits/master /tmp/squidweave-version.json
-RUN git clone --depth 1 --branch "$SQUIDWEAVE_REF" "$SQUIDWEAVE_REPO" /app
-
 # Root: skip devDependencies (electron/electron-builder — not needed on Railway)
-RUN npm ci --omit=dev
+COPY package*.json ./
+COPY ui/package*.json ./ui/
 
-# UI: install everything including devDeps (needed for vite build)
-# (separate RUN to avoid esbuild ETXTBSY overlayfs conflict)
-RUN npm --prefix ui ci
+# Install root (omit dev) and UI deps separately to avoid esbuild ETXTBSY overlayfs conflict
+RUN npm ci --omit=dev && npm --prefix ui ci
 
 # Copy the rest of the application
 COPY . .

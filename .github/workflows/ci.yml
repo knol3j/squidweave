@@ -6,9 +6,14 @@ on:
   pull_request:
     branches: [master]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         node-version: [20, 22]
@@ -26,10 +31,7 @@ jobs:
         run: npm ci --omit=optional
 
       - name: Lint (basic)
-        run: node --check src/**/*.mjs
-
-      - name: Run tests
-        run: npm test
+        run: find src -name '*.mjs' -print0 | xargs -0 node --check
 
       - name: Run tests with coverage
         run: npx c8 --reporter=text --reporter=lcov npm test
@@ -59,6 +61,5 @@ jobs:
             -e DRY_RUN=true \
             -e PORT=4010 \
             squidweave:${{ github.sha }}
-          sleep 5
-          curl -sf http://localhost:4010/health | grep -q '"ok":true'
+          timeout 60 bash -c 'until curl -sf http://localhost:4010/health | grep -q '"'"'"ok":true'"'"'; do sleep 2; done'
           docker stop test

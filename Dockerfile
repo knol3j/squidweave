@@ -15,9 +15,8 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=4010
 ENV STATIC_DIR=/app/ui/dist
-ENV UI_USER=admin
-ENV UI_PASS=squidweave
 
 EXPOSE 4010
 
+# Pass UI_USER and UI_PASS via -e at container start time
 CMD ["node", "scripts/start-railway.mjs"]

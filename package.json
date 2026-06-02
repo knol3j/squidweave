@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "main": "electron/main.mjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "pg": "^8.16.3"
   },
@@ -12,19 +15,22 @@
     "dev": "node scripts/dev.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:coverage": "c8 --reporter=text --reporter=lcov node --test tests/*.test.mjs",
+    "test:watch": "node --test --watch tests/*.test.mjs",
     "lint": "node --check src/**/*.mjs",
     "ui:dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",
     "ui:lint": "npm --prefix ui run lint",
     "desktop:dev": "electron .",
     "build:exe": "npm run ui:build && electron-builder --win portable",
+    "db:migrate": "node scripts/migrate.mjs",
     "automation:bootstrap": "node scripts/bootstrap-automation.mjs",
     "automation:orchestrate": "node scripts/orchestrate-blueprints.mjs",
     "automation:enrich": "node scripts/orchestrate-blueprints.mjs --enrich-only",
     "automation:funding": "node scripts/orchestrate-blueprints.mjs --funding-only",
     "automation:full": "node scripts/orchestrate-blueprints.mjs",
-    "automation:cron": "node scripts/orchestrate-blueprints.mjs --enrich-only",
+    "automation:cron": "node scripts/orchestrate-blueprints.mjs",
     "automation:smoke": "node scripts/automation-smoke.mjs",
+    "smoke": "node scripts/automation-smoke.mjs",
     "agent:start": "node scripts/clawdbot-agent.mjs",
     "agent:health": "node -e \"process.env.CLAWDBOT_ROLE='health';process.env.CLAWDBOT_ONCE='true';import('./scripts/clawdbot-agent.mjs')\"",
     "agent:site": "node -e \"process.env.CLAWDBOT_ROLE='site';process.env.CLAWDBOT_ONCE='true';import('./scripts/clawdbot-agent.mjs')\"",
@@ -46,7 +52,9 @@
     "systemd:logs": "journalctl --user -u squidweave --no-pager -n 50 -f"
   },
   "devDependencies": {
-    "c8": "^10.1.0",
+    "c8": "^10.1.0"
+  },
+  "optionalDependencies": {
     "electron": "^41.7.0",
     "electron-builder": "^26.0.12"
   },
