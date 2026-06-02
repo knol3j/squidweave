@@ -20,6 +20,94 @@ function summarizeChannel(contact, campaign) {
   return campaign.channel || "linkedin";
 }
 
+function parseName(value = "") {
+  const cleaned = String(value || "")
+    .replace(/[._-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) {
+    return { firstName: "", lastName: "", fullName: "" };
+  }
+  const parts = cleaned.split(" ").filter(Boolean);
+  return {
+    firstName: titleCase(parts[0] || ""),
+    lastName: titleCase(parts.slice(1).join(" ")),
+    fullName: titleCase(parts.join(" ")),
+  };
+}
+
+function parseEmailIdentity(email = "") {
+  const normalized = String(email || "").trim().toLowerCase();
+  const match = normalized.match(/^([^@]+)@([^@]+\.[^@]+)$/);
+  if (!match) {
+    return { email: normalized, domain: "", name: parseName("") };
+  }
+  const local = match[1].replace(/\+.*$/, "");
+  return {
+    email: normalized,
+    domain: match[2],
+    name: parseName(local),
+  };
+}
+
+function normalizePhone(value = "") {
+  const digits = String(value || "").replace(/\D+/g, "");
+  if (!digits) {
+    return "";
+  }
+  if (digits.length === 10) {
+    return `+1${digits}`;
+  }
+  return digits.startsWith("+") ? digits : `+${digits}`;
+}
+
+function completeContactProfile(contact, campaign, provider) {
+  const emailIdentity = parseEmailIdentity(contact.email);
+  const explicitName = parseName(contact.fullName || contact.contactName || "");
+  const inferredName = explicitName.fullName ? explicitName : emailIdentity.name;
+  const phone = normalizePhone(contact.phone);
+  const hasRoute = Boolean(emailIdentity.email || contact.linkedinUrl || phone);
+  const companyDomain = contact.companyDomain || contact.domain || emailIdentity.domain || "";
+  const inferredCompany = contact.company || (
+    companyDomain
+      ? titleCase(companyDomain.split(".").slice(0, -1).join(" "))
+      : ""
+  );
+  const fullName = contact.fullName || inferredName.fullName || titleCase(contact.role || contact.title || "");
+  const firstName = contact.firstName || inferredName.firstName || "";
+  const lastName = contact.lastName || inferredName.lastName || "";
+  const hasMinimumIdentity = Boolean(fullName || firstName || contact.role || contact.title);
+  const missingFields = [];
+  if (!fullName && !firstName) missingFields.push("name");
+  if (!emailIdentity.email) missingFields.push("email");
+  if (!phone) missingFields.push("phone");
+  if (!contact.linkedinUrl) missingFields.push("linkedinUrl");
+  if (!inferredCompany) missingFields.push("company");
+  if (!contact.title && !contact.role) missingFields.push("title");
+  const ready = hasMinimumIdentity && hasRoute;
+
+  return {
+    ...contact,
+    email: emailIdentity.email || contact.email || "",
+    phone: phone || contact.phone || "",
+    firstName,
+    lastName,
+    fullName,
+    company: inferredCompany,
+    companyDomain,
+    title: contact.title || titleCase(contact.role || ""),
+    preferredChannel: summarizeChannel({ ...contact, email: emailIdentity.email, phone }, campaign),
+    enrichmentStatus: ready ? "completed" : "queued",
+    verificationStatus: emailIdentity.email ? "verified" : (phone ? "phone-route-present" : "pending"),
+    contactStatus: ready ? "ready-for-sequencing" : "awaiting-provider",
+    complianceStatus: contact.complianceStatus === "pending-review" && hasRoute ? "reviewed" : contact.complianceStatus,
+    enrichmentProvider: provider,
+    missingFields,
+    profileCompletionScore: Number(((6 - missingFields.length) / 6).toFixed(4)),
+    lastActionAt: nowIso(),
+  };
+}
+
 function buildSequenceSteps(channel, campaign, contact) {
   const offer = campaign.offer || "strategy review";
   const objective = campaign.clientNeed || campaign.objective || "pipeline growth";
@@ -124,23 +212,8 @@ export class ProspectActivationEngine {
 
     const limit = Number(options.limit) > 0 ? Number(options.limit) : candidates.length;
     const selected = candidates.slice(0, limit);
-    const updatedContacts = selected.map(contact => {
-      const hasMinimumIdentity = Boolean(contact.fullName || contact.role || contact.title);
-      const hasRoute = Boolean(contact.email || contact.linkedinUrl);
-      const nextStatus = hasMinimumIdentity && hasRoute ? "ready-for-sequencing" : "awaiting-provider";
-      return {
-        ...contact,
-        fullName: contact.fullName || titleCase(contact.role || ""),
-        title: contact.title || titleCase(contact.role || ""),
-        preferredChannel: summarizeChannel(contact, campaign),
-        enrichmentStatus: hasRoute ? "completed" : "queued",
-        verificationStatus: contact.email ? "verified" : "pending",
-        contactStatus: nextStatus,
-        complianceStatus: contact.complianceStatus === "pending-review" && contact.email ? "reviewed" : contact.complianceStatus,
-        enrichmentProvider: options.provider || "internal-waterfall",
-        lastActionAt: nowIso(),
-      };
-    });
+    const provider = options.provider || "internal-waterfall";
+    const updatedContacts = selected.map(contact => completeContactProfile(contact, campaign, provider));
 
     await this.store.updateSourcedContacts(campaignId, updatedContacts);
 
