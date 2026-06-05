@@ -19,7 +19,7 @@ const TELEGRAM_ALERT_LEVELS = new Set((process.env.TELEGRAM_ALERT_LEVELS || 'err
   .filter(Boolean));
 const AUTOMATION_ARGS = normalizeArgs(process.env.CLAWDBOT_AUTOMATION_ARGS || defaultAutomationArgs(ROLE));
 const COMMAND_TIMEOUT_MS = Number(process.env.CLAWDBOT_COMMAND_TIMEOUT_MS || 15 * 60 * 1000);
-const REQUEST_TIMEOUT_MS = Number(process.env.CLAWDBOT_REQUEST_TIMEOUT_MS || 30000);
+const REQUEST_TIMEOUT_MS = Number(process.env.CLAWDBOT_REQUEST_TIMEOUT_MS || 60000);
 const CAMPAIGN_LIMIT = Number(process.env.CLAWDBOT_CAMPAIGN_LIMIT || 8);
 const SOURCE_LIMIT = Number(process.env.CLAWDBOT_SOURCE_LIMIT || 8);
 const PROSPECT_LIMIT = Number(process.env.CLAWDBOT_PROSPECT_LIMIT || 24);
@@ -236,15 +236,26 @@ function campaignQuery(campaign) {
 }
 
 async function checkHealth() {
-  const [apiHealth, sourceHealth, site] = await Promise.all([
-    requestApi('/health'),
-    requestApi('/sources/health'),
-    fetch(SITE_URL).then(async response => ({
-      ok: response.ok,
-      status: response.status,
-      hasRepoAssets: (await response.text()).includes('/squidweave/assets/'),
-    })).catch(error => ({ ok: false, error: error.message })),
-  ]);
+  let apiHealth, sourceHealth, site;
+  try {
+    [apiHealth, sourceHealth, site] = await Promise.all([
+      requestApi('/health'),
+      requestApi('/sources/health'),
+      fetch(SITE_URL).then(async response => ({
+        ok: response.ok,
+        status: response.status,
+        hasRepoAssets: (await response.text()).includes('/squidweave/assets/'),
+      })).catch(error => ({ ok: false, error: error.message, status: null })),
+    ]);
+  } catch (error) {
+    const info = { error: error.message };
+    log('error', 'health.check', {
+      api: apiHealth ?? info,
+      sources: sourceHealth ?? info,
+      site: site ?? info,
+    });
+    return;
+  }
 
   log(apiHealth.ok && site.ok ? 'info' : 'error', 'health.check', {
     api: { ok: apiHealth.ok, status: apiHealth.status, body: apiHealth.body },
