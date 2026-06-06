@@ -1,130 +1,36 @@
-import { motion } from 'framer-motion';
-import { useApp } from '@/context/AppContext';
-import StepperSidebar from '@/components/StepperSidebar';
-import CampaignCommandRow from '@/components/CampaignCommandRow';
-import IngestionRow from '@/components/IngestionRow';
-import DecisionRow from '@/components/DecisionRow';
-import ContentStudioRow from '@/components/ContentStudioRow';
-import OutreachHubRow from '@/components/OutreachHubRow';
-import MemoryPalaceRow from '@/components/MemoryPalaceRow';
-import {
-  campaign,
-  connectors,
-  researchRecords,
-  analyticsEvents,
-  outreachEvents,
-  targets,
-  investors,
-  tacticScores,
-  contentVariants,
-  abTests,
-  dlqEntries,
-  executionReceipts,
-  playbooks,
-  consolidationEvents,
-  knowledgeNodes,
-  knowledgeEdges,
-} from '@/data/mockData';
+import StepperSidebar from "@/components/StepperSidebar";
+import StageRow from "@/components/stage/StageRow";
+import CampaignRow from "@/components/stage/CampaignRow";
+import ResearchRow from "@/components/stage/ResearchRow";
+import DecisionRow from "@/components/stage/DecisionRow";
+import ContentRow from "@/components/stage/ContentRow";
+import OutreachRow from "@/components/stage/OutreachRow";
+import MemoryRow from "@/components/stage/MemoryRow";
 
 export default function MissionControl() {
-  const { state, dispatch } = useApp();
-
-  const handleStageSelect = (stageId: number) => {
-    const stage = state.stages.find(s => s.id === stageId);
-    if (stage && stage.status !== 'locked') {
-      dispatch({ type: 'EXPAND_STAGE', stageId });
-    }
-  };
-
   return (
-    <div className="flex" style={{ height: 'calc(100dvh - 3.5rem)' }}>
-      <StepperSidebar
-        stages={state.stages}
-        activeStage={state.activeStage}
-        onSelect={handleStageSelect}
-      />
-
-      <motion.div
-        className="flex-1 overflow-y-auto p-4 space-y-3"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.0, duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-        >
-          <CampaignCommandRow campaign={state.campaign} expanded={state.activeStage === 0} />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-        >
-          <IngestionRow
-            connectors={state.connectors}
-            researchRecords={state.researchRecords}
-            analyticsEvents={state.analyticsEvents}
-            outreachEvents={state.outreachEvents}
-            expanded={state.activeStage === 1}
-          />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-        >
-          <DecisionRow
-            targets={state.targets}
-            investors={state.investors}
-            tacticScores={tacticScores}
-            expanded={state.activeStage === 2}
-          />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-        >
-          <ContentStudioRow
-            contentVariants={state.contentVariants}
-            abTests={state.abTests}
-            expanded={state.activeStage === 3}
-          />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-        >
-          <OutreachHubRow
-            outreachEvents={state.outreachEvents}
-            dlqEntries={state.dlqEntries}
-            executionReceipts={state.executionReceipts}
-            dryRunMode={state.dryRunMode}
-            expanded={state.activeStage === 4}
-          />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-        >
-          <MemoryPalaceRow
-            playbooks={state.playbooks}
-            consolidationEvents={consolidationEvents}
-            knowledgeNodes={knowledgeNodes}
-            knowledgeEdges={knowledgeEdges}
-            expanded={state.activeStage === 5}
-          />
-        </motion.div>
-      </motion.div>
+    <div className="flex flex-1 overflow-hidden">
+      <StepperSidebar />
+      <main className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 custom-scrollbar">
+        <StageRow stageId={0} title="Setup" summary={<>Business profile, campaign config, design system</>}>
+          <CampaignRow />
+        </StageRow>
+        <StageRow stageId={1} title="Research" summary={<>Agent business research, data sources, connectors</>}>
+          <ResearchRow />
+        </StageRow>
+        <StageRow stageId={2} title="Targets" summary={<>Target market discovery, ranked prospects, playbooks</>}>
+          <DecisionRow />
+        </StageRow>
+        <StageRow stageId={3} title="Pitches" summary={<>Agent-generated pitch gallery, content approval</>}>
+          <ContentRow />
+        </StageRow>
+        <StageRow stageId={4} title="Launch" summary={<>Execution timeline, DLQ, safety gates, send controls</>}>
+          <OutreachRow />
+        </StageRow>
+        <StageRow stageId={5} title="Learn" summary={<>Knowledge graph, playbooks, target profiles</>}>
+          <MemoryRow />
+        </StageRow>
+      </main>
     </div>
   );
 }
