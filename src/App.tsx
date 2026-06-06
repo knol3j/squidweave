@@ -1,12 +1,12 @@
 /**
- * SquidWeave v2 — Mission Control + Neural Net
- * All data from real backend API calls. Zero mock data.
+ * SquidWeave v21 — Mission Control + Neural Net + 22 Data Funnels
  */
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Zap } from "lucide-react";
 import { AppProvider } from "@/context/AppContext";
 import Navbar from "@/components/Navbar";
+import Login from "@/pages/Login";
 
 const MissionControl = lazy(() => import("@/pages/MissionControl"));
 const NeuralNet = lazy(() => import("@/pages/NeuralNet"));
@@ -28,8 +28,23 @@ function LoadingFallback() {
   );
 }
 
+function isAuthenticated(): boolean {
+  // Check both new and old auth keys for backward compatibility
+  return localStorage.getItem("sw_authenticated") === "true" ||
+         localStorage.getItem("authenticated") === "true";
+}
+
 function AppShell() {
   const [view, setView] = useState<"mission" | "neural">("mission");
+  const [loggedIn, setLoggedIn] = useState(isAuthenticated);
+
+  const handleLogin = useCallback(() => {
+    setLoggedIn(true);
+  }, []);
+
+  if (!loggedIn) {
+    return <Login onLogin={handleLogin} />;
+  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#020617]">
