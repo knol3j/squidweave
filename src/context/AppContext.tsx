@@ -281,7 +281,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Resolve to a valid campaign ID
   const getCampaignId = useCallback(() => campaignId || campaigns[0]?.id || "main-campaign", [campaignId, campaigns]);
 
-  const setCampaignId = useCallback((id: string) => { setCampaignIdState(id); setError(null); }, []);
+  const setCampaignId = useCallback((id: string) => { setCampaignIdState(id); setErrorGuarded(null); }, []);
 
   const setActiveStagePersisted = useCallback((id: number) => {
     setActiveStage(id);
@@ -289,12 +289,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Base fetch: /state is PRIMARY, supplementary calls are parallel
-  // CRITICAL: every setX below uses stable setters that deep-compare before updating.
+  // CRITICAL: silent polls skip ALL state changes unless data actually differs.
   // This prevents the "blinking" issue where 5-second polling re-renders the entire tree.
+  const isPollingRef = useRef(false);
+  const isLoadingRef = useRef(true);
+  const errorRef = useRef<string | null>(null);
+
   const fetchAll = useCallback(async (silent = false) => {
-    if (!silent) setIsLoading(true);
-    setError(null);
-    setIsPolling(true);
+    // Guard: skip redundant state transitions during silent polls
+    if (!silent && !isLoadingRef.current) { setIsLoading(true); isLoadingRef.current = true; }
+    if (errorRef.current !== null) { setErrorGuarded(null); }
+    if (!isPollingRef.current) { setIsPolling(true); isPollingRef.current = true; }
     let hasUpdates = false;
     try {
       const stateResult = await dataService.getState();
@@ -386,13 +391,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const nextSafetyCount = ((stateResult as any).safetyExecutions || []).filter((r: any) => r.status === "pending").length;
       if (nextSafetyCount !== pendingSafetyCountRef.current) { setPendingSafetyCountRaw(nextSafetyCount); hasUpdates = true; }
 
-      // Only update timestamp when data actually changed — prevents DecisionRow re-fetch on every poll
+      // Only update timestamp when data actually changed
       if (hasUpdates) setLastRefresh(new Date().toLocaleTimeString());
     } catch (err: any) {
-      setError(err.message || "Failed to fetch data");
+      setErrorGuarded(err.message || "Failed to fetch data");
     } finally {
-      setIsLoading(false);
-      setIsPolling(false);
+      // Guarded cleanup: only change state if it was actually set
+      if (isLoadingRef.current && !silent) { setIsLoading(false); isLoadingRef.current = false; }
+      if (isPollingRef.current) { setIsPolling(false); isPollingRef.current = false; }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getCampaignId]);
@@ -426,8 +432,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [businessProfile.website]);
 
-  // Simple callbacks
-  const clearError = () => setError(null);
+  // Guarded error setter — syncs both state and ref
+  const setErrorGuarded = useCallback((msg: string | null) => {
+    if (msg !== errorRef.current) { setError(msg); errorRef.current = msg; }
+  }, []);
+  const clearError = () => setErrorGuarded(null);
   const refresh = useCallback(() => fetchAll(false), [fetchAll]);
 
   const toggleApproval = useCallback((key: keyof ApprovalState) => { setApprovals(prev => ({ ...prev, [key]: !prev[key] })); }, []);
@@ -447,14 +456,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const runAutomation = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.runAutomation(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const generateContent = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.generateContent(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
@@ -528,7 +537,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ];
         setTargetMarkets(prev => [...fallbackMarkets, ...prev].slice(0, 12));
       }
-    } catch (e: any) { setError(e.message || "Failed to discover markets"); }
+    } catch (e: any) { setErrorGuarded(e.message || "Failed to discover markets"); }
   }, [getCampaignId, fetchAll, businessProfile]);
 
   const generatePitches = useCallback(async () => {
@@ -578,7 +587,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       // Backend failed (no campaign, LM Studio error, etc) — mark but don't stop
-      setError(`Backend: ${err.message}. Using local fallback.`);
+      setErrorGuarded(`Backend: ${err.message}. Using local fallback.`);
     }
 
     // Step 4: ALWAYS fall back to profile-based pitches if backend produced nothing
@@ -594,56 +603,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const generateProspects = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.generateProspects(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const enrichProspects = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.enrichProspects(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const sequenceProspects = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.sequenceProspects(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const runFunding = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.runFunding(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const updateConnector = useCallback(async (connector: string, baseUrl: string, token: string) => {
     try { await dataService.updateConnectorConfig(connector, { baseUrl, token, probe: true }); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
   }, [fetchAll]);
 
   const runPromptAutopilot = useCallback(async (prompt: string) => {
     setIsLoading(true);
     try { await dataService.runPromptAutopilot(prompt, { campaignId: getCampaignId() }); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const ingestOutcomes = useCallback(async (payload: any) => {
     try { await dataService.ingestOutcomes({ campaignId: getCampaignId(), ...payload }); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
   }, [getCampaignId, fetchAll]);
 
   const addResearchRecord = useCallback(async (record: any) => {
     try { await dataService.addResearchRecord({ campaignId: getCampaignId(), ...record }); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
   }, [getCampaignId, fetchAll]);
 
   const getTargetDecision = useCallback(async () => {
     try { await dataService.getTargetDecision(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
   }, [getCampaignId, fetchAll]);
 
   const stages = computeStages(campaign, stageData, approvals, businessProfile, targetMarkets, pitches);
