@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import {
   Building2,
   Mail,
@@ -10,7 +10,6 @@ import {
   Clock,
   Plus,
   ChevronDown,
-  ChevronUp,
   ExternalLink,
   MessageSquare,
   FileText,
@@ -22,9 +21,39 @@ import {
   Star,
   Briefcase,
   Globe,
+  Upload,
+  Zap,
+  Filter,
+  Download,
+  Copy,
+  Check,
+  X,
+  Send,
+  RotateCcw,
+  Sparkles,
+  ChevronRight,
+  Layers,
 } from "lucide-react";
+import {
+  parseDeck,
+  loadDeck,
+  getTemplateVars,
+  getDeckSummary,
+  type InvestorDeck,
+} from "@/lib/investorDeckStore";
+import {
+  getAllTemplates,
+  composeEmail,
+  previewTemplate,
+  recordSentEmail,
+  getEmailStats,
+} from "@/lib/emailTemplateEngine";
 
-// ─── Types ───────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ContactStatus = "not-contacted" | "contacted" | "responded" | "meeting" | "passed" | "invested";
 
 export interface DecisionMaker {
   id: string;
@@ -32,7 +61,7 @@ export interface DecisionMaker {
   title: string;
   email: string;
   linkedin: string;
-  contactStatus: "not-contacted" | "contacted" | "responded" | "meeting" | "passed" | "invested";
+  contactStatus: ContactStatus;
   bio: string;
   education: string;
   previousFirms: string[];
@@ -96,7 +125,9 @@ export interface InvestorContact {
   notableExits: { company: string; return: string; year: number }[];
 }
 
-// ─── Seed Data ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEED DATA — 12 top-tier firms with full decision-maker profiles
+// ═══════════════════════════════════════════════════════════════════════════════
 
 const SEED_INVESTORS: InvestorContact[] = [
   {
@@ -120,7 +151,7 @@ const SEED_INVESTORS: InvestorContact[] = [
     followOnRate: "87%",
     reputationScore: 9.6,
     decisionMakers: [
-      { id: "a16z-1", name: "Marc Andreessen", title: "Co-Founder & General Partner", email: "marc@a16z.com", linkedin: "linkedin.com/in/marcandreessen", contactStatus: "contacted", bio: "Co-authored Mosaic, co-founded Netscape and Opsware. Board member at Meta.", education: "UIUC, Computer Science", previousFirms: ["Netscape", "Opsware", "Ning"], notableInvestments: ["Facebook", "Twitter", "Airbnb", "Coinbase"], personalityNotes: "Thinks in frameworks, responds to bold visions. Prefect concise memos over long decks." },
+      { id: "a16z-1", name: "Marc Andreessen", title: "Co-Founder & General Partner", email: "marc@a16z.com", linkedin: "linkedin.com/in/marcandreessen", contactStatus: "contacted", bio: "Co-authored Mosaic, co-founded Netscape and Opsware. Board member at Meta.", education: "UIUC, Computer Science", previousFirms: ["Netscape", "Opsware", "Ning"], notableInvestments: ["Facebook", "Twitter", "Airbnb", "Coinbase"], personalityNotes: "Thinks in frameworks, responds to bold visions. Prefers concise memos over long decks." },
       { id: "a16z-2", name: "Ben Horowitz", title: "Co-Founder & General Partner", email: "ben@a16z.com", linkedin: "linkedin.com/in/benhorowitz", contactStatus: "not-contacted", bio: "Co-founded Loudcloud/Opsware (acquired by HP for $1.6B). Author of The Hard Thing About Hard Things.", education: "Columbia University, BA Computer Science", previousFirms: ["Loudcloud", "Opsware", "HP"], notableInvestments: ["GitHub", "Okta", "Databricks", "Figma"], personalityNotes: "Values operational excellence. Respects founders who have done their homework on GTM." },
       { id: "a16z-3", name: "Katherine Boyle", title: "General Partner", email: "katherine@a16z.com", linkedin: "linkedin.com/in/katherineboyle", contactStatus: "responded", bio: "Leads American Dynamism practice, focusing on companies supporting national interest.", education: "Georgetown University", previousFirms: ["Ribbit Capital", "Prelude Ventures"], notableInvestments: ["Shield AI", "Anduril", "Hadrian"], personalityNotes: "Passionate about defense tech and industrials. Very responsive to founders with technical depth." },
       { id: "a16z-4", name: "Martin Casado", title: "General Partner", email: "martin@a16z.com", linkedin: "linkedin.com/in/martincasado", contactStatus: "meeting", bio: "Founded Nicira (acquired by VMware for $1.26B). Pioneer of SDN.", education: "Stanford, PhD Computer Science", previousFirms: ["Nicira", "VMware"], notableInvestments: ["Astronomer", "HashiCorp", "Databricks"], personalityNotes: "Deep technical evaluator. Loves to dive into architecture. Meetings tend to be 90+ min technical deep-dives." },
@@ -148,9 +179,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["Sequoia Capital", "Greylock", "Benchmark", "Lightspeed"],
     boardSeats: ["Coinbase", "Databricks", "Airbnb", "Anduril"],
     notableExits: [
-      { company: "Instagram", return: "52x", year: 2012 },
-      { company: "Oculus VR", return: "13x", year: 2014 },
-      { company: "GitHub", return: "10x", year: 2018 },
+      { company: "Instagram", return: "52", year: 2012 },
+      { company: "Oculus VR", return: "13", year: 2014 },
+      { company: "GitHub", return: "10", year: 2018 },
     ],
   },
   {
@@ -176,9 +207,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     decisionMakers: [
       { id: "seq-1", name: "Roelof Botha", title: "Senior Steward & Partner", email: "roelof@sequoiacap.com", linkedin: "linkedin.com/in/roelofbotha", contactStatus: "contacted", bio: "Former CFO of PayPal. Led investments in YouTube, Instagram, Square, MongoDB.", education: "Stanford, MBA; Oxford, MSc", previousFirms: ["PayPal", "McKinsey"], notableInvestments: ["YouTube", "Instagram", "Square", "Nubank"], personalityNotes: "Extremely analytical. Prefers detailed financial models. Respects founders with accounting discipline." },
       { id: "seq-2", name: "Alfred Lin", title: "Partner", email: "alfred@sequoiacap.com", linkedin: "linkedin.com/in/alfredlin", contactStatus: "not-contacted", bio: "Former COO/CFO at Zappos. Led investments in Airbnb, DoorDash, Houzz.", education: "Stanford, MS Statistics; Harvard, BA", previousFirms: ["Zappos", "LinkExchange", "Tellme"], notableInvestments: ["Airbnb", "DoorDash", "Houzz", "Citadel"], personalityNotes: "Pattern matcher. Known for rapid yes/no decisions. Values customer obsession metrics." },
-      { id: "seq-3", name: "Pat Grady", title: "Partner", email: "pat@sequoiacap.com", linkedin: "linkedin.com/in/patgrady", contactStatus: "responded", bio: "Leads AI/data infrastructure investments. Led Snowflake,ZoomInfo, and Klaviyo.", education: "Boston College, BS Finance", previousFirms: ["Summit Partners"], notableInvestments: ["Snowflake", "ZoomInfo", "Klaviyo", "Amplitude"], personalityNotes: "Data infrastructure expert. Always asks about TAM expansion potential and data moats." },
+      { id: "seq-3", name: "Pat Grady", title: "Partner", email: "pat@sequoiacap.com", linkedin: "linkedin.com/in/patgrady", contactStatus: "responded", bio: "Leads AI/data infrastructure investments. Led Snowflake, ZoomInfo, and Klaviyo.", education: "Boston College, BS Finance", previousFirms: ["Summit Partners"], notableInvestments: ["Snowflake", "ZoomInfo", "Klaviyo", "Amplitude"], personalityNotes: "Data infrastructure expert. Always asks about TAM expansion potential and data moats." },
       { id: "seq-4", name: "Jess Lee", title: "Partner", email: "jess@sequoiacap.com", linkedin: "linkedin.com/in/jesslee", contactStatus: "not-contacted", bio: "Co-founder of Polyvore (acquired by Yahoo). Focus on consumer and AI applications.", education: "Stanford, BS Computer Science", previousFirms: ["Polyvore", "Yahoo", "Google"], notableInvestments: ["Figma", "Xyla", "LangChain"], personalityNotes: "Product visionary. Deeply cares about UX and design. Best approached with product demos, not decks." },
-      { id: "seq-5", name: "Sonya Huang", title: "Partner", email: "sonya@sequoiacap.com", linkedin: "linkedin.com/in/sonyahuang", contactStatus: "meeting", bio: "Leads AI practice. Former PM at Google AI. Author of Generative AI market map.", education: "MIT, BS Computer Science", previousFirms: ["Google AI", "DeepMind"], notableInvestments: ["LangChain", "Harvey", " Cursor", "ElevenLabs"], personalityNotes: "The go-to AI expert at Sequoia. Stays on bleeding edge. Respects technical teams with research backgrounds." },
+      { id: "seq-5", name: "Sonya Huang", title: "Partner", email: "sonya@sequoiacap.com", linkedin: "linkedin.com/in/sonyahuang", contactStatus: "meeting", bio: "Leads AI practice. Former PM at Google AI. Author of Generative AI market map.", education: "MIT, BS Computer Science", previousFirms: ["Google AI", "DeepMind"], notableInvestments: ["LangChain", "Harvey", "Cursor", "ElevenLabs"], personalityNotes: "The go-to AI expert at Sequoia. Stays on bleeding edge. Respects technical teams with research backgrounds." },
     ],
     portfolio: [
       { name: "Apple", stage: "Public", sector: "Consumer Tech", valuation: "$3.4T", yearInvested: 1978, isLead: false },
@@ -202,9 +233,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["a16z", "Greylock", "Index Ventures", "Accel"],
     boardSeats: ["Google", "Snowflake", "Zoom", "DoorDash"],
     notableExits: [
-      { company: "WhatsApp", return: "158x", year: 2014 },
-      { company: "Instagram", return: "78x", year: 2012 },
-      { company: "YouTube", return: "44x", year: 2006 },
+      { company: "WhatsApp", return: "158", year: 2014 },
+      { company: "Instagram", return: "78", year: 2012 },
+      { company: "YouTube", return: "44", year: 2006 },
     ],
   },
   {
@@ -236,7 +267,6 @@ const SEED_INVESTORS: InvestorContact[] = [
     portfolio: [
       { name: "Twitter/X", stage: "Public", sector: "Social", valuation: "$95B", yearInvested: 2009, isLead: true },
       { name: "Snapchat", stage: "Public", sector: "Social", valuation: "$28B", yearInvested: 2012, isLead: true },
-      { name: "WeWork", stage: "Restructured", sector: "Real Estate", valuation: "$450M", yearInvested: 2012, isLead: true },
       { name: "Cockroach Labs", stage: "Series F", sector: "Database", valuation: "$5B", yearInvested: 2015, isLead: true },
       { name: "Airtable", stage: "Series F", sector: "No-Code", valuation: "$11B", yearInvested: 2015, isLead: false },
     ],
@@ -252,9 +282,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["Accel", "First Round", "Index Ventures"],
     boardSeats: ["Twitter/X", "Snapchat", "Cockroach Labs"],
     notableExits: [
-      { company: "Twitter", return: "124x", year: 2013 },
-      { company: "Snapchat", return: "68x", year: 2017 },
-      { company: "Yelp", return: "42x", year: 2012 },
+      { company: "Twitter", return: "124", year: 2013 },
+      { company: "Snapchat", return: "68", year: 2017 },
+      { company: "Yelp", return: "42", year: 2012 },
     ],
   },
   {
@@ -300,9 +330,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["Sequoia", "a16z", "Greylock", "Kleiner Perkins"],
     boardSeats: ["CrowdStrike", "Snyk", "Monzo"],
     notableExits: [
-      { company: "Facebook", return: "500x", year: 2012 },
-      { company: "CrowdStrike", return: "89x", year: 2019 },
-      { company: "Slack", return: "67x", year: 2019 },
+      { company: "Facebook", return: "500", year: 2012 },
+      { company: "CrowdStrike", return: "89", year: 2019 },
+      { company: "Slack", return: "67", year: 2019 },
     ],
   },
   {
@@ -348,9 +378,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["Sequoia", "a16z", "Benchmark"],
     boardSeats: ["LinkedIn", "Workday", "Figma"],
     notableExits: [
-      { company: "LinkedIn", return: "180x", year: 2016 },
-      { company: "Facebook", return: "95x", year: 2012 },
-      { company: "Instagram", return: "42x", year: 2012 },
+      { company: "LinkedIn", return: "180", year: 2016 },
+      { company: "Facebook", return: "95", year: 2012 },
+      { company: "Instagram", return: "42", year: 2012 },
     ],
   },
   {
@@ -375,8 +405,8 @@ const SEED_INVESTORS: InvestorContact[] = [
     reputationScore: 9.1,
     decisionMakers: [
       { id: "ls-1", name: "Ravi Mhatre", title: "Founding Partner", email: "ravi@lsvp.com", linkedin: "linkedin.com/in/ravimhatre", contactStatus: "contacted", bio: "Founding partner. Led investments in Nutanix, AppDynamics, MuleSoft.", education: "Stanford, MBA; IIT Delhi", previousFirms: ["Bain", "Goldman Sachs"], notableInvestments: ["Nutanix", "AppDynamics", "MuleSoft", "Snap"], personalityNotes: "Deep enterprise DNA. Very experienced board member. Prefers businesses with clear enterprise GTM." },
-      { id: "ls-2", name: "Bessemer " + "(Guru Chahal)", title: "Partner", email: "guru@lsvp.com", linkedin: "linkedin.com/in/guruchahal", contactStatus: "not-contacted", bio: "Led investments in Rubrik, Guardicore, and five AI unicorns.", education: "UC Berkeley, BS EECS", previousFirms: ["Floodgate", "Twitter"], notableInvestments: ["Rubrik", "Guardicore", "Cato Networks"], personalityNotes: "Security and infrastructure focused. Very technical. Loves to do reference calls with customers." },
-      { id: "ls-3", name: "Nicole Quinn", title: "Partner", email: "nicole@lsvp.com", linkedin: "linkedin.com/in/nicolequinn", contactStatus: "responded", bio: "Leads consumer and brand investments. Led investments in Lady Gaga's Haus Labs.", education: "Oxford, BA", previousFirms: ["Goldman Sachs"], notableInvestments: ["Snap", "Gwyneth Paltrow's Goop", "Rothy's"], personalityNotes: "Consumer brand expert. Best for B2C pitches. Very visual, loves great product design." },
+      { id: "ls-2", name: "Guru Chahal", title: "Partner", email: "guru@lsvp.com", linkedin: "linkedin.com/in/guruchahal", contactStatus: "not-contacted", bio: "Led investments in Rubrik, Guardicore, and five AI unicorns.", education: "UC Berkeley, BS EECS", previousFirms: ["Floodgate", "Twitter"], notableInvestments: ["Rubrik", "Guardicore", "Cato Networks"], personalityNotes: "Security and infrastructure focused. Very technical. Loves to do reference calls with customers." },
+      { id: "ls-3", name: "Nicole Quinn", title: "Partner", email: "nicole@lsvp.com", linkedin: "linkedin.com/in/nicolequinn", contactStatus: "responded", bio: "Leads consumer and brand investments. Led investments in Snap.", education: "Oxford, BA", previousFirms: ["Goldman Sachs"], notableInvestments: ["Snap", "Rothy's"], personalityNotes: "Consumer brand expert. Best for B2C pitches. Very visual, loves great product design." },
     ],
     portfolio: [
       { name: "Snap", stage: "Public", sector: "Social", valuation: "$28B", yearInvested: 2012, isLead: true },
@@ -396,9 +426,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["a16z", "Sequoia", "IVP"],
     boardSeats: ["Snap", "Nutanix", "Affirm"],
     notableExits: [
-      { company: "MuleSoft", return: "45x", year: 2018 },
-      { company: "AppDynamics", return: "38x", year: 2017 },
-      { company: "Nutanix", return: "32x", year: 2016 },
+      { company: "MuleSoft", return: "45", year: 2018 },
+      { company: "AppDynamics", return: "38", year: 2017 },
+      { company: "Nutanix", return: "32", year: 2016 },
     ],
   },
   {
@@ -444,9 +474,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["a16z", "Sequoia", "General Catalyst"],
     boardSeats: ["Palantir", "Anduril", "SpaceX"],
     notableExits: [
-      { company: "Facebook", return: "12,000x", year: 2012 },
-      { company: "SpaceX", return: "350x", year: 2024 },
-      { company: "Palantir", return: "200x", year: 2020 },
+      { company: "Facebook", return: "12000", year: 2012 },
+      { company: "SpaceX", return: "350", year: 2024 },
+      { company: "Palantir", return: "200", year: 2020 },
     ],
   },
   {
@@ -492,13 +522,13 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["a16z", "Sequoia", "Founders Fund"],
     boardSeats: ["OpenAI", "DoorDash", "Square"],
     notableExits: [
-      { company: "Square", return: "65x", year: 2015 },
-      { company: "Ring", return: "45x", year: 2018 },
-      { company: "Juniper", return: "28x", year: 1999 },
+      { company: "Square", return: "65", year: 2015 },
+      { company: "Ring", return: "45", year: 2018 },
+      { company: "Juniper", return: "28", year: 1999 },
     ],
   },
   {
-    id: "general-catalyst",
+    id: "generalcatalyst",
     name: "General Catalyst",
     type: "VC",
     location: "Cambridge, MA",
@@ -540,57 +570,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["a16z", "Sequoia", "Greylock"],
     boardSeats: ["Stripe", "Samsara", "Livongo"],
     notableExits: [
-      { company: "Livongo", return: "28x", year: 2020 },
-      { company: "Snap", return: "25x", year: 2017 },
-      { company: "Airbnb", return: "22x", year: 2020 },
-    ],
-  },
-  {
-    id: "bessemer",
-    name: "Bessemer Venture Partners",
-    type: "VC",
-    location: "San Francisco, CA",
-    checkSize: "$1M – $100M",
-    aum: "$20B",
-    thesis: "We partner with entrepreneurs to build enduring businesses. With 110+ years of history, we've invested in 145+ IPOs. We invest from seed to growth across cloud, consumer, healthcare, and deep tech.",
-    focusAreas: ["Cloud/SaaS", "Consumer", "Healthcare", "Deep Tech", "Fintech", "Marketplaces"],
-    portfolioCompanies: 389,
-    founded: 1911,
-    fundStage: "Multi-Stage",
-    website: "bvp.com",
-    crunchbaseUrl: "crunchbase.com/organization/bessemer-venture-partners",
-    signalRank: 91,
-    fundSize: "$5B (BVP XI)",
-    avgInitialCheck: "$3.5M",
-    speedToTermSheet: "2-4 weeks",
-    followOnRate: "82%",
-    reputationScore: 9.1,
-    decisionMakers: [
-      { id: "bvp-1", name: "Byron Deeter", title: "Partner", email: "byron@bvp.com", linkedin: "linkedin.com/in/byrondeter", contactStatus: "contacted", bio: "Created Bessemer's cloud investing practice. Led investments in Twilio, Shopify, ServiceTitan.", education: "UCLA, BA; Harvard, MBA", previousFirms: ["Bain", "Trulia"], notableInvestments: ["Twilio", "Shopify", "ServiceTitan", "Canva"], personalityNotes: "Cloud/SaaS legend. Created the 10 Laws of Cloud. Loves unit economics and net retention." },
-      { id: "bvp-2", name: "Elliott Robinson", title: "Partner", email: "elliott@bvp.com", linkedin: "linkedin.com/in/elliotrobinson", contactStatus: "not-contacted", bio: "Leads growth investments. Board member at LinkedIn.", education: "Duke, BA; Stanford, MBA", previousFirms: ["Summit Partners", "McKinsey"], notableInvestments: ["LinkedIn", "Toast", "Gainsight"], personalityNotes: "Growth-stage expert. Focuses on expansion revenue and international growth." },
-      { id: "bvp-3", name: "Mary D'Onofrio", title: "Partner", email: "mary@bvp.com", linkedin: "linkedin.com/in/marydonofrio", contactStatus: "responded", bio: "Created BVP's Atlas platform for cloud benchmarking. Expert in cloud metrics.", education: "Stanford, BA Economics", previousFirms: ["Goldman Sachs"], notableInvestments: ["HashiCorp", "Amplitude", "PagerDuty"], personalityNotes: "Data-obsessed. Created the Centaur ($100M ARR) milestone concept. Always benchmarking metrics." },
-    ],
-    portfolio: [
-      { name: "Shopify", stage: "Public", sector: "E-commerce", valuation: "$110B", yearInvested: 2010, isLead: true },
-      { name: "LinkedIn", stage: "Acquired (Microsoft)", sector: "Professional", valuation: "$26.2B", yearInvested: 2004, isLead: true },
-      { name: "Twilio", stage: "Public", sector: "Communication", valuation: "$12B", yearInvested: 2010, isLead: true },
-      { name: "Pinterest", stage: "Public", sector: "Social", valuation: "$18B", yearInvested: 2010, isLead: true },
-      { name: "Toast", stage: "Public", sector: "Fintech", valuation: "$14B", yearInvested: 2015, isLead: false },
-    ],
-    contactHistory: [
-      { date: "2025-01-05", type: "Meeting", notes: "Discussed SaaS metrics and cloud benchmarks", participant: "Mary D'Onofrio", outcome: "Positive, requested metrics dashboard" },
-      { date: "2024-12-20", type: "Call", notes: "Initial call with Byron on cloud thesis", participant: "Byron Deeter", outcome: "Interested in Series A" },
-    ],
-    lastContact: "Jan 5, 2025",
-    dealFlow: [
-      { company: "CloudSync AI", stage: "Series A", amount: "$12M", date: "2025-01-04", status: "evaluating", leadPartner: "Byron Deeter" },
-    ],
-    coInvestors: ["Sequoia", "Accel", "IVP"],
-    boardSeats: ["Shopify", "LinkedIn", "Twilio"],
-    notableExits: [
-      { company: "LinkedIn", return: "180x", year: 2016 },
-      { company: "Shopify", return: "120x", year: 2015 },
-      { company: "Twilio", return: "78x", year: 2016 },
+      { company: "Livongo", return: "28", year: 2020 },
+      { company: "Snap", return: "25", year: 2017 },
+      { company: "Airbnb", return: "22", year: 2020 },
     ],
   },
   {
@@ -636,9 +618,9 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["a16z", "Accel", "Bessemer"],
     boardSeats: ["Shopify", "Qualtrics", "DataDog"],
     notableExits: [
-      { company: "Twitter", return: "35x", year: 2013 },
-      { company: "Shopify", return: "28x", year: 2015 },
-      { company: "Qualtrics", return: "22x", year: 2021 },
+      { company: "Twitter", return: "35", year: 2013 },
+      { company: "Shopify", return: "28", year: 2015 },
+      { company: "Qualtrics", return: "22", year: 2021 },
     ],
   },
   {
@@ -663,7 +645,7 @@ const SEED_INVESTORS: InvestorContact[] = [
     reputationScore: 9.0,
     decisionMakers: [
       { id: "fr-1", name: "Josh Kopelman", title: "Founder & Partner", email: "josh@firstround.com", linkedin: "linkedin.com/in/joshkopelman", contactStatus: "contacted", bio: "Founded Half.com (acquired by eBay), TurnTide. Led investments in Uber, LinkedIn, Square.", education: "Wharton, BS", previousFirms: ["Half.com", "TurnTide", "Infonautics"], notableInvestments: ["Uber", "LinkedIn", "Square", "Roblox"], personalityNotes: "Speed demon. Known for making decisions in days. Loves scrappy founders with unique insights." },
-      { id: "fr-2", name: "Hayley Barna", title: "Partner", email: "hayley@firstround.com", linkedin: "linkedin.com/in/hayleybarna", contactStatus: "not-contacted", bio: "Co-founder of Birchbox. Leads consumer and marketplace investments.", education: "Harvard, BA; Harvard, MBA", previousFirms: ["Birchbox", "McKinsey"], notableInvestments: ["Birchbox", "S inc.", "Swile"], personalityNotes: "Consumer product expert. Great eye for brand and distribution. Very supportive founder coach." },
+      { id: "fr-2", name: "Hayley Barna", title: "Partner", email: "hayley@firstround.com", linkedin: "linkedin.com/in/hayleybarna", contactStatus: "not-contacted", bio: "Co-founder of Birchbox. Leads consumer and marketplace investments.", education: "Harvard, BA; Harvard, MBA", previousFirms: ["Birchbox", "McKinsey"], notableInvestments: ["Birchbox", "Swile"], personalityNotes: "Consumer product expert. Great eye for brand and distribution. Very supportive founder coach." },
       { id: "fr-3", name: "Teddy Citrin", title: "Partner", email: "teddy@firstround.com", linkedin: "linkedin.com/in/teddycitrin", contactStatus: "responded", bio: "Leads AI and developer tool investments. Former founder.", education: "MIT, BS CS", previousFirms: ["Google", "YC"], notableInvestments: ["Vercel", "Watershed", "Cursor"], personalityNotes: "Developer tools and AI-native companies. Very responsive. Loves product-led growth stories." },
     ],
     portfolio: [
@@ -684,16 +666,83 @@ const SEED_INVESTORS: InvestorContact[] = [
     coInvestors: ["Benchmark", "Accel", "a16z"],
     boardSeats: ["Uber", "Square", "Roblox"],
     notableExits: [
-      { company: "Uber", return: "4,000x", year: 2019 },
-      { company: "Square", return: "280x", year: 2015 },
-      { company: "LinkedIn", return: "155x", year: 2016 },
+      { company: "Uber", return: "4000", year: 2019 },
+      { company: "Square", return: "280", year: 2015 },
+      { company: "LinkedIn", return: "155", year: 2016 },
+    ],
+  },
+  {
+    id: "bessemer",
+    name: "Bessemer Venture Partners",
+    type: "VC",
+    location: "San Francisco, CA",
+    checkSize: "$1M – $100M",
+    aum: "$20B",
+    thesis: "We partner with entrepreneurs to build enduring businesses. With 110+ years of history, we've invested in 145+ IPOs. We invest from seed to growth across cloud, consumer, healthcare, and deep tech.",
+    focusAreas: ["Cloud/SaaS", "Consumer", "Healthcare", "Deep Tech", "Fintech", "Marketplaces"],
+    portfolioCompanies: 389,
+    founded: 1911,
+    fundStage: "Multi-Stage",
+    website: "bvp.com",
+    crunchbaseUrl: "crunchbase.com/organization/bessemer-venture-partners",
+    signalRank: 91,
+    fundSize: "$5B (BVP XI)",
+    avgInitialCheck: "$3.5M",
+    speedToTermSheet: "2-4 weeks",
+    followOnRate: "82%",
+    reputationScore: 9.1,
+    decisionMakers: [
+      { id: "bvp-1", name: "Byron Deeter", title: "Partner", email: "byron@bvp.com", linkedin: "linkedin.com/in/byrondeter", contactStatus: "contacted", bio: "Created Bessemer's cloud investing practice. Led investments in Twilio, Shopify, ServiceTitan.", education: "UCLA, BA; Harvard, MBA", previousFirms: ["Bain", "Trulia"], notableInvestments: ["Twilio", "Shopify", "ServiceTitan", "Canva"], personalityNotes: "Cloud/SaaS legend. Created the 10 Laws of Cloud. Loves unit economics and net retention." },
+      { id: "bvp-2", name: "Elliott Robinson", title: "Partner", email: "elliott@bvp.com", linkedin: "linkedin.com/in/elliotrobinson", contactStatus: "not-contacted", bio: "Leads growth investments. Board member at LinkedIn.", education: "Duke, BA; Stanford, MBA", previousFirms: ["Summit Partners", "McKinsey"], notableInvestments: ["LinkedIn", "Toast", "Gainsight"], personalityNotes: "Growth-stage expert. Focuses on expansion revenue and international growth." },
+      { id: "bvp-3", name: "Mary D'Onofrio", title: "Partner", email: "mary@bvp.com", linkedin: "linkedin.com/in/marydonofrio", contactStatus: "responded", bio: "Created BVP's Atlas platform for cloud benchmarking. Expert in cloud metrics.", education: "Stanford, BA Economics", previousFirms: ["Goldman Sachs"], notableInvestments: ["HashiCorp", "Amplitude", "PagerDuty"], personalityNotes: "Data-obsessed. Created the Centaur ($100M ARR) milestone concept. Always benchmarking metrics." },
+    ],
+    portfolio: [
+      { name: "Shopify", stage: "Public", sector: "E-commerce", valuation: "$110B", yearInvested: 2010, isLead: true },
+      { name: "LinkedIn", stage: "Acquired (Microsoft)", sector: "Professional", valuation: "$26.2B", yearInvested: 2004, isLead: true },
+      { name: "Twilio", stage: "Public", sector: "Communication", valuation: "$12B", yearInvested: 2010, isLead: true },
+      { name: "Pinterest", stage: "Public", sector: "Social", valuation: "$18B", yearInvested: 2010, isLead: true },
+      { name: "Toast", stage: "Public", sector: "Fintech", valuation: "$14B", yearInvested: 2015, isLead: false },
+    ],
+    contactHistory: [
+      { date: "2025-01-05", type: "Meeting", notes: "Discussed SaaS metrics and cloud benchmarks", participant: "Mary D'Onofrio", outcome: "Positive, requested metrics dashboard" },
+      { date: "2024-12-20", type: "Call", notes: "Initial call with Byron on cloud thesis", participant: "Byron Deeter", outcome: "Interested in Series A" },
+    ],
+    lastContact: "Jan 5, 2025",
+    dealFlow: [
+      { company: "CloudSync AI", stage: "Series A", amount: "$12M", date: "2025-01-04", status: "evaluating", leadPartner: "Byron Deeter" },
+    ],
+    coInvestors: ["Sequoia", "Accel", "IVP"],
+    boardSeats: ["Shopify", "LinkedIn", "Twilio"],
+    notableExits: [
+      { company: "LinkedIn", return: "180", year: 2016 },
+      { company: "Shopify", return: "120", year: 2015 },
+      { company: "Twilio", return: "78", year: 2016 },
     ],
   },
 ];
 
-// ─── localStorage helpers ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-const STORAGE_KEY = "sw_investor_contacts";
+const STORAGE_KEY = "sw_investor_contacts_v2";
+const SENT_EMAILS_KEY = "sw_sent_email_log";
+const EXPANDED_KEY = "sw_inv_expanded";
+
+const STATUS_CONFIG: Record<ContactStatus, { label: string; color: string; bg: string; border: string; index: number }> = {
+  "not-contacted": { label: "Not Contacted", color: "text-slate-400", bg: "bg-slate-500/10", border: "border-slate-500/20", index: 0 },
+  "contacted":     { label: "Contacted",     color: "text-sky-400",    bg: "bg-sky-500/10",    border: "border-sky-500/20",    index: 1 },
+  "responded":     { label: "Responded",     color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20", index: 2 },
+  "meeting":       { label: "Meeting",       color: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/20",  index: 3 },
+  "passed":        { label: "Passed",        color: "text-rose-400",   bg: "bg-rose-500/10",   border: "border-rose-500/20",   index: 4 },
+  "invested":      { label: "Invested",      color: "text-emerald-400",bg: "bg-emerald-500/10",border: "border-emerald-500/20",index: 5 },
+};
+
+const STATUS_ORDER: ContactStatus[] = ["not-contacted", "contacted", "responded", "meeting", "passed", "invested"];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOCALSTORAGE HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function loadInvestors(): InvestorContact[] {
   try {
@@ -704,12 +753,132 @@ function loadInvestors(): InvestorContact[] {
 }
 
 function saveInvestors(data: InvestorContact[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* silent */ }
 }
 
-// ─── Deal Flow Status Badge ──────────────────────────────────────────
+function loadExpanded(): Record<string, boolean> {
+  try {
+    const s = localStorage.getItem(EXPANDED_KEY);
+    if (s) return JSON.parse(s);
+  } catch { /* silent */ }
+  return { thesis: true, decisionMakers: true, portfolio: true, contactHistory: false, dealFlow: true, notableExits: false };
+}
 
-function DealStatusBadge({ status }: { status: DealFlow["status"] }) {
+function saveExpanded(data: Record<string, boolean>) {
+  try { localStorage.setItem(EXPANDED_KEY, JSON.stringify(data)); } catch { /* silent */ }
+}
+
+function recordSentEmailLog(entry: { templateId: string; contactName: string; firmName: string; sentAt: string }) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(SENT_EMAILS_KEY) || "[]");
+    existing.unshift(entry);
+    localStorage.setItem(SENT_EMAILS_KEY, JSON.stringify(existing.slice(0, 200)));
+  } catch { /* silent */ }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FIT SCORING ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function computeFitScore(investor: InvestorContact, deck: InvestorDeck | null): number {
+  if (!deck) return 0;
+  const e = deck.extracted;
+  let score = 0;
+  let maxScore = 0;
+
+  // Focus area overlap (0-40 pts)
+  const deckText = `${e.problem} ${e.solution} ${e.vision} ${e.tagline}`.toLowerCase();
+  const focusMatches = investor.focusAreas.filter(fa => {
+    const faLower = fa.toLowerCase();
+    return deckText.includes(faLower) ||
+           investor.thesis.toLowerCase().includes(faLower);
+  }).length;
+  score += Math.min(40, focusMatches * 10);
+  maxScore += 40;
+
+  // Keyword matching from deck content to investor thesis (0-30 pts)
+  const thesisLower = investor.thesis.toLowerCase();
+  const keywords = [
+    e.companyName.toLowerCase(),
+    ...(e.solution ? e.solution.split(" ").slice(0, 5) : []),
+    ...(e.problem ? e.problem.split(" ").slice(0, 5) : []),
+  ].filter(Boolean);
+  const keywordHits = keywords.filter(kw => kw.length > 3 && thesisLower.includes(kw)).length;
+  score += Math.min(30, keywordHits * 6);
+  maxScore += 30;
+
+  // Sector alignment with traction/revenue (0-30 pts)
+  if (e.revenue && investor.focusAreas.some(fa => fa.includes("Enterprise") || fa.includes("SaaS"))) score += 10;
+  if (e.customerCount && investor.focusAreas.some(fa => fa.includes("Consumer"))) score += 10;
+  if (e.growthRate && investor.focusAreas.some(fa => fa.includes("Growth"))) score += 10;
+  maxScore += 30;
+
+  return maxScore > 0 ? Math.round((score / maxScore) * 100) : 50;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPORT HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function exportToCSV(investors: InvestorContact[]): string {
+  const headers = [
+    "Firm", "Type", "Location", "Check Size", "AUM", "Signal Rank",
+    "Reputation", "Contact Name", "Contact Title", "Contact Email",
+    "Contact Status", "Focus Areas", "Thesis (truncated)",
+  ];
+  const rows: string[] = [headers.join(",")];
+  for (const inv of investors) {
+    for (const dm of inv.decisionMakers) {
+      const cells = [
+        inv.name,
+        inv.type,
+        inv.location,
+        inv.checkSize,
+        inv.aum,
+        inv.signalRank,
+        inv.reputationScore,
+        dm.name,
+        dm.title,
+        dm.email,
+        STATUS_CONFIG[dm.contactStatus].label,
+        inv.focusAreas.join("; "),
+        inv.thesis.slice(0, 120),
+      ];
+      rows.push(cells.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","));
+    }
+  }
+  return rows.join("\n");
+}
+
+function downloadBlob(content: string, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUB-COMPONENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const FitScoreBadge = memo(function FitScoreBadge({ score }: { score: number }) {
+  let colorClass = "text-rose-400 bg-rose-500/10 border-rose-500/20";
+  if (score >= 80) colorClass = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+  else if (score >= 50) colorClass = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${colorClass} font-semibold`}>
+      <Zap className="w-3 h-3" />
+      {score}% fit
+    </span>
+  );
+});
+
+// StatusBadge removed - unused
+
+const DealStatusBadge = memo(function DealStatusBadge({ status }: { status: DealFlow["status"] }) {
   const config: Record<DealFlow["status"], { label: string; classes: string }> = {
     "evaluating": { label: "Evaluating", classes: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
     "term-sheet": { label: "Term Sheet", classes: "bg-sky-500/10 text-sky-400 border-sky-500/20" },
@@ -723,49 +892,486 @@ function DealStatusBadge({ status }: { status: DealFlow["status"] }) {
       {c.label}
     </span>
   );
-}
+});
 
-// ─── Signal Rank Bar ─────────────────────────────────────────────────
-
-function SignalRankBar({ rank }: { rank: number }) {
+const SignalRankBar = memo(function SignalRankBar({ rank }: { rank: number }) {
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all"
-          style={{ width: `${rank}%` }}
-        />
+        <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all" style={{ width: `${rank}%` }} />
       </div>
       <span className="text-[10px] font-semibold text-amber-400 w-6 text-right">{rank}</span>
     </div>
   );
+});
+
+const MiniPipeline = memo(function MiniPipeline({ stages }: { stages: Record<ContactStatus, number> }) {
+  return (
+    <div className="flex items-center gap-0.5 mt-1">
+      {STATUS_ORDER.map((s) => {
+        const count = stages[s] || 0;
+        const c = STATUS_CONFIG[s];
+        return (
+          <div key={s} className="flex-1 flex flex-col items-center gap-0.5">
+            <div
+              className={`w-full h-1.5 rounded-full ${count > 0 ? c.bg.replace("/10", "/40") : "bg-white/[0.04]"} transition-colors`}
+              title={`${c.label}: ${count}`}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EMAIL COMPOSER PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface EmailComposerProps {
+  dm: DecisionMaker;
+  firm: InvestorContact;
+  deck: InvestorDeck | null;
+  onClose: () => void;
+  onMarkSent: (dmId: string) => void;
 }
 
-// ─── Main Component ──────────────────────────────────────────────────
+function EmailComposerPanel({ dm, firm, deck, onClose, onMarkSent }: EmailComposerProps) {
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [preview, setPreview] = useState<{ subject: string; body: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [senderName, setSenderName] = useState("");
+  const [extraVars, setExtraVars] = useState<Record<string, string>>({});
+
+  const templates = useMemo(() => getAllTemplates(), []);
+  const categories = useMemo(() => {
+    const cats = new Set(templates.map(t => t.category));
+    return Array.from(cats);
+  }, [templates]);
+
+  const handleSelectTemplate = useCallback((tid: string) => {
+    setSelectedTemplateId(tid);
+    const p = previewTemplate(tid, deck);
+    setPreview(p);
+  }, [deck]);
+
+  const handleCompose = useCallback(() => {
+    if (!selectedTemplateId) return null;
+    const firstName = dm.name.split(" ")[0];
+    const lastName = dm.name.split(" ").slice(1).join(" ");
+    return composeEmail(
+      selectedTemplateId,
+      {
+        firstName,
+        lastName,
+        email: dm.email,
+        title: dm.title,
+        firmName: firm.name,
+        investorFocus: firm.focusAreas[0] || "this space",
+        notableInvestment: firm.notableExits[0]?.company || "similar companies",
+      },
+      deck,
+      { senderName, ...extraVars },
+    );
+  }, [selectedTemplateId, dm, firm, deck, senderName, extraVars]);
+
+  const composed = useMemo(() => handleCompose(), [handleCompose]);
+  const stats = useMemo(() => preview ? getEmailStats(preview.body) : null, [preview]);
+
+  const copyToClipboard = useCallback(async () => {
+    if (!composed) return;
+    const text = `Subject: ${composed.subject}\n\n${composed.body}`;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [composed]);
+
+  const handleMarkSent = useCallback(() => {
+    if (!composed) return;
+    recordSentEmail(composed);
+    recordSentEmailLog({
+      templateId: composed.templateId,
+      contactName: dm.name,
+      firmName: firm.name,
+      sentAt: new Date().toISOString(),
+    });
+    onMarkSent(dm.id);
+    onClose();
+  }, [composed, dm.id, dm.name, firm.name, onClose, onMarkSent]);
+
+  return (
+    <div className="fixed inset-y-0 right-0 w-full sm:w-[540px] bg-[#0f172a] border-l border-white/[0.08] shadow-2xl z-50 flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-white/[0.08]">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center">
+            <Send className="w-4 h-4 text-sky-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-100">Email Composer</h3>
+            <p className="text-[10px] text-slate-500">{dm.name} · {dm.title} · {firm.name}</p>
+          </div>
+        </div>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-slate-400 hover:text-slate-200 transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Sender Name */}
+        <div>
+          <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Your Name</label>
+          <input
+            value={senderName}
+            onChange={e => setSenderName(e.target.value)}
+            placeholder="Your name for signature"
+            className="w-full text-xs px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.02] text-slate-200 placeholder:text-slate-600 outline-none focus:border-sky-500/30"
+          />
+        </div>
+
+        {/* Template Selection */}
+        <div>
+          <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Select Template</label>
+          <div className="space-y-2">
+            {categories.map(cat => (
+              <div key={cat}>
+                <div className="text-[9px] font-semibold text-slate-600 uppercase tracking-wider mb-1">{cat}</div>
+                <div className="space-y-1">
+                  {templates.filter(t => t.category === cat).map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleSelectTemplate(t.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg border transition-all text-[11px] ${
+                        selectedTemplateId === t.id
+                          ? "border-sky-500/30 bg-sky-500/[0.06] text-sky-300"
+                          : "border-white/[0.04] hover:border-white/[0.08] bg-white/[0.02] text-slate-300"
+                      }`}
+                    >
+                      <div className="font-medium">{t.name}</div>
+                      <div className="text-[9px] text-slate-500 mt-0.5">{t.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Extra Variables */}
+        {selectedTemplateId && (
+          <div>
+            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Custom Variables</label>
+            <div className="grid grid-cols-2 gap-2">
+              {["mutualConnection", "recentWin", "coInvestors", "notableInvestment", "availability"].map(key => (
+                <div key={key}>
+                  <label className="text-[9px] text-slate-600 capitalize">{key.replace(/([A-Z])/g, " $1")}</label>
+                  <input
+                    value={extraVars[key] || ""}
+                    onChange={e => setExtraVars(p => ({ ...p, [key]: e.target.value }))}
+                    className="w-full text-[10px] px-2 py-1.5 rounded border border-white/[0.06] bg-white/[0.02] text-slate-300 outline-none focus:border-sky-500/30"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Live Preview */}
+        {preview && (
+          <div>
+            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Preview</label>
+            <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
+              <div className="flex items-center gap-2 pb-2 border-b border-white/[0.06]">
+                <span className="text-[9px] font-medium text-slate-500 uppercase">Subject:</span>
+                <span className="text-[11px] text-slate-200">{composed?.subject || preview.subject}</span>
+              </div>
+              <div className="text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
+                {composed?.body || preview.body}
+              </div>
+              {stats && (
+                <div className="flex items-center gap-3 pt-2 border-t border-white/[0.06] text-[9px] text-slate-500">
+                  <span>{stats.words} words</span>
+                  <span>{stats.chars} chars</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{stats.readTime}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer Actions */}
+      <div className="p-4 border-t border-white/[0.08] flex items-center gap-2">
+        <button
+          onClick={copyToClipboard}
+          disabled={!composed}
+          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-white/[0.08] text-xs text-slate-300 hover:bg-white/[0.04] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? "Copied!" : "Copy to Clipboard"}
+        </button>
+        <button
+          onClick={handleMarkSent}
+          disabled={!composed}
+          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-sky-500 text-white text-xs font-medium hover:bg-sky-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <Send className="w-3.5 h-3.5" />
+          Mark as Sent
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INVESTOR DECK PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function DeckUploadPanel({ deck, onParse }: { deck: InvestorDeck | null; onParse: (text: string) => void }) {
+  const [rawText, setRawText] = useState("");
+  const [expanded, setExpanded] = useState(true);
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = String(ev.target?.result || "");
+      onParse(text);
+      setRawText("");
+    };
+    reader.readAsText(file);
+  }, [onParse]);
+
+  const summary = useMemo(() => deck ? getDeckSummary(deck) : "No investor deck uploaded yet.", [deck]);
+  const templateVars = useMemo(() => deck ? getTemplateVars(deck) : [], [deck]);
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+      <button
+        onClick={() => setExpanded(p => !p)}
+        className="w-full flex items-center justify-between p-3 hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
+            <FileText className="w-3.5 h-3.5 text-violet-400" />
+          </div>
+          <div className="text-left">
+            <h3 className="text-xs font-semibold text-slate-200">Investor Deck</h3>
+            <p className="text-[10px] text-slate-500">
+              {deck ? `Parsed ${deck.sections.length} sections · ${templateVars.length} variables` : "Paste deck text or upload a file"}
+            </p>
+          </div>
+        </div>
+        {expanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-500" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
+      </button>
+
+      {expanded && (
+        <div className="px-3 pb-3 space-y-3">
+          {/* Upload controls */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <textarea
+                value={rawText}
+                onChange={e => setRawText(e.target.value)}
+                placeholder="Paste your investor deck content here (Markdown, text extract, or structured outline)..."
+                className="w-full h-20 text-[11px] px-3 py-2 rounded-lg border border-white/[0.08] bg-[#0f172a] text-slate-200 placeholder:text-slate-600 outline-none focus:border-violet-500/30 resize-none"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { if (rawText.trim()) { onParse(rawText); setRawText(""); } }}
+                disabled={!rawText.trim()}
+                className="px-3 py-1.5 rounded-lg bg-violet-500 text-white text-[11px] font-medium hover:bg-violet-400 disabled:opacity-30 transition-colors flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3 h-3" />
+                Parse
+              </button>
+              <label className="px-3 py-1.5 rounded-lg border border-white/[0.08] text-[11px] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-colors cursor-pointer flex items-center gap-1.5 justify-center">
+                <Upload className="w-3 h-3" />
+                Upload
+                <input type="file" accept=".txt,.md" className="hidden" onChange={handleFileUpload} />
+              </label>
+            </div>
+          </div>
+
+          {/* Summary */}
+          {deck && (
+            <div className="p-2.5 rounded-lg border border-violet-500/10 bg-violet-500/[0.03]">
+              <div className="text-[9px] font-semibold text-violet-400 uppercase tracking-wider mb-1">Deck Summary</div>
+              <div className="text-[11px] text-slate-300 whitespace-pre-line leading-relaxed">{summary}</div>
+            </div>
+          )}
+
+          {/* Sections */}
+          {deck && deck.sections.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Extracted Sections</div>
+              <div className="flex flex-wrap gap-1">
+                {deck.sections.slice(0, 8).map(sec => (
+                  <span key={sec.id} className="text-[9px] px-2 py-0.5 rounded bg-white/[0.04] text-slate-400 border border-white/[0.04]">
+                    {sec.title}
+                  </span>
+                ))}
+                {deck.sections.length > 8 && (
+                  <span className="text-[9px] px-2 py-0.5 text-slate-500">+{deck.sections.length - 8} more</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Template Variables */}
+          {templateVars.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Available Variables</div>
+              <div className="flex flex-wrap gap-1">
+                {templateVars.slice(0, 12).map(v => (
+                  <span key={v.key} className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/5 text-emerald-400/70 border border-emerald-500/10" title={v.value}>
+                    {v.key}
+                  </span>
+                ))}
+                {templateVars.length > 12 && (
+                  <span className="text-[9px] text-slate-500">+{templateVars.length - 12}</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PIPELINE VISUALIZATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function PipelineSummary({ investors }: { investors: InvestorContact[] }) {
+  const counts = useMemo(() => {
+    const c: Record<ContactStatus, number> = { "not-contacted": 0, "contacted": 0, "responded": 0, "meeting": 0, "passed": 0, "invested": 0 };
+    for (const inv of investors) {
+      for (const dm of inv.decisionMakers) {
+        c[dm.contactStatus] = (c[dm.contactStatus] || 0) + 1;
+      }
+    }
+    return c;
+  }, [investors]);
+
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Layers className="w-3.5 h-3.5 text-slate-500" />
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Pipeline ({total} contacts)</span>
+      </div>
+      <div className="flex gap-1">
+        {STATUS_ORDER.map(s => {
+          const c = STATUS_CONFIG[s];
+          const count = counts[s];
+          const pct = total > 0 ? (count / total) * 100 : 0;
+          return (
+            <div key={s} className="flex-1" title={`${c.label}: ${count}`}>
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-[8px] text-slate-600">{c.label.split(" ")[0]}</span>
+                <span className={`text-[8px] font-semibold ${c.color}`}>{count}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                <div className={`h-full rounded-full ${c.bg.replace("/10", "/50")}`} style={{ width: `${Math.max(4, pct)}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export default function InvestorContactSheets() {
   const [investors, setInvestors] = useState<InvestorContact[]>(loadInvestors);
   const [selectedInvestor, setSelectedInvestor] = useState<InvestorContact | null>(null);
+  const [selectedDM, setSelectedDM] = useState<DecisionMaker | null>(null);
+  const [deck, setDeck] = useState<InvestorDeck | null>(loadDeck);
   const [newNote, setNewNote] = useState("");
+
+  // Search & filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    thesis: true,
-    decisionMakers: true,
-    portfolio: true,
-    contactHistory: true,
-    dealFlow: true,
-    notableExits: true,
-  });
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Persist to localStorage
+  // UI state
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(loadExpanded);
+
+  // Persist investors
   useEffect(() => { saveInvestors(investors); }, [investors]);
 
-  const toggleSection = (key: string) => {
-    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  // Persist expanded sections
+  useEffect(() => { saveExpanded(expandedSections); }, [expandedSections]);
 
-  const addNote = () => {
+  // Parse deck handler
+  const handleParseDeck = useCallback((text: string) => {
+    const parsed = parseDeck(text);
+    setDeck(parsed);
+  }, []);
+
+  const toggleSection = useCallback((key: string) => {
+    setExpandedSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      return next;
+    });
+  }, []);
+
+  // Fit scores memo
+  const fitScores = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!deck) return map;
+    for (const inv of investors) {
+      map[inv.id] = computeFitScore(inv, deck);
+    }
+    return map;
+  }, [investors, deck]);
+
+  // Filtered investors
+  const filteredInvestors = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return investors.filter(inv => {
+      if (q) {
+        const inName = inv.name.toLowerCase().includes(q);
+        const inThesis = inv.thesis.toLowerCase().includes(q);
+        const inFocus = inv.focusAreas.some(fa => fa.toLowerCase().includes(q));
+        const inLocation = inv.location.toLowerCase().includes(q);
+        const inDMs = inv.decisionMakers.some(dm =>
+          dm.name.toLowerCase().includes(q) ||
+          dm.title.toLowerCase().includes(q) ||
+          dm.email.toLowerCase().includes(q)
+        );
+        const inPortfolio = inv.portfolio.some(p => p.name.toLowerCase().includes(q));
+        if (!inName && !inThesis && !inFocus && !inLocation && !inDMs && !inPortfolio) return false;
+      }
+      if (typeFilter !== "all" && inv.type !== typeFilter) return false;
+      if (locationFilter !== "all" && !inv.location.toLowerCase().includes(locationFilter.toLowerCase())) return false;
+      if (statusFilter !== "all") {
+        const hasStatus = inv.decisionMakers.some(dm => dm.contactStatus === statusFilter);
+        if (!hasStatus) return false;
+      }
+      return true;
+    });
+  }, [investors, searchQuery, typeFilter, statusFilter, locationFilter]);
+
+  // Unique locations for filter
+  const locations = useMemo(() => {
+    const locs = new Set(investors.map(inv => inv.location.split(",")[0]?.trim()).filter(Boolean));
+    return Array.from(locs).sort();
+  }, [investors]);
+
+  const addNote = useCallback(() => {
     if (!newNote.trim() || !selectedInvestor) return;
     const updated: InvestorContact = {
       ...selectedInvestor,
@@ -778,9 +1384,9 @@ export default function InvestorContactSheets() {
     setSelectedInvestor(updated);
     setInvestors(prev => prev.map(inv => inv.id === updated.id ? updated : inv));
     setNewNote("");
-  };
+  }, [newNote, selectedInvestor]);
 
-  const updateDMStatus = (dmId: string, newStatus: DecisionMaker["contactStatus"]) => {
+  const updateDMStatus = useCallback((dmId: string, newStatus: ContactStatus) => {
     if (!selectedInvestor) return;
     const updated: InvestorContact = {
       ...selectedInvestor,
@@ -790,42 +1396,94 @@ export default function InvestorContactSheets() {
     };
     setSelectedInvestor(updated);
     setInvestors(prev => prev.map(inv => inv.id === updated.id ? updated : inv));
-  };
+  }, [selectedInvestor]);
 
-  const filteredInvestors = investors.filter(inv => {
-    const matchesSearch = !searchQuery ||
-      inv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inv.focusAreas.some(fa => fa.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      inv.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = typeFilter === "all" || inv.type === typeFilter;
-    return matchesSearch && matchesType;
-  });
+  const handleMarkSent = useCallback((dmId: string) => {
+    if (!selectedInvestor) return;
+    const updated: InvestorContact = {
+      ...selectedInvestor,
+      decisionMakers: selectedInvestor.decisionMakers.map(dm =>
+        dm.id === dmId ? { ...dm, contactStatus: "contacted" as ContactStatus } : dm
+      ),
+    };
+    setSelectedInvestor(updated);
+    setInvestors(prev => prev.map(inv => inv.id === updated.id ? updated : inv));
+    setSelectedDM(null);
+  }, [selectedInvestor]);
+
+  const handleExportCSV = useCallback(() => {
+    const csv = exportToCSV(filteredInvestors);
+    downloadBlob(csv, `investor-contacts-${new Date().toISOString().split("T")[0]}.csv`, "text/csv");
+  }, [filteredInvestors]);
+
+  const handleExportJSON = useCallback(() => {
+    const json = JSON.stringify(filteredInvestors, null, 2);
+    downloadBlob(json, `investor-contacts-${new Date().toISOString().split("T")[0]}.json`, "application/json");
+  }, [filteredInvestors]);
+
+  const totalDMs = useMemo(() => investors.reduce((acc, i) => acc + i.decisionMakers.length, 0), [investors]);
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* ─── Header ─── */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
             <Building2 className="w-4 h-4 text-amber-400" />
             Investor Firm Directory
           </h2>
-          <p className="text-[10px] text-slate-500 mt-0.5">{filteredInvestors.length} firms · {investors.reduce((acc, i) => acc + i.decisionMakers.length, 0)} contacts · {investors.reduce((acc, i) => acc + i.portfolioCompanies, 0)} portfolio companies</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">
+            {filteredInvestors.length} of {investors.length} firms shown · {totalDMs} decision makers · {investors.reduce((acc, i) => acc + i.portfolioCompanies, 0)} portfolio companies
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Search */}
           <div className="relative">
             <Search className="w-3 h-3 text-slate-500 absolute left-2 top-1/2 -translate-y-1/2" />
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search firms..."
-              className="text-[11px] pl-6 pr-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-slate-200 placeholder:text-slate-600 outline-none focus:border-amber-500/30 w-44"
+              placeholder="Search names, firms, focus areas, thesis..."
+              className="text-[11px] pl-6 pr-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-slate-200 placeholder:text-slate-600 outline-none focus:border-amber-500/30 w-56"
             />
           </div>
+          {/* Filter toggle */}
+          <button
+            onClick={() => setShowFilters(p => !p)}
+            className={`flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border transition-colors ${
+              showFilters ? "border-amber-500/30 bg-amber-500/[0.06] text-amber-300" : "border-white/[0.06] bg-white/[0.02] text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Filter className="w-3 h-3" />
+            Filters
+          </button>
+          {/* Export */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-colors"
+            >
+              <Download className="w-3 h-3" />
+              CSV
+            </button>
+            <button
+              onClick={handleExportJSON}
+              className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-colors"
+            >
+              <Download className="w-3 h-3" />
+              JSON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Filter Bar ─── */}
+      {showFilters && (
+        <div className="flex items-center gap-2 flex-wrap p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
           <select
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
-            className="text-[11px] px-2 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] text-slate-200 outline-none focus:border-amber-500/30"
+            className="text-[11px] px-2 py-1.5 rounded-lg border border-white/[0.06] bg-[#0f172a] text-slate-200 outline-none focus:border-amber-500/30"
           >
             <option value="all">All Types</option>
             <option value="VC">VC</option>
@@ -833,59 +1491,104 @@ export default function InvestorContactSheets() {
             <option value="PE">PE</option>
             <option value="Strategic">Strategic</option>
             <option value="Family Office">Family Office</option>
+            <option value="Growth Equity">Growth Equity</option>
           </select>
-        </div>
-      </div>
-
-      {/* Section 1: Investor Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {filteredInvestors.map(inv => (
-          <div
-            key={inv.id}
-            className={`p-4 rounded-xl border transition-all cursor-pointer ${
-              selectedInvestor?.id === inv.id
-                ? "border-amber-500/30 bg-amber-500/[0.04]"
-                : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
-            }`}
-            onClick={() => setSelectedInvestor(inv)}
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="text-[11px] px-2 py-1.5 rounded-lg border border-white/[0.06] bg-[#0f172a] text-slate-200 outline-none focus:border-amber-500/30"
           >
-            <div className="flex items-center gap-3 mb-2.5">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center text-sm font-bold text-amber-300 shrink-0">
-                {inv.name.slice(0, 2).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-slate-200 truncate">{inv.name}</div>
-                <div className="text-[10px] text-slate-500">{inv.type} · {inv.location} · Est. {inv.founded}</div>
-              </div>
-              <div className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-medium shrink-0">
-                {inv.checkSize}
-              </div>
-            </div>
+            <option value="all">All Statuses</option>
+            {STATUS_ORDER.map(s => (
+              <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
+            ))}
+          </select>
+          <select
+            value={locationFilter}
+            onChange={e => setLocationFilter(e.target.value)}
+            className="text-[11px] px-2 py-1.5 rounded-lg border border-white/[0.06] bg-[#0f172a] text-slate-200 outline-none focus:border-amber-500/30"
+          >
+            <option value="all">All Locations</option>
+            {locations.map(loc => (
+              <option key={loc} value={loc}>{loc}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => { setTypeFilter("all"); setStatusFilter("all"); setLocationFilter("all"); setSearchQuery(""); }}
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg border border-white/[0.06] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-colors ml-auto"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset
+          </button>
+        </div>
+      )}
 
-            <div className="flex flex-wrap gap-1 mb-2.5">
-              {inv.focusAreas.slice(0, 4).map(fa => (
-                <span key={fa} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-400">{fa}</span>
-              ))}
-              {inv.focusAreas.length > 4 && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-500">+{inv.focusAreas.length - 4}</span>
-              )}
-            </div>
+      {/* ─── Investor Deck Panel ─── */}
+      <DeckUploadPanel deck={deck} onParse={handleParseDeck} />
 
-            <div className="flex justify-between text-[10px] text-slate-500 mb-2">
-              <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" />{inv.portfolioCompanies} portfolio</span>
-              <span className="flex items-center gap-1"><Users className="w-3 h-3" />{inv.decisionMakers.length} contacts</span>
-              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{inv.lastContact}</span>
-            </div>
+      {/* ─── Pipeline Summary ─── */}
+      <PipelineSummary investors={investors} />
 
-            <SignalRankBar rank={inv.signalRank} />
-          </div>
-        ))}
+      {/* ─── Investor Grid ─── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {filteredInvestors.map(inv => {
+          const dmStages = inv.decisionMakers.reduce((acc, dm) => {
+            acc[dm.contactStatus] = (acc[dm.contactStatus] || 0) + 1;
+            return acc;
+          }, {} as Record<ContactStatus, number>);
+
+          return (
+            <div
+              key={inv.id}
+              className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                selectedInvestor?.id === inv.id
+                  ? "border-amber-500/30 bg-amber-500/[0.04]"
+                  : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+              }`}
+              onClick={() => { setSelectedInvestor(inv); setSelectedDM(null); }}
+            >
+              <div className="flex items-center gap-3 mb-2.5">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center text-sm font-bold text-amber-300 shrink-0">
+                  {inv.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-slate-200 truncate">{inv.name}</div>
+                  <div className="text-[10px] text-slate-500">{inv.type} · {inv.location} · Est. {inv.founded}</div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  {deck && <FitScoreBadge score={fitScores[inv.id] || 0} />}
+                  <div className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-medium">
+                    {inv.checkSize}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-1 mb-2.5">
+                {inv.focusAreas.slice(0, 4).map(fa => (
+                  <span key={fa} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-400">{fa}</span>
+                ))}
+                {inv.focusAreas.length > 4 && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-500">+{inv.focusAreas.length - 4}</span>
+                )}
+              </div>
+
+              <div className="flex justify-between text-[10px] text-slate-500 mb-2">
+                <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" />{inv.portfolioCompanies} portfolio</span>
+                <span className="flex items-center gap-1"><Users className="w-3 h-3" />{inv.decisionMakers.length} contacts</span>
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{inv.lastContact}</span>
+              </div>
+
+              <SignalRankBar rank={inv.signalRank} />
+              <MiniPipeline stages={dmStages} />
+            </div>
+          );
+        })}
       </div>
 
-      {/* Section 2: Selected Investor Detail */}
+      {/* ─── Selected Investor Detail ─── */}
       {selectedInvestor && (
         <div className="p-4 rounded-xl border border-amber-500/15 bg-amber-500/[0.03] space-y-4">
-          {/* Header */}
+          {/* Detail Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/30 to-orange-500/30 flex items-center justify-center text-lg font-bold text-amber-200">
@@ -893,7 +1596,7 @@ export default function InvestorContactSheets() {
               </div>
               <div>
                 <div className="text-sm font-semibold text-slate-100">{selectedInvestor.name}</div>
-                <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                <div className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
                   <span>{selectedInvestor.type}</span>
                   <span>·</span>
                   <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" />{selectedInvestor.location}</span>
@@ -905,6 +1608,7 @@ export default function InvestorContactSheets() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {deck && <FitScoreBadge score={fitScores[selectedInvestor.id] || 0} />}
               <div className="text-right mr-2">
                 <div className="flex items-center gap-1">
                   <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
@@ -913,7 +1617,7 @@ export default function InvestorContactSheets() {
                 <div className="text-[9px] text-slate-500">Reputation</div>
               </div>
               <button
-                onClick={() => setSelectedInvestor(null)}
+                onClick={() => { setSelectedInvestor(null); setSelectedDM(null); }}
                 className="text-[10px] px-2 py-1 rounded-lg border border-white/[0.08] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] transition-colors"
               >
                 Close
@@ -952,7 +1656,7 @@ export default function InvestorContactSheets() {
           {/* Investment Thesis */}
           <div>
             <button onClick={() => toggleSection("thesis")} className="flex items-center gap-1.5 mb-1.5 w-full">
-              {expandedSections.thesis ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronUp className="w-3 h-3 text-slate-500" />}
+              {expandedSections.thesis ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronRight className="w-3 h-3 text-slate-500" />}
               <FileText className="w-3 h-3 text-slate-500" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Investment Thesis</span>
             </button>
@@ -964,7 +1668,7 @@ export default function InvestorContactSheets() {
           {/* Decision Makers Table */}
           <div>
             <button onClick={() => toggleSection("decisionMakers")} className="flex items-center gap-1.5 mb-2 w-full">
-              {expandedSections.decisionMakers ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronUp className="w-3 h-3 text-slate-500" />}
+              {expandedSections.decisionMakers ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronRight className="w-3 h-3 text-slate-500" />}
               <Users className="w-3 h-3 text-slate-500" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Decision Makers ({selectedInvestor.decisionMakers.length})</span>
             </button>
@@ -977,6 +1681,7 @@ export default function InvestorContactSheets() {
                       <th className="pb-1.5 font-medium">Title</th>
                       <th className="pb-1.5 font-medium">Contact</th>
                       <th className="pb-1.5 font-medium">Status</th>
+                      <th className="pb-1.5 font-medium">Actions</th>
                       <th className="pb-1.5 font-medium">Notable</th>
                     </tr>
                   </thead>
@@ -1003,16 +1708,22 @@ export default function InvestorContactSheets() {
                         <td className="py-2">
                           <select
                             value={dm.contactStatus}
-                            onChange={e => updateDMStatus(dm.id, e.target.value as DecisionMaker["contactStatus"])}
+                            onChange={e => updateDMStatus(dm.id, e.target.value as ContactStatus)}
                             className="text-[10px] px-1.5 py-0.5 rounded border border-white/[0.08] bg-[#0f172a] text-slate-300 outline-none"
                           >
-                            <option value="not-contacted">Not Contacted</option>
-                            <option value="contacted">Contacted</option>
-                            <option value="responded">Responded</option>
-                            <option value="meeting">Meeting</option>
-                            <option value="passed">Passed</option>
-                            <option value="invested">Invested</option>
+                            {STATUS_ORDER.map(s => (
+                              <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
+                            ))}
                           </select>
+                        </td>
+                        <td className="py-2">
+                          <button
+                            onClick={() => setSelectedDM(dm)}
+                            className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-sky-500/20 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 transition-colors"
+                          >
+                            <Send className="w-3 h-3" />
+                            Email
+                          </button>
                         </td>
                         <td className="py-2">
                           <div className="text-[9px] text-slate-400 max-w-[140px] truncate" title={dm.notableInvestments.join(", ")}>
@@ -1033,7 +1744,7 @@ export default function InvestorContactSheets() {
           {/* Portfolio Companies */}
           <div>
             <button onClick={() => toggleSection("portfolio")} className="flex items-center gap-1.5 mb-2 w-full">
-              {expandedSections.portfolio ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronUp className="w-3 h-3 text-slate-500" />}
+              {expandedSections.portfolio ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronRight className="w-3 h-3 text-slate-500" />}
               <Briefcase className="w-3 h-3 text-slate-500" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Portfolio ({selectedInvestor.portfolio.length})</span>
             </button>
@@ -1058,7 +1769,7 @@ export default function InvestorContactSheets() {
           {/* Deal Flow */}
           <div>
             <button onClick={() => toggleSection("dealFlow")} className="flex items-center gap-1.5 mb-2 w-full">
-              {expandedSections.dealFlow ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronUp className="w-3 h-3 text-slate-500" />}
+              {expandedSections.dealFlow ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronRight className="w-3 h-3 text-slate-500" />}
               <Target className="w-3 h-3 text-slate-500" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active Deal Flow ({selectedInvestor.dealFlow.length})</span>
             </button>
@@ -1086,7 +1797,7 @@ export default function InvestorContactSheets() {
           {/* Notable Exits */}
           <div>
             <button onClick={() => toggleSection("notableExits")} className="flex items-center gap-1.5 mb-2 w-full">
-              {expandedSections.notableExits ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronUp className="w-3 h-3 text-slate-500" />}
+              {expandedSections.notableExits ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronRight className="w-3 h-3 text-slate-500" />}
               <TrendingUp className="w-3 h-3 text-slate-500" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Notable Exits</span>
             </button>
@@ -1104,7 +1815,7 @@ export default function InvestorContactSheets() {
           {/* Contact History */}
           <div>
             <button onClick={() => toggleSection("contactHistory")} className="flex items-center gap-1.5 mb-2 w-full">
-              {expandedSections.contactHistory ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronUp className="w-3 h-3 text-slate-500" />}
+              {expandedSections.contactHistory ? <ChevronDown className="w-3 h-3 text-slate-500" /> : <ChevronRight className="w-3 h-3 text-slate-500" />}
               <Calendar className="w-3 h-3 text-slate-500" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Contact History</span>
             </button>
@@ -1114,7 +1825,7 @@ export default function InvestorContactSheets() {
                   <div key={i} className="flex items-start gap-2 p-2 rounded-lg border border-white/[0.04] bg-white/[0.02]">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-1" />
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] text-slate-400">{ch.date}</span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300">{ch.type}</span>
                         <span className="text-[10px] text-amber-400/70">{ch.participant}</span>
@@ -1149,24 +1860,28 @@ export default function InvestorContactSheets() {
 
           {/* Links */}
           <div className="flex items-center gap-3 pt-2 border-t border-white/[0.06]">
-            <a
-              href={`https://${selectedInvestor.website}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] flex items-center gap-1 text-sky-400 hover:text-sky-300 transition-colors"
-            >
+            <a href={`https://${selectedInvestor.website}`} target="_blank" rel="noopener noreferrer" className="text-[10px] flex items-center gap-1 text-sky-400 hover:text-sky-300 transition-colors">
               <Globe className="w-3 h-3" />{selectedInvestor.website}<ExternalLink className="w-2.5 h-2.5" />
             </a>
-            <a
-              href={`https://${selectedInvestor.crunchbaseUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] flex items-center gap-1 text-sky-400 hover:text-sky-300 transition-colors"
-            >
+            <a href={`https://${selectedInvestor.crunchbaseUrl}`} target="_blank" rel="noopener noreferrer" className="text-[10px] flex items-center gap-1 text-sky-400 hover:text-sky-300 transition-colors">
               <ExternalLink className="w-3 h-3" />Crunchbase<ExternalLink className="w-2.5 h-2.5" />
             </a>
           </div>
         </div>
+      )}
+
+      {/* ─── Email Composer Overlay ─── */}
+      {selectedDM && selectedInvestor && (
+        <>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onClick={() => setSelectedDM(null)} />
+          <EmailComposerPanel
+            dm={selectedDM}
+            firm={selectedInvestor}
+            deck={deck}
+            onClose={() => setSelectedDM(null)}
+            onMarkSent={handleMarkSent}
+          />
+        </>
       )}
     </div>
   );
