@@ -10,7 +10,13 @@ import CodeParser from "@/components/funnel/CodeParser";
 export default function ContentRow() {
   const { state, toggleApproval, approveVariant, rejectVariant, approvePitch, rejectPitch, generatePitches } = useApp();
   const { campaign, approvals, pitches, businessProfile } = state;
-  const [tab, setTab] = useState<"pitches" | "email" | "warming" | "abtest" | "code">("pitches");
+  const [tab, setTabRaw] = useState<"pitches" | "email" | "warming" | "abtest" | "code">(() => {
+    try { const s = localStorage.getItem("sw_tab_content"); return (s as any) || "pitches"; } catch { return "pitches"; }
+  });
+  const setTab = (t: "pitches" | "email" | "warming" | "abtest" | "code") => {
+    setTabRaw(t);
+    try { localStorage.setItem("sw_tab_content", t); } catch { /* silent */ }
+  };
   const [generating, setGenerating] = useState(false);
   const [activePitchTab, setActivePitchTab] = useState<string | null>(null);
   const pack = campaign?.latestContentPack;

@@ -14,7 +14,13 @@ export default function OutreachRow() {
   const { state, toggleApproval, updateConnector } = useApp();
   const { campaign, approvals } = state;
   const campaignId = campaign?.id || "";
-  const [tab, setTab] = useState<"timeline" | "dlq" | "safety" | "gates" | "connectors" | "crm" | "analytics" | "workflows" | "meetings" | "revenue" | "reports">("timeline");
+  const [tab, setTabRaw] = useState<"timeline" | "dlq" | "safety" | "gates" | "connectors" | "crm" | "analytics" | "workflows" | "meetings" | "revenue" | "reports">(() => {
+    try { const s = localStorage.getItem("sw_tab_outreach"); return (s as any) || "timeline"; } catch { return "timeline"; }
+  });
+  const setTab = (t: "timeline" | "dlq" | "safety" | "gates" | "connectors" | "crm" | "analytics" | "workflows" | "meetings" | "revenue" | "reports") => {
+    setTabRaw(t);
+    try { localStorage.setItem("sw_tab_outreach", t); } catch { /* silent */ }
+  };
   const [outreach, setOutreach] = useState<any[]>([]);
   const [dlq, setDlq] = useState<any>(null);
   const [safety, setSafety] = useState<any[]>([]);

@@ -1,3 +1,4 @@
+import { memo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Lock, CheckCircle, Play, Circle } from "lucide-react";
 import { useApp } from "@/context/AppContext";
@@ -14,7 +15,15 @@ const ICONS: Record<StageStatus, React.ReactNode> = {
   completed: <CheckCircle className="w-3 h-3" />,
 };
 
-export default function StageRow({
+// Scroll position storage per stage
+function saveScroll(stageId: number, pos: number) {
+  try { sessionStorage.setItem(`sw_scroll_${stageId}`, String(pos)); } catch { /* silent */ }
+}
+function loadScroll(stageId: number): number {
+  try { const s = sessionStorage.getItem(`sw_scroll_${stageId}`); return s ? parseInt(s, 10) : 0; } catch { return 0; }
+}
+
+const StageRow = memo(function StageRow({
   stageId, title, summary, children,
 }: {
   stageId: number;
@@ -28,16 +37,36 @@ export default function StageRow({
   const isExpanded = activeStage === stageId;
   const isLocked = stage?.status === "locked";
   const accent = ACCENTS[stageId];
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Restore scroll position when expanding
+  useEffect(() => {
+    if (isExpanded && contentRef.current) {
+      const saved = loadScroll(stageId);
+      if (saved > 0) {
+        contentRef.current.scrollTop = saved;
+      }
+    }
+  }, [isExpanded, stageId]);
+
+  // Save scroll position when collapsing or unmounting
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const handler = () => saveScroll(stageId, el.scrollTop);
+    el.addEventListener("scroll", handler, { passive: true });
+    return () => { el.removeEventListener("scroll", handler); };
+  }, [stageId, isExpanded]);
 
   return (
-    <motion.div
-      layout
-      className="rounded-2xl border overflow-hidden transition-all"
+    <div
+      className="rounded-2xl border overflow-hidden transition-all duration-300"
       style={{
         background: isExpanded ? "rgba(8,17,31,0.95)" : "rgba(8,17,31,0.6)",
         borderColor: isExpanded ? `${accent}25` : "rgba(255,255,255,0.04)",
         borderLeft: `3px solid ${isLocked ? "rgba(255,255,255,0.04)" : isExpanded ? accent : `${accent}50`}`,
         boxShadow: isExpanded ? `0 0 30px -10px ${accent}15, 0 8px 32px rgba(2,6,23,0.4)` : "none",
+        willChange: "transform",
       }}
     >
       <button
@@ -69,7 +98,7 @@ export default function StageRow({
         )}
       </button>
 
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {isExpanded && !isLocked && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
@@ -78,15 +107,21 @@ export default function StageRow({
             transition={{ duration: 0.25, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-4 border-t border-white/[0.04]">
+            <div
+              ref={contentRef}
+              className="px-5 pb-4 border-t border-white/[0.04] overflow-y-auto max-h-[70vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
               {children}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
-}
+});
+
+export default StageRow;
 
 function StatusBadge({ status, accent }: { status: StageStatus; accent: string }) {
   const map: Record<StageStatus, { bg: string; text: string; label: string }> = {

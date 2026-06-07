@@ -26,7 +26,13 @@ function loadSavedDossiers(): CompanyDossierData[] {
 type ResearchTab = "data" | "research" | "dossier" | "painpoints" | "contacts";
 
 export default function ResearchRow() {
-  const [activeTab, setActiveTab] = useState<ResearchTab>("data");
+  const [activeTab, setActiveTabRaw] = useState<ResearchTab>(() => {
+    try { const s = localStorage.getItem("sw_tab_research"); return (s as ResearchTab) || "data"; } catch { return "data"; }
+  });
+  const setActiveTab = (t: ResearchTab) => {
+    setActiveTabRaw(t);
+    try { localStorage.setItem("sw_tab_research", t); } catch { /* silent */ }
+  };
   const [savedDossiers, setSavedDossiers] = useState<CompanyDossierData[]>(loadSavedDossiers);
   const [selectedDossier, setSelectedDossier] = useState<CompanyDossierData | null>(null);
 

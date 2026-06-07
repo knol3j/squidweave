@@ -6,7 +6,13 @@ import { dataService } from "@/services/dataService";
 export default function MemoryRow() {
   const { state } = useApp();
   const campaignId = state.campaign?.id || "";
-  const [tab, setTab] = useState<"recall" | "playbooks" | "profiles">("recall");
+  const [tab, setTabRaw] = useState<"recall" | "playbooks" | "profiles">(() => {
+    try { const s = localStorage.getItem("sw_tab_memory"); return (s as any) || "recall"; } catch { return "recall"; }
+  });
+  const setTab = (t: "recall" | "playbooks" | "profiles") => {
+    setTabRaw(t);
+    try { localStorage.setItem("sw_tab_memory", t); } catch { /* silent */ }
+  };
   const [recall, setRecall] = useState<any>(null);
   const [playbooks, setPlaybooks] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -26,7 +32,9 @@ export default function MemoryRow() {
       if (prof.status === "fulfilled") setProfiles(prof.value);
       setLoading(false);
     });
-  }, [campaignId, state.lastRefresh]);
+  // Only fetch when campaignId changes — not on every poll refresh
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId]);
 
   const consolidate = async () => {
     if (!campaignId) return;

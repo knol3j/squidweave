@@ -1,6 +1,25 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { dataService } from "@/services/dataService";
 
+/** Deep equality check for state comparison — prevents unnecessary re-renders */
+function deepEqual(a: any, b: any): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return a === b;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== "object") return false;
+  const aArr = Array.isArray(a);
+  const bArr = Array.isArray(b);
+  if (aArr !== bArr) return false;
+  if (aArr) {
+    if (a.length !== b.length) return false;
+    return a.every((v: any, i: number) => deepEqual(v, b[i]));
+  }
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every(k => bKeys.includes(k) && deepEqual(a[k], b[k]));
+}
+
 export type StageStatus = "locked" | "ready" | "active" | "completed";
 
 export interface BusinessProfile {
@@ -192,19 +211,20 @@ function computeStages(
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [campaign, setCampaign] = useState<any | null>(null);
+  // Core state with stable setters that skip identical values
+  const [campaigns, setCampaignsRaw] = useState<any[]>([]);
+  const [campaign, setCampaignRaw] = useState<any | null>(null);
   const [campaignId, setCampaignIdState] = useState<string>("");
-  const [activeStage, setActiveStage] = useState(0);
+  const [activeStage, setActiveStage] = useState(() => { try { const s = localStorage.getItem("sw_active_stage"); return s ? parseInt(s, 10) : 0; } catch { return 0; } });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [health, setHealth] = useState<any>(null);
+  const [health, setHealthRaw] = useState<any>(null);
   const [lastRefresh, setLastRefresh] = useState("");
   const [isPolling, setIsPolling] = useState(false);
-  const [stageData, setStageData] = useState<Record<string, any>>({});
+  const [stageData, setStageDataRaw] = useState<Record<string, any>>({});
   const [approvals, setApprovals] = useState<ApprovalState>(loadApprovals);
-  const [pendingSafetyCount, setPendingSafetyCount] = useState(0);
-  const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(loadBusinessProfile);
+  const [pendingSafetyCount, setPendingSafetyCountRaw] = useState(0);
+  const [businessProfile, setBusinessProfileRaw] = useState<BusinessProfile>(loadBusinessProfile);
   const [targetMarkets, setTargetMarkets] = useState<TargetMarket[]>(loadTargetMarkets);
   const [pitches, setPitches] = useState<PitchOption[]>(loadPitches);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -212,50 +232,89 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   campaignIdRef.current = campaignId;
 
   // New backend-data-funnel state
-  const [brainState, setBrainState] = useState<any | null>(null);
-  const [connectorStatuses, setConnectorStatuses] = useState<any[]>([]);
-  const [prospectPipeline, setProspectPipeline] = useState<any | null>(null);
-  const [prospectingRuns, setProspectingRuns] = useState<any[]>([]);
-  const [fundingPipeline, setFundingPipeline] = useState<any | null>(null);
-  const [fundingInvestors, setFundingInvestors] = useState<any[]>([]);
-  const [fundingRuns, setFundingRuns] = useState<any[]>([]);
-  const [reengagement, setReengagement] = useState<any | null>(null);
-  const [setupRequirements, setSetupRequirements] = useState<any | null>(null);
-  const [openClawDiagnostics, setOpenClawDiagnostics] = useState<any[]>([]);
-  const [scheduler, setScheduler] = useState<any | null>(null);
-  const [connectorDrafts, setConnectorDrafts] = useState<Record<string, { baseUrl: string; token: string }>>({});
+  const [brainState, setBrainStateRaw] = useState<any | null>(null);
+  const [connectorStatuses, setConnectorStatusesRaw] = useState<any[]>([]);
+  const [prospectPipeline, setProspectPipelineRaw] = useState<any | null>(null);
+  const [prospectingRuns, setProspectingRunsRaw] = useState<any[]>([]);
+  const [fundingPipeline, setFundingPipelineRaw] = useState<any | null>(null);
+  const [fundingInvestors, setFundingInvestorsRaw] = useState<any[]>([]);
+  const [fundingRuns, setFundingRunsRaw] = useState<any[]>([]);
+  const [reengagement, setReengagementRaw] = useState<any | null>(null);
+  const [setupRequirements, setSetupRequirementsRaw] = useState<any | null>(null);
+  const [openClawDiagnostics, setOpenClawDiagnosticsRaw] = useState<any[]>([]);
+  const [scheduler, setSchedulerRaw] = useState<any | null>(null);
+  const [connectorDrafts, setConnectorDraftsRaw] = useState<Record<string, { baseUrl: string; token: string }>>({});
   const [researchDossiers, _setResearchDossiers] = useState<any[]>(() => {
     try { const s = localStorage.getItem("sw_research_dossiers"); return s ? JSON.parse(s) : []; } catch { return []; }
   });
   void _setResearchDossiers;
+
+  // Refs for stable comparison in fetchAll — prevents setState when data unchanged
+  const campaignsRef = useRef(campaigns); campaignsRef.current = campaigns;
+  const campaignRef = useRef(campaign); campaignRef.current = campaign;
+  const brainStateRef = useRef(brainState); brainStateRef.current = brainState;
+  const healthRef = useRef(health); healthRef.current = health;
+  const stageDataRef = useRef(stageData); stageDataRef.current = stageData;
+  const connectorStatusesRef = useRef(connectorStatuses); connectorStatusesRef.current = connectorStatuses;
+  const prospectPipelineRef = useRef(prospectPipeline); prospectPipelineRef.current = prospectPipeline;
+  const prospectingRunsRef = useRef(prospectingRuns); prospectingRunsRef.current = prospectingRuns;
+  const fundingPipelineRef = useRef(fundingPipeline); fundingPipelineRef.current = fundingPipeline;
+  const fundingInvestorsRef = useRef(fundingInvestors); fundingInvestorsRef.current = fundingInvestors;
+  const fundingRunsRef = useRef(fundingRuns); fundingRunsRef.current = fundingRuns;
+  const reengagementRef = useRef(reengagement); reengagementRef.current = reengagement;
+  const setupRequirementsRef = useRef(setupRequirements); setupRequirementsRef.current = setupRequirements;
+  const openClawDiagnosticsRef = useRef(openClawDiagnostics); openClawDiagnosticsRef.current = openClawDiagnostics;
+  const schedulerRef = useRef(scheduler); schedulerRef.current = scheduler;
+  const pendingSafetyCountRef = useRef(pendingSafetyCount); pendingSafetyCountRef.current = pendingSafetyCount;
+  const businessProfileRef = useRef(businessProfile); businessProfileRef.current = businessProfile;
+  const connectorDraftsRef = useRef(connectorDrafts); connectorDraftsRef.current = connectorDrafts;
+
+  // setBusinessProfile is used by updateBusinessProfile callback — stable, skips identical values
+  const setBusinessProfile = useCallback((v: BusinessProfile | ((prev: BusinessProfile) => BusinessProfile)) => {
+    if (typeof v === "function") {
+      setBusinessProfileRaw(prev => { const next = (v as (prev: BusinessProfile) => BusinessProfile)(prev); return deepEqual(next, prev) ? prev : next; });
+    } else if (!deepEqual(v, businessProfileRef.current)) {
+      setBusinessProfileRaw(v);
+    }
+  }, []);
 
   // Resolve to a valid campaign ID
   const getCampaignId = useCallback(() => campaignId || campaigns[0]?.id || "main-campaign", [campaignId, campaigns]);
 
   const setCampaignId = useCallback((id: string) => { setCampaignIdState(id); setError(null); }, []);
 
+  const setActiveStagePersisted = useCallback((id: number) => {
+    setActiveStage(id);
+    try { localStorage.setItem("sw_active_stage", String(id)); } catch { /* silent */ }
+  }, []);
+
   // Base fetch: /state is PRIMARY, supplementary calls are parallel
+  // CRITICAL: every setX below uses stable setters that deep-compare before updating.
+  // This prevents the "blinking" issue where 5-second polling re-renders the entire tree.
   const fetchAll = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true);
     setError(null);
     setIsPolling(true);
+    let hasUpdates = false;
     try {
       const stateResult = await dataService.getState();
-      setBrainState(stateResult);
+      const nextBrain = stateResult;
+      if (!deepEqual(nextBrain, brainStateRef.current)) { setBrainStateRaw(nextBrain); hasUpdates = true; }
 
       const campaignsMap = (stateResult as any).campaigns || {};
       const campaignsList = Object.values(campaignsMap);
-      setCampaigns(campaignsList);
+      if (!deepEqual(campaignsList, campaignsRef.current)) { setCampaignsRaw(campaignsList); hasUpdates = true; }
 
-      const cid = campaignId || (campaignsList[0] as any)?.id || "main-campaign";
-      if (!campaignId && (campaignsList[0] as any)?.id) setCampaignIdState(cid);
+      const cid = campaignIdRef.current || (campaignsList[0] as any)?.id || "main-campaign";
+      if (!campaignIdRef.current && (campaignsList[0] as any)?.id) setCampaignIdState(cid);
 
       const activeCampaign = campaignsMap[cid] || campaignsList[0] || null;
-      setCampaign(activeCampaign);
+      if (!deepEqual(activeCampaign, campaignRef.current)) { setCampaignRaw(activeCampaign); hasUpdates = true; }
 
-      setScheduler((stateResult as any).scheduler || null);
+      const nextScheduler = (stateResult as any).scheduler || null;
+      if (!deepEqual(nextScheduler, schedulerRef.current)) { setSchedulerRaw(nextScheduler); hasUpdates = true; }
 
-      setStageData({
+      const nextStageData = {
         researchRecords: (stateResult as any).researchRecords || [],
         analyticsEvents: (stateResult as any).analyticsEvents || [],
         outreachEvents: (stateResult as any).outreachEvents || [],
@@ -269,7 +328,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         safety: (stateResult as any).safetyExecutions || [],
         decisions: (stateResult as any).decisions || [],
         contentPacks: (stateResult as any).contentPacks || [],
-      });
+      };
+      if (!deepEqual(nextStageData, stageDataRef.current)) { setStageDataRaw(nextStageData); hasUpdates = true; }
 
       const cId = getCampaignId();
       const [healthData, connectors, reqs, diagnostics, prospectPipe, prospects, fundPipe, fundInv, fundRun, reeng] = await Promise.allSettled([
@@ -285,38 +345,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dataService.getReengagementQueue(cId).catch(() => null),
       ]);
 
-      setHealth(healthData.status === "fulfilled" ? healthData.value : null);
+      const nextHealth = healthData.status === "fulfilled" ? healthData.value : null;
+      if (!deepEqual(nextHealth, healthRef.current)) { setHealthRaw(nextHealth); hasUpdates = true; }
 
       const connectorArr = connectors.status === "fulfilled" ? (connectors.value as any[]) : [];
-      setConnectorStatuses(connectorArr);
+      if (!deepEqual(connectorArr, connectorStatusesRef.current)) { setConnectorStatusesRaw(connectorArr); hasUpdates = true; }
       if (connectorArr.length > 0) {
-        setConnectorDrafts(current => {
-          const next = { ...current };
-          for (const st of connectorArr) {
-            if (st && st.connector && !next[st.connector]) next[st.connector] = { baseUrl: st.baseUrl || "", token: "" };
-          }
-          return next;
-        });
+        const nextDrafts = { ...connectorDraftsRef.current };
+        let draftsChanged = false;
+        for (const st of connectorArr) {
+          if (st && st.connector && !nextDrafts[st.connector]) { nextDrafts[st.connector] = { baseUrl: st.baseUrl || "", token: "" }; draftsChanged = true; }
+        }
+        if (draftsChanged) setConnectorDraftsRaw(nextDrafts);
       }
 
-      setSetupRequirements(reqs.status === "fulfilled" ? reqs.value : null);
-      setOpenClawDiagnostics(diagnostics.status === "fulfilled" ? ((diagnostics.value as any)?.diagnostics || []) : []);
-      setProspectPipeline(prospectPipe.status === "fulfilled" ? prospectPipe.value : null);
-      setProspectingRuns(prospects.status === "fulfilled" ? prospects.value : []);
-      setFundingPipeline(fundPipe.status === "fulfilled" ? fundPipe.value : null);
-      setFundingInvestors(fundInv.status === "fulfilled" ? fundInv.value : []);
-      setFundingRuns(fundRun.status === "fulfilled" ? fundRun.value : []);
-      setReengagement(reeng.status === "fulfilled" ? reeng.value : null);
-      setPendingSafetyCount(((stateResult as any).safetyExecutions || []).filter((r: any) => r.status === "pending").length);
+      const nextSetupReqs = reqs.status === "fulfilled" ? reqs.value : null;
+      if (!deepEqual(nextSetupReqs, setupRequirementsRef.current)) { setSetupRequirementsRaw(nextSetupReqs); hasUpdates = true; }
 
-      setLastRefresh(new Date().toLocaleTimeString());
+      const nextDiagnostics = diagnostics.status === "fulfilled" ? ((diagnostics.value as any)?.diagnostics || []) : [];
+      if (!deepEqual(nextDiagnostics, openClawDiagnosticsRef.current)) { setOpenClawDiagnosticsRaw(nextDiagnostics); hasUpdates = true; }
+
+      const nextProspectPipe = prospectPipe.status === "fulfilled" ? prospectPipe.value : null;
+      if (!deepEqual(nextProspectPipe, prospectPipelineRef.current)) { setProspectPipelineRaw(nextProspectPipe); hasUpdates = true; }
+
+      const nextProspects = prospects.status === "fulfilled" ? prospects.value : [];
+      if (!deepEqual(nextProspects, prospectingRunsRef.current)) { setProspectingRunsRaw(nextProspects); hasUpdates = true; }
+
+      const nextFundPipe = fundPipe.status === "fulfilled" ? fundPipe.value : null;
+      if (!deepEqual(nextFundPipe, fundingPipelineRef.current)) { setFundingPipelineRaw(nextFundPipe); hasUpdates = true; }
+
+      const nextFundInv = fundInv.status === "fulfilled" ? fundInv.value : [];
+      if (!deepEqual(nextFundInv, fundingInvestorsRef.current)) { setFundingInvestorsRaw(nextFundInv); hasUpdates = true; }
+
+      const nextFundRuns = fundRun.status === "fulfilled" ? fundRun.value : [];
+      if (!deepEqual(nextFundRuns, fundingRunsRef.current)) { setFundingRunsRaw(nextFundRuns); hasUpdates = true; }
+
+      const nextReeng = reeng.status === "fulfilled" ? reeng.value : null;
+      if (!deepEqual(nextReeng, reengagementRef.current)) { setReengagementRaw(nextReeng); hasUpdates = true; }
+
+      const nextSafetyCount = ((stateResult as any).safetyExecutions || []).filter((r: any) => r.status === "pending").length;
+      if (nextSafetyCount !== pendingSafetyCountRef.current) { setPendingSafetyCountRaw(nextSafetyCount); hasUpdates = true; }
+
+      // Only update timestamp when data actually changed — prevents DecisionRow re-fetch on every poll
+      if (hasUpdates) setLastRefresh(new Date().toLocaleTimeString());
     } catch (err: any) {
       setError(err.message || "Failed to fetch data");
     } finally {
       setIsLoading(false);
       setIsPolling(false);
     }
-  }, [campaignId, getCampaignId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getCampaignId]);
 
   const fetchAllRef = useRef(fetchAll);
   fetchAllRef.current = fetchAll;
@@ -332,6 +411,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { saveTargetMarkets(targetMarkets); }, [targetMarkets]);
   useEffect(() => { savePitches(pitches); }, [pitches]);
   useEffect(() => { localStorage.setItem("sw_research_dossiers", JSON.stringify(researchDossiers)); }, [researchDossiers]);
+  // Persist active stage whenever it changes
+  useEffect(() => {
+    try { localStorage.setItem("sw_active_stage", String(activeStage)); } catch { /* silent */ }
+  }, [activeStage]);
 
   // Auto-trigger research when business profile has a website
   useEffect(() => {
@@ -573,7 +656,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       fundingPipeline, fundingInvestors, fundingRuns, reengagement,
       setupRequirements, openClawDiagnostics, scheduler, connectorDrafts, researchDossiers,
     },
-    setActiveStage, setCampaignId, refresh, runAutomation, generateContent, clearError,
+    setActiveStage: setActiveStagePersisted, setCampaignId, refresh, runAutomation, generateContent, clearError,
     toggleApproval, approveVariant, rejectVariant,
     updateBusinessProfile, setBusinessResearchStatus,
     approveTargetMarket, rejectTargetMarket,

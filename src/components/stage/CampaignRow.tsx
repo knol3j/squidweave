@@ -10,7 +10,13 @@ import GitHubIntegration from "@/components/funnel/GitHubIntegration";
 export default function CampaignRow() {
   const { state, updateBusinessProfile, runResearch } = useApp();
   const { campaign, businessProfile } = state;
-  const [tab, setTab] = useState<"profile" | "domain" | "investors" | "social" | "github">("profile");
+  const [tab, setTabRaw] = useState<"profile" | "domain" | "investors" | "social" | "github">(() => {
+    try { const s = localStorage.getItem("sw_tab_campaign"); return (s as any) || "profile"; } catch { return "profile"; }
+  });
+  const setTab = (t: "profile" | "domain" | "investors" | "social" | "github") => {
+    setTabRaw(t);
+    try { localStorage.setItem("sw_tab_campaign", t); } catch { /* silent */ }
+  };
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});

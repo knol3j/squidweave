@@ -19,6 +19,8 @@ export default function DecisionRow() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch data only when campaignId changes — NOT on every poll refresh
+  // This prevents the "blinking" caused by lastRefresh changing every 5s
   useEffect(() => {
     if (!campaignId) return;
     setLoading(true);
@@ -34,7 +36,8 @@ export default function DecisionRow() {
       if (pipe.status === "fulfilled") setPipeline(pipe.value);
       setLoading(false);
     }).catch(e => { setError(e.message); setLoading(false); });
-  }, [campaignId, state.lastRefresh]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId]);
 
   const handleDiscover = async () => {
     setGeneratingMarkets(true);
