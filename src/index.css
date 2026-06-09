@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #020617;
+    --bg-surface: #08111f;
+    --bg-surface-2: #0f172a;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148,163,184,0.35) transparent;
+  }
+
+  body {
+    @apply bg-[#020617] text-slate-100 antialiased;
+    background-image:
+      radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 32%),
+      radial-gradient(circle at top right, rgba(244, 114, 182, 0.1), transparent 24%),
+      linear-gradient(180deg, #020617 0%, #08111f 55%, #020617 100%);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.55); }
+}
+
+@layer components {
+  .glass-panel {
+    @apply rounded-2xl border border-white/10 bg-[#08111f]/88 shadow-[0_16px_60px_rgba(2,6,23,0.45)] backdrop-blur-xl;
+  }
+  .stage-border-indigo { border-left: 3px solid #6366f1; }
+  .stage-border-cyan   { border-left: 3px solid #06b6d4; }
+  .stage-border-amber  { border-left: 3px solid #f59e0b; }
+  .stage-border-rose   { border-left: 3px solid #f43f5e; }
+  .stage-border-emerald{ border-left: 3px solid #10b981; }
+  .stage-border-violet { border-left: 3px solid #8b5cf6; }
+  .stage-border-locked { border-left: 3px solid rgba(255,255,255,0.06); }
+}
