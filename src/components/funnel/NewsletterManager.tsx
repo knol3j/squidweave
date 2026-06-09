@@ -247,7 +247,13 @@ export default function NewsletterManager() {
   );
 
   /* -- tabs -- */
-  const [activeTab, setActiveTab] = useState<Tab>("campaigns");
+  const [activeTab, setActiveTabRaw] = useState<Tab>(() => {
+    try { return (localStorage.getItem("sw_newsletter_tab") as Tab) || "campaigns"; } catch { return "campaigns"; }
+  });
+  const setActiveTab = (tab: Tab) => {
+    setActiveTabRaw(tab);
+    try { localStorage.setItem("sw_newsletter_tab", tab); } catch { /* silent */ }
+  };
 
   /* -- localStorage sync -- */
   useEffect(() => { saveJSON("nm_subscribers", subscribers); }, [subscribers]);

@@ -54,6 +54,8 @@ export default function OutreachRow() {
     setSavingConnector(null);
   };
 
+  // Only re-fetch when campaignId actually changes — NOT on every poll refresh
+  // This prevents the UI from resetting while the user is working
   useEffect(() => {
     if (!campaignId) return;
     setLoading(true);
@@ -67,7 +69,7 @@ export default function OutreachRow() {
       if (s.status === "fulfilled") setSafety(s.value);
       setLoading(false);
     });
-  }, [campaignId, state.lastRefresh]);
+  }, [campaignId]); // ← intentionally NOT state.lastRefresh
 
   const checkDedupe = async () => {
     if (!dedupeKey.trim()) return;
@@ -76,7 +78,7 @@ export default function OutreachRow() {
   };
 
   if (!campaignId) return <Empty message="Select a campaign first" />;
-  if (loading) return <Loading />;
+  // Don't unmount children for loading — show inline spinner instead
 
   const tabs = [
     { key: "campaigns" as const, label: "All Campaigns", icon: LayoutDashboard },

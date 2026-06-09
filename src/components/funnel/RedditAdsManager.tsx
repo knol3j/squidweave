@@ -63,9 +63,21 @@ function formatCurrency(n: number): string {
 type TabId = "campaigns" | "builder" | "creative" | "analytics";
 
 export default function RedditAdsManager() {
-  const [activeTab, setActiveTab] = useState<TabId>("campaigns");
+  const [activeTab, setActiveTabRaw] = useState<TabId>(() => {
+    try { return (localStorage.getItem("sw_reddit_view") as TabId) || "campaigns"; } catch { return "campaigns"; }
+  });
+  const setActiveTab = (tab: TabId) => {
+    setActiveTabRaw(tab);
+    try { localStorage.setItem("sw_reddit_view", tab); } catch { /* silent */ }
+  };
   const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignIdRaw] = useState<string | null>(() => {
+    try { return localStorage.getItem("sw_reddit_selected") || null; } catch { return null; }
+  });
+  const setSelectedCampaignId = (id: string | null) => {
+    setSelectedCampaignIdRaw(id);
+    try { if (id) localStorage.setItem("sw_reddit_selected", id); else localStorage.removeItem("sw_reddit_selected"); } catch { /* silent */ }
+  };
   const [filterObjective, setFilterObjective] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
