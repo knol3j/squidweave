@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { dataService } from "@/services/dataService";
 
 /** Deep equality check for state comparison — prevents unnecessary re-renders */
@@ -313,10 +313,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const campaignsList = Object.values(campaignsMap);
         if (!deepEqual(campaignsList, campaignsRef.current)) { setCampaignsRaw(campaignsList); changed = true; }
 
-        const cid = campaignIdRef.current || (campaignsList[0] as any)?.id || "main-campaign";
-        if (!campaignIdRef.current && (campaignsList[0] as any)?.id) setCampaignIdState(cid);
-
-        const activeCampaign = campaignsMap[cid] || campaignsList[0] || null;
+        // Silent poll: NEVER change campaignId — that would reset the user's view
+        const cid = campaignIdRef.current || "main-campaign";
+        const activeCampaign = cid && campaignsMap[cid] ? campaignsMap[cid] : campaignsList[0] || null;
         if (!deepEqual(activeCampaign, campaignRef.current)) { setCampaignRaw(activeCampaign); changed = true; }
 
         const nextScheduler = (stateResult as any).scheduler || null;
@@ -394,9 +393,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const nextSafetyCount = ((stateResult as any).safetyExecutions || []).filter((r: any) => r.status === "pending").length;
         if (nextSafetyCount !== pendingSafetyCountRef.current) { setPendingSafetyCountRaw(nextSafetyCount); changed = true; }
 
+        // Silent poll: never update lastRefresh — prevents child useEffects from re-firing
         if (changed) {
           noChangeCountRef.current = 0;
-          setLastRefresh(new Date().toLocaleTimeString());
         } else {
           noChangeCountRef.current++;
         }
@@ -420,8 +419,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const campaignsList = Object.values(campaignsMap);
       if (!deepEqual(campaignsList, campaignsRef.current)) { setCampaignsRaw(campaignsList); hasUpdates = true; }
 
+      // Only auto-select campaign on explicit refresh if user hasn't picked one
       const cid = campaignIdRef.current || (campaignsList[0] as any)?.id || "main-campaign";
-      if (!campaignIdRef.current && (campaignsList[0] as any)?.id) setCampaignIdState(cid);
+      if (!campaignIdRef.current && (campaignsList[0] as any)?.id) {
+        setCampaignIdState(cid);
+        campaignIdRef.current = cid;
+      }
 
       const activeCampaign = campaignsMap[cid] || campaignsList[0] || null;
       if (!deepEqual(activeCampaign, campaignRef.current)) { setCampaignRaw(activeCampaign); hasUpdates = true; }
@@ -516,18 +519,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const fetchAllRef = useRef(fetchAll);
   fetchAllRef.current = fetchAll;
 
-  // Adaptive polling: backs off when data isn't changing (prevents unnecessary work)
+  // Adaptive polling: starts silently after 2s, backs off when no data changes
+  // NEVER calls fetchAll(false) — full refresh would flash loading and reset UI
   useEffect(() => {
-    fetchAllRef.current(false);
     const schedule = () => {
       const backoffIdx = Math.min(noChangeCountRef.current, POLL_BACKOFF.length - 1);
       const delay = POLL_BACKOFF[backoffIdx];
       timerRef.current = setTimeout(() => {
         fetchAllRef.current(true);
-        schedule(); // reschedule with potentially different delay
+        schedule();
       }, delay);
     };
-    schedule();
+    timerRef.current = setTimeout(() => { fetchAllRef.current(true); schedule(); }, 2000);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
   useEffect(() => { saveApprovals(approvals); }, [approvals]);
@@ -773,9 +776,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     catch (err: any) { setErrorGuarded(err.message || String(err)); }
   }, [getCampaignId, fetchAll]);
 
-  const stages = computeStages(campaign, stageData, approvals, businessProfile, targetMarkets, pitches);
+  // Memoize stages — only recalculate when dependencies actually change
+  // This prevents StageRow children from re-rendering on every context update
+  const stages = useMemo(
+    () => computeStages(campaign, stageData, approvals, businessProfile, targetMarkets, pitches),
+    [campaign, stageData, approvals, businessProfile, targetMarkets, pitches]
+  );
 
-  const value: AppContextValue = {
+  // Memoize the entire context value — prevents ALL consumers from re-rendering
+  // when unrelated state changes (e.g., silent poll updates backend data)
+  const value: AppContextValue = useMemo(() => ({
     state: {
       campaigns, campaign, campaignId, stages, activeStage, isLoading, error, health, lastRefresh, isPolling,
       approvals, pendingSafetyCount, businessProfile, targetMarkets, pitches,
@@ -791,7 +801,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     runResearch, discoverMarkets,
     generateProspects, enrichProspects, sequenceProspects, runFunding,
     updateConnector, runPromptAutopilot, ingestOutcomes, addResearchRecord, getTargetDecision,
-  };
+  }), [
+    campaigns, campaign, campaignId, stages, activeStage, isLoading, error, health, lastRefresh, isPolling,
+    approvals, pendingSafetyCount, businessProfile, targetMarkets, pitches,
+    brainState, connectorStatuses, prospectPipeline, prospectingRuns,
+    fundingPipeline, fundingInvestors, fundingRuns, reengagement,
+    setupRequirements, openClawDiagnostics, scheduler, connectorDrafts, researchDossiers,
+    setActiveStagePersisted, setCampaignId, refresh, runAutomation, generateContent, clearError,
+    toggleApproval, approveVariant, rejectVariant,
+    updateBusinessProfile, setBusinessResearchStatus,
+    approveTargetMarket, rejectTargetMarket,
+    approvePitch, rejectPitch, generatePitches,
+    runResearch, discoverMarkets,
+    generateProspects, enrichProspects, sequenceProspects, runFunding,
+    updateConnector, runPromptAutopilot, ingestOutcomes, addResearchRecord, getTargetDecision,
+  ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
