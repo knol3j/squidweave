@@ -923,9 +923,24 @@ function AnalyticsDashboard({ campaign, onBack }: { campaign: AdCampaign; onBack
    ═══════════════════════════════════════════ */
 
 export default function MetaAdsManager() {
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setViewRaw] = useState<ViewMode>(() => {
+    try { return (localStorage.getItem("sw_meta_view") as ViewMode) || "list"; } catch { return "list"; }
+  });
+  const setView = (v: ViewMode) => {
+    setViewRaw(v);
+    try { localStorage.setItem("sw_meta_view", v); } catch { /* silent */ }
+  };
   const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState<AdCampaign | null>(null);
+  const [selectedCampaign, setSelectedCampaignRaw] = useState<AdCampaign | null>(() => {
+    try {
+      const saved = localStorage.getItem("sw_meta_selected");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const setSelectedCampaign = (c: AdCampaign | null) => {
+    setSelectedCampaignRaw(c);
+    try { if (c) localStorage.setItem("sw_meta_selected", JSON.stringify(c)); else localStorage.removeItem("sw_meta_selected"); } catch { /* silent */ }
+  };
 
   // Load campaigns on mount
   useEffect(() => {

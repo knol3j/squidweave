@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Target, BookOpen, DollarSign, Users, Check, X, Sparkles, Loader2, GitBranch, Zap, Send, UserSearch, Swords } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { dataService } from "@/services/dataService";
@@ -6,11 +6,17 @@ import ProspectIntelligence from "@/components/funnel/ProspectIntelligence";
 import CompetitiveIntel from "@/components/funnel/CompetitiveIntel";
 
 
-export default function DecisionRow() {
+const DecisionRow = memo(function DecisionRow() {
   const { state, approveTargetMarket, rejectTargetMarket, discoverMarkets, generateProspects, enrichProspects, sequenceProspects } = useApp();
   const { campaign, businessProfile, targetMarkets } = state;
   const campaignId = campaign?.id || "";
-  const [tab, setTab] = useState<"markets" | "targets" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive">("markets");
+  const [tab, setTabRaw] = useState<"markets" | "targets" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive">(() => {
+    try { const s = localStorage.getItem("sw_tab_decision"); return (s as any) || "markets"; } catch { return "markets"; }
+  });
+  const setTab = (t: "markets" | "targets" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive") => {
+    setTabRaw(t);
+    try { localStorage.setItem("sw_tab_decision", t); } catch { /* silent */ }
+  };
   const [targets, setTargets] = useState<any[]>([]);
   const [playbooks, setPlaybooks] = useState<any[]>([]);
   const [investors, setInvestors] = useState<any[]>([]);
@@ -46,7 +52,6 @@ export default function DecisionRow() {
   };
 
   if (!campaignId) return <Empty message="Select a campaign first" />;
-  if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
 
   const tabs = [
@@ -71,8 +76,10 @@ export default function DecisionRow() {
         ))}
       </div>
 
+      {loading && <Loading />}
+
       {/* Target Markets Tab */}
-      {tab === "markets" && (
+      {!loading && tab === "markets" && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-[10px] text-slate-600">
@@ -153,8 +160,8 @@ export default function DecisionRow() {
       )}
 
       {/* Ranked Targets Tab */}
-      {tab === "targets" && targets.length === 0 && <Empty message="No targets ranked yet" />}
-      {tab === "targets" && targets.length > 0 && (
+      {!loading && tab === "targets" && targets.length === 0 && <Empty message="No targets ranked yet" />}
+      {!loading && tab === "targets" && targets.length > 0 && (
         <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
           {targets.slice(0, 20).map((t: any) => (
             <div key={t.targetId || t.id} className="flex items-center gap-3 p-2.5 rounded-xl border border-white/[0.06] bg-[#0f172a]">
@@ -177,8 +184,8 @@ export default function DecisionRow() {
         </div>
       )}
 
-      {tab === "playbooks" && playbooks.length === 0 && <Empty message="No playbooks in memory" />}
-      {tab === "playbooks" && playbooks.length > 0 && (
+      {!loading && tab === "playbooks" && playbooks.length === 0 && <Empty message="No playbooks in memory" />}
+      {!loading && tab === "playbooks" && playbooks.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto custom-scrollbar">
           {playbooks.map((pb: any) => (
             <div key={pb.id} className="p-3 rounded-xl border border-white/[0.06] bg-[#0f172a]">
@@ -194,7 +201,7 @@ export default function DecisionRow() {
         </div>
       )}
 
-      {tab === "funding" && (
+      {!loading && tab === "funding" && (
         <div className="space-y-3">
           {pipeline && (
             <div className="flex gap-4 p-3 rounded-xl border border-white/[0.06] bg-[#0f172a]">
@@ -229,7 +236,7 @@ export default function DecisionRow() {
       )}
 
       {/* Prospecting Pipeline Tab */}
-      {tab === "pipeline" && (
+      {!loading && tab === "pipeline" && (
         <div className="space-y-3">
           {state.prospectPipeline ? (
             <>
@@ -273,13 +280,14 @@ export default function DecisionRow() {
       )}
 
       {/* Prospect Intelligence Tab */}
-      {tab === "prospects" && <ProspectIntelligence />}
+      {!loading && tab === "prospects" && <ProspectIntelligence />}
 
       {/* Competitive Intelligence Tab */}
-      {tab === "competitive" && <CompetitiveIntel />}
+      {!loading && tab === "competitive" && <CompetitiveIntel />}
     </div>
   );
-}
+});
+export default DecisionRow;
 
 function ScoreBar({ value, accent }: { value: number; accent: string }) {
   const pct = Math.min(100, Math.max(0, value));
