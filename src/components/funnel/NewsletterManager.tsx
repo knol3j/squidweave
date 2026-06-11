@@ -159,7 +159,7 @@ function createTemplate(name: string, type: TemplateType, subject: string, block
   return { id: makeId("tmpl"), name, type, subject, blocks, html: "", createdAt: now, updatedAt: now };
 }
 
-function getDefaultTemplates(): Template[] {
+function getStarterTemplates(): Template[] {
   return [
     createTemplate("Welcome Email", "Welcome", "Welcome to {{company}}, {{firstName}}!", [
       defaultBlock("header"),
@@ -237,8 +237,9 @@ export default function NewsletterManager() {
   );
 
   /* -- state: templates -- */
+  // Load templates — starts empty, user can add starter templates if desired
   const [templates, setTemplates] = useState<Template[]>(() =>
-    loadJSON<Template[]>("nm_templates", getDefaultTemplates())
+    loadJSON<Template[]>("nm_templates", [])
   );
 
   /* -- state: campaigns -- */
@@ -247,7 +248,13 @@ export default function NewsletterManager() {
   );
 
   /* -- tabs -- */
-  const [activeTab, setActiveTab] = useState<Tab>("campaigns");
+  const [activeTab, setActiveTabRaw] = useState<Tab>(() => {
+    try { return (localStorage.getItem("sw_newsletter_tab") as Tab) || "campaigns"; } catch { return "campaigns"; }
+  });
+  const setActiveTab = (tab: Tab) => {
+    setActiveTabRaw(tab);
+    try { localStorage.setItem("sw_newsletter_tab", tab); } catch { /* silent */ }
+  };
 
   /* -- localStorage sync -- */
   useEffect(() => { saveJSON("nm_subscribers", subscribers); }, [subscribers]);
@@ -1250,6 +1257,22 @@ function TemplatesTab({ templates, setTemplates }: { templates: Template[]; setT
           <button onClick={createNewTemplate} disabled={!newName} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-900 font-semibold rounded-lg text-sm transition-colors flex items-center gap-1"><Plus className="w-4 h-4" /> Create</button>
         </div>
       </div>
+
+      {templates.length === 0 && (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-12 text-center">
+          <Type className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-slate-400 mb-2">No templates yet</h3>
+          <p className="text-sm text-slate-500 mb-4 max-w-md mx-auto">
+            Create your own or load 5 starter templates (Welcome, Digest, Product Update, Announcement, Curated).
+          </p>
+          <button
+            onClick={() => setTemplates(getStarterTemplates())}
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold rounded-lg text-sm transition-colors"
+          >
+            Load Starters
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {templates.map(t => (

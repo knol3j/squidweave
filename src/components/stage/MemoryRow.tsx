@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Brain, BookOpen, Users, Sparkles } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { dataService } from "@/services/dataService";
 
-export default function MemoryRow() {
+const MemoryRow = memo(function MemoryRow() {
   const { state } = useApp();
   const campaignId = state.campaign?.id || "";
   const [tab, setTabRaw] = useState<"recall" | "playbooks" | "profiles">(() => {
@@ -44,7 +44,6 @@ export default function MemoryRow() {
   };
 
   if (!campaignId) return <Empty message="Select a campaign first" />;
-  if (loading) return <Loading />;
 
   const tabs = [
     { key: "recall" as const, label: "Recall", icon: Brain },
@@ -70,7 +69,9 @@ export default function MemoryRow() {
         </button>
       </div>
 
-      {tab === "recall" && (
+      {loading ? (
+        <Loading />
+      ) : tab === "recall" ? (
         <div>
           {!recall?.targetProfile && !recall?.semanticMemories ? <Empty message="No memory recall data yet" /> : (
             <div className="space-y-3">
@@ -110,9 +111,7 @@ export default function MemoryRow() {
             </div>
           )}
         </div>
-      )}
-
-      {tab === "playbooks" && (
+      ) : tab === "playbooks" ? (
         <div>
           {playbooks.length === 0 ? <Empty message="No playbooks in memory" /> : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto custom-scrollbar">
@@ -131,9 +130,7 @@ export default function MemoryRow() {
             </div>
           )}
         </div>
-      )}
-
-      {tab === "profiles" && (
+      ) : (
         <div>
           {profiles.length === 0 ? <Empty message="No target profiles" /> : (
             <div className="overflow-x-auto max-h-72 overflow-y-auto custom-scrollbar">
@@ -169,7 +166,9 @@ export default function MemoryRow() {
       )}
     </div>
   );
-}
+});
+
+export default MemoryRow;
 
 function Loading() { return <div className="py-6 text-center text-xs text-slate-600">Loading memory data...</div>; }
 function Empty({ message }: { message: string }) { return <div className="py-6 text-center text-xs text-slate-600">{message}</div>; }

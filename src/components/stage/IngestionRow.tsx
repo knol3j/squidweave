@@ -30,10 +30,10 @@ export default function IngestionRow() {
       if (o.status === "fulfilled") setOutreach(o.value);
       setLoading(false);
     }).catch(e => { setError(e.message); setLoading(false); });
-  }, [campaignId, state.lastRefresh]);
+  }, [campaignId]); // ← only re-fetch when campaign changes, NOT on every poll
 
   if (!campaignId) return <Empty message="Select a campaign first" />;
-  if (loading) return <Loading />;
+  // Show inline loading — don't unmount children
   if (error) return <ErrorMessage message={error} />;
 
   const tabs = [
