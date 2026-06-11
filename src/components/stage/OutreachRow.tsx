@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, Search, Shield, CheckCircle, XCircle, Mail, Lock, Cable, Unplug, Users, BarChart3, Workflow, CalendarClock, TrendingUp, FileText, LayoutDashboard, Facebook, Search as SearchIcon, Twitter, MessageSquare, Linkedin, Phone, Mail as MailIcon } from "lucide-react";
+import { AlertTriangle, Search, Shield, CheckCircle, XCircle, Mail, Lock, Cable, Unplug, Users, BarChart3, Workflow, CalendarClock, TrendingUp, FileText, LayoutDashboard, Facebook, Search as SearchIcon, Twitter, MessageSquare, Linkedin, Phone, Mail as MailIcon, Sparkles } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { dataService } from "@/services/dataService";
 import {
@@ -23,12 +23,13 @@ import RedditAdsManager from "@/components/funnel/RedditAdsManager";
 import LinkedInAdsManager from "@/components/funnel/LinkedInAdsManager";
 import ColdOutreachManager from "@/components/funnel/ColdOutreachManager";
 import NewsletterManager from "@/components/funnel/NewsletterManager";
+import AutonomousOutreach from "@/components/funnel/AutonomousOutreach";
 
 export default function OutreachRow() {
   const { state, toggleApproval, updateConnector } = useApp();
   const { campaign, approvals } = state;
   const campaignId = campaign?.id || "";
-  type OutreachTab = "campaigns" | "meta" | "google" | "twitter" | "reddit" | "linkedin" | "cold" | "newsletter" | "timeline" | "dlq" | "safety" | "gates" | "connectors" | "crm" | "analytics" | "workflows" | "meetings" | "revenue" | "reports";
+  type OutreachTab = "autonomous" | "campaigns" | "meta" | "google" | "twitter" | "reddit" | "linkedin" | "cold" | "newsletter" | "timeline" | "dlq" | "safety" | "gates" | "connectors" | "crm" | "analytics" | "workflows" | "meetings" | "revenue" | "reports";
   const [tab, setTabRaw] = useState<OutreachTab>(() => {
     try { const s = localStorage.getItem("sw_tab_outreach"); return (s as any) || "campaigns"; } catch { return "campaigns"; }
   });
@@ -54,6 +55,8 @@ export default function OutreachRow() {
     setSavingConnector(null);
   };
 
+  // Only re-fetch when campaignId actually changes — NOT on every poll refresh
+  // This prevents the UI from resetting while the user is working
   useEffect(() => {
     if (!campaignId) return;
     setLoading(true);
@@ -67,7 +70,7 @@ export default function OutreachRow() {
       if (s.status === "fulfilled") setSafety(s.value);
       setLoading(false);
     });
-  }, [campaignId, state.lastRefresh]);
+  }, [campaignId]); // ← intentionally NOT state.lastRefresh
 
   const checkDedupe = async () => {
     if (!dedupeKey.trim()) return;
@@ -76,9 +79,10 @@ export default function OutreachRow() {
   };
 
   if (!campaignId) return <Empty message="Select a campaign first" />;
-  if (loading) return <Loading />;
+  // Don't unmount children for loading — show inline spinner instead
 
   const tabs = [
+    { key: "autonomous" as const, label: "Investor Outreach", icon: Sparkles },
     { key: "campaigns" as const, label: "All Campaigns", icon: LayoutDashboard },
     { key: "meta" as const, label: "Meta", icon: Facebook },
     { key: "google" as const, label: "Google", icon: SearchIcon },
@@ -353,6 +357,9 @@ export default function OutreachRow() {
 
       {/* Custom Reports Tab */}
       {tab === "reports" && <CustomReports />}
+
+      {/* ─── AUTONOMOUS INVESTOR OUTREACH ─── */}
+      {tab === "autonomous" && <AutonomousOutreach />}
 
       {/* ─── ADVERTISING PLATFORMS ─── */}
       {tab === "campaigns" && <AdCampaignManager />}

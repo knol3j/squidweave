@@ -1133,7 +1133,13 @@ function ReplyInboxTab() {
 // ══════════════════════════════════════════════════════════════════════
 
 export default function ColdOutreachManager() {
-  const [activeTab, setActiveTab] = useState("campaigns");
+  const [activeTab, setActiveTabRaw] = useState<string>(() => {
+    try { return localStorage.getItem("sw_cold_tab") || "campaigns"; } catch { return "campaigns"; }
+  });
+  const setActiveTab = (tab: string) => {
+    setActiveTabRaw(tab);
+    try { localStorage.setItem("sw_cold_tab", tab); } catch { /* silent */ }
+  };
   const [tick, setTick] = useState(0);
 
   /* no seed data — all data comes from user-created content in localStorage */

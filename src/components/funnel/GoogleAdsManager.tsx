@@ -1797,9 +1797,30 @@ function AlignLeftIcon({ size = 16 }: { size?: number }) {
 
 export default function GoogleAdsManager() {
   const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
-  const [view, setView] = useState<ViewMode>("list");
-  const [selectedCampaign, setSelectedCampaign] = useState<AdCampaign | null>(null);
-  const [subTab, setSubTab] = useState<CampaignSubTab>("setup");
+  const [view, setViewRaw] = useState<ViewMode>(() => {
+    try { return (localStorage.getItem("sw_google_view") as ViewMode) || "list"; } catch { return "list"; }
+  });
+  const setView = (v: ViewMode) => {
+    setViewRaw(v);
+    try { localStorage.setItem("sw_google_view", v); } catch { /* silent */ }
+  };
+  const [selectedCampaign, setSelectedCampaignRaw] = useState<AdCampaign | null>(() => {
+    try {
+      const saved = localStorage.getItem("sw_google_selected");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const setSelectedCampaign = (c: AdCampaign | null) => {
+    setSelectedCampaignRaw(c);
+    try { if (c) localStorage.setItem("sw_google_selected", JSON.stringify(c)); else localStorage.removeItem("sw_google_selected"); } catch { /* silent */ }
+  };
+  const [subTab, setSubTabRaw] = useState<CampaignSubTab>(() => {
+    try { return (localStorage.getItem("sw_google_subtab") as CampaignSubTab) || "setup"; } catch { return "setup"; }
+  });
+  const setSubTab = (tab: CampaignSubTab) => {
+    setSubTabRaw(tab);
+    try { localStorage.setItem("sw_google_subtab", tab); } catch { /* silent */ }
+  };
   // Load campaigns on mount
   useEffect(() => {
     setCampaigns(loadCampaigns());

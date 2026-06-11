@@ -1,0 +1,195 @@
+{
+  "version": "1.0",
+  "parsedAt": "2026-06-10T00:00:00.000Z",
+  "rawText": "SQUIDWEAVE - The Autonomous Marketing Brain for B2B Growth\n\nTHE PROBLEM:\nB2B marketing is broken. Fragmented tools, manual workflows, and zero intelligence burn $120B annually with diminishing returns.\n- Tool Fragmentation: Marketers juggle 10+ disconnected apps for outreach, analytics, CRM, and content \u2014 no single source of truth.\n- No Intelligence Layer: Campaigns run on gut feeling, not data. Past learnings are lost. Every campaign starts from scratch.\n- Skyrocketing Costs: Enterprise stacks cost $800-2K per seat monthly. Mid-market companies are priced out or underserved.\n\nTHE SOLUTION:\nOne brain that does it all. Scrapes, decides, remembers, and executes \u2014 at zero per-seat cost.\n- Multi-Agent Orchestration: Autonomous agents discover conversations across Reddit, Twitter/X, and the web \u2014 then analyze, rank, and act on opportunities without human intervention.\n- AI Decision Engine: Scores tactics per campaign context and picks the optimal outreach strategy. No guesswork \u2014 every decision is data-driven.\n- Learning Memory: Compounds campaign outcomes into trusted playbooks. Performance improves with every execution \u2014 the brain gets smarter over time.\n\nTHE SQUIDWEAVE LOOP:\n1. CONNECT \u2014 Scrape Reddit, Twitter/X, Google, company sites\n2. DECIDE \u2014 Score tactics, pick optimal strategy per campaign\n3. EXECUTE \u2014 Generate localized outreach, send via SMTP\n4. LEARN \u2014 Consolidate outcomes into playbooks & memory\n5. REPEAT \u2014 Smarter every cycle\n\nKEY CAPABILITIES:\n- Multi-Platform Scraping: Reddit, Twitter/X, Google search, company websites \u2014 extract leads, conversations, and intent signals.\n- AI Decision Engine: Scores tactics per campaign context and selects the optimal outreach strategy automatically.\n- Episodic Memory: Consolidates outcomes into targetProfiles, tacticObservations, and trusted playbooks over time.\n- Zero-Cost Automation: SMTP delivery, free email enrichment, Cal.com scheduling \u2014 no per-seat SaaS subscriptions required.\n- Localization Engine: Generates locale-aware content packs via LM Studio with deterministic fallback for any market.\n- Safety-First Execution: DRY_RUN by default, execution receipts, live approval gates, and full audit trails for every action.\n\nMARKET:\n$8.3B global marketing automation market (2024), growing to $19.7B by 2032 at 12.3% CAGR. B2B segment growing at 14.1%.\n\nTRACTION:\n84+ production API endpoints. 6 core automation modules. 3 platform connectors live. Zero per-seat cost.\n- Full automation engine with scheduler (120s ticks)\n- AI decision scoring against real campaign summaries\n- Episodic memory: targetProfiles, tacticObservations, playbooks\n- Contact sourcing pipeline with dedup & enrichment\n- Localized content generation via LM Studio\n- GHL (GoHighLevel) bi-directional sync\n- VC funding pipeline with investor scoring engine\n- Zero-cost SMTP delivery + email enrichment\n- Docker + Postgres deployment ready\n- React UI (LocaleWeave) with auth guard\n- CI/CD via GitHub Actions\n- Desktop app (Electron) in development\n\nCOMPETITIVE EDGE:\n- Learning Memory: Episodic playbooks (vs basic workflows in HubSpot, none in Clay/Apollo)\n- Multi-Platform Scraping: Reddit, X, Web (vs limited in HubSpot, enrichment only in Clay)\n- AI Decision Engine: Tactic scoring (vs A/B testing in HubSpot, sequences in Clay)\n- Per-Seat Cost: Zero open core (vs $800-2K/mo HubSpot, $100-500/mo Clay)\n- Data Sovereignty: Local-first (vs cloud-only competitors)\n\nBUSINESS MODEL:\n- Open Source Core: Free, self-hosted, 3 connectors, community support\n- Enterprise: $500-2K/mo, managed cloud, CRM integrations, team collaboration\n- Professional Services: Custom, implementation consulting, white-label, training\n- Target revenue mix at $200K MRR: 60% Enterprise, 30% Services, 10% Open Core\n\nTHE ASK:\n$750K seed round. 18-month runway to Series A.\nUse of funds: 40% Engineering (2 senior hires), 30% Go-to-Market (community, content), 20% Infrastructure (cloud, ops), 10% Operations (legal, finance)\n\nMILESTONES TO SERIES A:\n- 1,000 active open-source installs\n- 50+ paying enterprise customers generating $50K MRR\n- Native Salesforce & HubSpot integrations shipped\n- Series A Target: $3-5M at $15-25M valuation\n",
+  "sections": [
+    {
+      "id": "sec-0",
+      "title": "The Problem",
+      "content": "B2B marketing is broken. Fragmented tools, manual workflows, and zero intelligence burn $120B annually with diminishing returns. Marketers juggle 10+ disconnected apps. Campaigns run on gut feeling. Enterprise stacks cost $800-2K per seat monthly.",
+      "bullets": [
+        "$120B annual B2B marketing tech spend with diminishing returns",
+        "10+ average tools in a marketer's stack, none talking to each other",
+        "$2K/mo per-seat cost of enterprise marketing automation suites"
+      ],
+      "order": 0
+    },
+    {
+      "id": "sec-1",
+      "title": "The Solution",
+      "content": "One brain that does it all. Scrapes, decides, remembers, and executes \u2014 at zero per-seat cost. The SquidWeave Loop: CONNECT \u2192 DECIDE \u2192 EXECUTE \u2192 LEARN \u2192 REPEAT.",
+      "bullets": [
+        "Multi-Agent Orchestration across Reddit, Twitter/X, and the web",
+        "AI Decision Engine scores tactics and picks optimal strategy",
+        "Learning Memory compounds campaign outcomes into trusted playbooks"
+      ],
+      "order": 1
+    },
+    {
+      "id": "sec-2",
+      "title": "Product Architecture",
+      "content": "Modular, extensible, local-first. Sources: OpenClaw/Reddit, Clawdbot/X, MoltBot/Web, GHL Bridge. Pipeline: Contact Sourcing \u2192 Brain (Decision, Planner, Memory, Orchestrator) \u2192 Output (Hermes Agent, LocaleWeave UI).",
+      "bullets": [
+        "Runtime: Node.js 18+, ES Modules",
+        "State: JSON file or Postgres 16",
+        "UI: React + Vite, dark mode",
+        "Safety: DRY_RUN default, approval gates, execution receipts"
+      ],
+      "order": 2
+    },
+    {
+      "id": "sec-3",
+      "title": "Key Capabilities",
+      "content": "Six capabilities that compound: Multi-Platform Scraping, AI Decision Engine, Episodic Memory, Zero-Cost Automation, Localization Engine, Safety-First Execution. Memory is the moat.",
+      "bullets": [
+        "Multi-Platform Scraping: Reddit, Twitter/X, Google search, company websites",
+        "AI Decision Engine: Tactic scoring per campaign context",
+        "Episodic Memory: targetProfiles, tacticObservations, trusted playbooks",
+        "Zero-Cost Automation: SMTP delivery, free email enrichment, Cal.com scheduling",
+        "Localization Engine: LM Studio with deterministic fallback",
+        "Safety-First: DRY_RUN default, approval gates, audit trails"
+      ],
+      "order": 3
+    },
+    {
+      "id": "sec-4",
+      "title": "Market Opportunity",
+      "content": "$8.3B global marketing automation market (2024), growing to $19.7B by 2032 at 12.3% CAGR. B2B segment at 14.1% CAGR. Key drivers: AI personalization, multi-channel demand, mid-market gap, data sovereignty.",
+      "bullets": [
+        "$8.3B market in 2024 \u2192 $19.7B by 2032",
+        "12.3% overall CAGR, 14.1% B2B segment CAGR",
+        "AI personalization \u2014 buyers expect tailored outreach",
+        "Data sovereignty \u2014 local-first is a growing requirement"
+      ],
+      "order": 4
+    },
+    {
+      "id": "sec-5",
+      "title": "Competitive Edge",
+      "content": "Memory, cost structure, and control \u2014 three moats. Only platform combining open-source pricing, learning memory, multi-platform scraping, and full data sovereignty.",
+      "bullets": [
+        "Episodic playbooks vs basic workflows (HubSpot) or none (Clay)",
+        "Zero per-seat cost vs $800-2K/mo (HubSpot) or $100-500/mo (Clay)",
+        "Local-first data sovereignty vs cloud-only competitors",
+        "Multi-platform scraping: Reddit, X, Web"
+      ],
+      "order": 5
+    },
+    {
+      "id": "sec-6",
+      "title": "Business Model",
+      "content": "Open core + enterprise ups. Land with open-source adoption, expand with enterprise features. Target mix at $200K MRR: 60% Enterprise, 30% Services, 10% Open Core.",
+      "bullets": [
+        "Open Source Core: Free, self-hosted, 3 connectors",
+        "Enterprise: $500-2K/mo, managed cloud, CRM integrations",
+        "Professional Services: Custom consulting, white-label, training"
+      ],
+      "order": 6
+    },
+    {
+      "id": "sec-7",
+      "title": "Traction & Roadmap",
+      "content": "84+ API endpoints. 6 automation modules. 3 connectors live. Zero per-seat cost. 18-month roadmap: Public Launch (1K installs) \u2192 Platform Scale ($50K MRR) \u2192 Ecosystem Growth ($200K MRR).",
+      "bullets": [
+        "84+ production API endpoints",
+        "6 core automation modules live",
+        "3 platform connectors",
+        "18-month path to Series A at $3-5M"
+      ],
+      "order": 7
+    },
+    {
+      "id": "sec-8",
+      "title": "The Ask",
+      "content": "$750K seed round. 18-month runway to Series A. Use of funds: 40% Engineering, 30% Go-to-Market, 20% Infrastructure, 10% Operations.",
+      "bullets": [
+        "$750K seed on 18-month runway",
+        "Milestones: 1K installs, 50 enterprise customers, $50K MRR",
+        "Series A gate: $3-5M at Month 18"
+      ],
+      "order": 8
+    }
+  ],
+  "extracted": {
+    "companyName": "SquidWeave",
+    "tagline": "The Autonomous Marketing Brain for B2B Growth",
+    "problem": "B2B marketing is broken. Fragmented tools, manual workflows, and zero intelligence burn $120B annually with diminishing returns. Marketers juggle 10+ disconnected apps.",
+    "solution": "One brain that does it all. Multi-agent orchestration, AI decision engine, and learning memory \u2014 at zero per-seat cost. The SquidWeave Loop: CONNECT \u2192 DECIDE \u2192 EXECUTE \u2192 LEARN \u2192 REPEAT.",
+    "marketSize": "$8.3B \u2192 $19.7B by 2032",
+    "traction": "84+ API endpoints, 6 automation modules, 3 platform connectors live, zero per-seat cost. Full automation engine with scheduler, AI decision scoring, episodic memory, contact sourcing pipeline, GHL bi-directional sync.",
+    "revenue": "Pre-revenue, seeking seed",
+    "growthRate": "Market growing 12.3% CAGR (14.1% B2B segment)",
+    "teamHighlights": "Solo founder with full-stack engineering background. 84+ API endpoints built. 6 automation modules shipping. Production-ready with Docker + Postgres deployment.",
+    "fundingAsk": "$750K",
+    "useOfFunds": "40% Engineering (2 senior hires), 30% Go-to-Market (community, content), 20% Infrastructure (cloud, ops), 10% Operations (legal, finance)",
+    "moat": "Episodic learning memory that compounds with every campaign. No competitor combines open-source pricing, learning memory, multi-platform scraping, and data sovereignty.",
+    "vision": "The last marketing platform you'll ever need. One brain that learns, adapts, and executes while you sleep.",
+    "customerCount": "Pre-launch, targeting 1K open-source installs",
+    "ARR": "",
+    "mrr": "",
+    "valuation": "",
+    "runway": "18-month runway to Series A",
+    "burnRate": "",
+    "ltv": "",
+    "cac": "",
+    "paybackPeriod": "",
+    "nrr": "",
+    "logoCustomers": [],
+    "keyMetrics": [
+      {
+        "label": "API Endpoints",
+        "value": "84+"
+      },
+      {
+        "label": "Automation Modules",
+        "value": "6"
+      },
+      {
+        "label": "Platform Connectors",
+        "value": "3"
+      },
+      {
+        "label": "Per-Seat Cost",
+        "value": "$0 (open core)"
+      },
+      {
+        "label": "Market Size",
+        "value": "$8.3B \u2192 $19.7B"
+      },
+      {
+        "label": "CAGR",
+        "value": "12.3% (14.1% B2B)"
+      },
+      {
+        "label": "Funding Ask",
+        "value": "$750K seed"
+      },
+      {
+        "label": "Runway",
+        "value": "18 months"
+      },
+      {
+        "label": "Target MRR at Series A",
+        "value": "$50K"
+      },
+      {
+        "label": "Series A Target",
+        "value": "$3-5M at $15-25M"
+      }
+    ],
+    "competitors": [
+      "HubSpot",
+      "Clay",
+      "Apollo",
+      "Marketo",
+      "Salesforce"
+    ],
+    "differentiators": [
+      "Episodic learning memory",
+      "Zero per-seat cost (open core)",
+      "Multi-platform scraping (Reddit, X, Web)",
+      "Local-first data sovereignty",
+      "AI decision engine with tactic scoring"
+    ]
+  }
+}

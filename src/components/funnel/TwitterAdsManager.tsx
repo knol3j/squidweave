@@ -120,9 +120,21 @@ function getCostPerResult(campaign: AdCampaign) {
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 export default function TwitterAdsManager() {
-  const [view, setView] = useState<View>("list");
+  const [view, setViewRaw] = useState<View>(() => {
+    try { return (localStorage.getItem("sw_twitter_view") as View) || "list"; } catch { return "list"; }
+  });
+  const setView = (v: View) => {
+    setViewRaw(v);
+    try { localStorage.setItem("sw_twitter_view", v); } catch { /* silent */ }
+  };
   const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [selectedCampaignId, setSelectedCampaignIdRaw] = useState<string | null>(() => {
+    try { return localStorage.getItem("sw_twitter_selected") || null; } catch { return null; }
+  });
+  const setSelectedCampaignId = (id: string | null) => {
+    setSelectedCampaignIdRaw(id);
+    try { if (id) localStorage.setItem("sw_twitter_selected", id); else localStorage.removeItem("sw_twitter_selected"); } catch { /* silent */ }
+  };
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [objectiveFilter, setObjectiveFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");

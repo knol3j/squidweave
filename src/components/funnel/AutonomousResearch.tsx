@@ -34,6 +34,7 @@ interface WikipediaEntry {
   summary: string;
   founded: string;
   headquarters: string;
+  revenue: string;
   keyPeople: string[];
   industry: string;
   url: string;
@@ -356,248 +357,44 @@ function inferIndustry(domain: string): string {
 }
 
 /* ================================================================== */
-/*  SEEDED DATA GENERATORS (used for enrichment & inference only)      */
+/*  DATA PLACEHOLDERS — no fabricated data. Unknown until user fills   */
 /* ================================================================== */
-const sizes = ["1-50", "50-200", "200-500", "500-1000", "1000-5000", "5000+"];
-const revenueRanges = ["<$1M", "$1M-$5M", "$5M-$10M", "$10M-$50M", "$50M-$100M", "$100M-$500M", "$500M+"];
-const foundedYears = ["2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024"];
-const locations = [
-  "San Francisco, CA", "New York, NY", "Austin, TX", "Seattle, WA",
-  "Boston, MA", "Denver, CO", "Chicago, IL", "Los Angeles, CA",
-  "London, UK", "Berlin, DE", "Toronto, CA", "Remote-first",
-];
 
-function randomSize(domain: string): string { return pickFromHash(domain, sizes); }
-function randomRevenue(domain: string): string { return pickFromHash(domain, revenueRanges); }
-function randomFounded(domain: string): string { return pickFromHash(domain, foundedYears); }
-function randomLocation(domain: string): string { return pickFromHash(domain, locations); }
+function unknownSize(_domain: string): string { return "Unknown"; }
+function unknownRevenue(_domain: string): string { return "Unknown"; }
+function unknownFounded(_domain: string): string { return "Unknown"; }
+function unknownLocation(_domain: string): string { return "Unknown"; }
 
 /* ---- Products ---- */
 interface Product { name: string; description: string; category: string; pricing?: string; }
 
-const productCatalog: Record<string, Product[]> = {
-  Healthcare: [
-    { name: "Patient Management Platform", description: "Electronic health records and patient scheduling system", category: "Core Platform", pricing: "$99/provider/month" },
-    { name: "Telehealth Suite", description: "HIPAA-compliant video consultations", category: "Telemedicine", pricing: "$49/month" },
-    { name: "Insurance Claims Engine", description: "Automated claims processing and verification", category: "Operations", pricing: "Custom" },
-    { name: "Analytics Dashboard", description: "Population health analytics and reporting", category: "Analytics", pricing: "$199/month" },
-  ],
-  Fintech: [
-    { name: "Payment Processing API", description: "Multi-currency payment gateway with instant settlement", category: "Payments", pricing: "2.9% + $0.30" },
-    { name: "Fraud Detection Engine", description: "ML-powered real-time transaction monitoring", category: "Security", pricing: "$0.05/transaction" },
-    { name: "Lending Platform", description: "Digital loan origination and servicing", category: "Lending", pricing: "Custom" },
-    { name: "Wealth Management Suite", description: "Portfolio tracking and robo-advisory tools", category: "Wealth", pricing: "0.25% AUM" },
-  ],
-  "E-commerce": [
-    { name: "Store Builder", description: "No-code storefront with 100+ themes", category: "Core", pricing: "$29/month" },
-    { name: "Inventory Manager", description: "Multi-channel inventory sync and forecasting", category: "Operations", pricing: "$79/month" },
-    { name: "Marketing Automation", description: "Abandoned cart recovery and email campaigns", category: "Marketing", pricing: "$49/month" },
-    { name: "Analytics Suite", description: "Customer lifetime value and cohort analysis", category: "Analytics", pricing: "$99/month" },
-  ],
-  EdTech: [
-    { name: "Learning Management System", description: "Course creation, student tracking, and assessments", category: "Core", pricing: "$8/student/month" },
-    { name: "Live Classroom", description: "Interactive virtual classroom with breakout rooms", category: "Live", pricing: "$49/instructor/month" },
-    { name: "Content Library", description: "Pre-built curriculum and lesson plans", category: "Content", pricing: "$199/month" },
-    { name: "Certification Engine", description: "Automated grading and credential issuance", category: "Assessment", pricing: "$2/certificate" },
-  ],
-  "Developer Tools": [
-    { name: "Cloud IDE", description: "Browser-based development environment with collaboration", category: "IDE", pricing: "$15/dev/month" },
-    { name: "CI/CD Pipeline", description: "Automated testing and deployment workflows", category: "DevOps", pricing: "$0.008/minute" },
-    { name: "API Gateway", description: "Rate limiting, authentication, and monitoring", category: "Infrastructure", pricing: "$29/month" },
-    { name: "Observability Suite", description: "Distributed tracing, logs, and metrics", category: "Monitoring", pricing: "$49/month" },
-  ],
-  "Marketing Tech": [
-    { name: "Customer Data Platform", description: "Unified customer profiles and segmentation", category: "Data", pricing: "$499/month" },
-    { name: "Campaign Manager", description: "Multi-channel campaign orchestration", category: "Campaigns", pricing: "$199/month" },
-    { name: "Attribution Engine", description: "Multi-touch revenue attribution modeling", category: "Analytics", pricing: "$299/month" },
-    { name: "Content Optimizer", description: "AI-powered A/B testing and personalization", category: "Optimization", pricing: "$149/month" },
-  ],
-  Cybersecurity: [
-    { name: "Threat Detection Platform", description: "AI-powered real-time threat intelligence", category: "Detection", pricing: "$12/endpoint/month" },
-    { name: "Vulnerability Scanner", description: "Automated security assessments and patching", category: "Prevention", pricing: "$499/month" },
-    { name: "SIEM Dashboard", description: "Security event logging and correlation", category: "Monitoring", pricing: "$999/month" },
-    { name: "Compliance Manager", description: "SOC 2, GDPR, HIPAA compliance automation", category: "Compliance", pricing: "Custom" },
-  ],
-  "HR Tech": [
-    { name: "Applicant Tracking System", description: "End-to-end hiring pipeline management", category: "Recruiting", pricing: "$149/month" },
-    { name: "HRIS Platform", description: "Employee records, onboarding, and offboarding", category: "Core HR", pricing: "$8/employee/month" },
-    { name: "Performance Reviews", description: "360-degree feedback and goal tracking", category: "Performance", pricing: "$5/employee/month" },
-    { name: "Payroll Engine", description: "Multi-state payroll and tax compliance", category: "Payroll", pricing: "$35/month base" },
-  ],
-  "B2B SaaS": [
-    { name: "Workflow Automation", description: "No-code business process automation", category: "Automation", pricing: "$49/user/month" },
-    { name: "Team Collaboration Hub", description: "Shared workspaces, docs, and messaging", category: "Collaboration", pricing: "$12/user/month" },
-    { name: "Analytics Dashboard", description: "Custom reports and KPI tracking", category: "Analytics", pricing: "$199/month" },
-    { name: "Integration Platform", description: "500+ native integrations and webhooks", category: "Integrations", pricing: "Custom" },
-  ],
-};
+// No hardcoded product catalog — products must be discovered via real APIs or entered by user
+const productCatalog: Record<string, Product[]> = {};
 
 function generateProducts(industry: string): Product[] {
   return productCatalog[industry] || productCatalog["B2B SaaS"];
 }
 
-/* ---- Tech stack ---- */
-const techPools: Record<string, string[]> = {
-  Healthcare: ["React", "Node.js", "PostgreSQL", "AWS", "Docker", "HIPAA Vault", "HL7 FHIR", "Kubernetes"],
-  Fintech: ["React", "Go", "PostgreSQL", "Redis", "AWS", "Stripe API", "Kafka", "Terraform"],
-  "E-commerce": ["Next.js", "Node.js", "MongoDB", "Vercel", "Stripe", "Algolia", "Redis", "Cloudflare"],
-  EdTech: ["React", "Python", "PostgreSQL", "AWS", "WebRTC", "TensorFlow", "Docker", "S3"],
-  "Developer Tools": ["TypeScript", "Rust", "PostgreSQL", "Redis", "Kubernetes", "GitHub Actions", "gRPC", "Prometheus"],
-  "Marketing Tech": ["React", "Python", "ClickHouse", "AWS", "Apache Airflow", "dbt", "BigQuery", "Looker"],
-  Cybersecurity: ["Rust", "Go", "PostgreSQL", "Kafka", "ElasticSearch", "eBPF", "AWS", "YARA"],
-  "HR Tech": ["React", "Ruby on Rails", "PostgreSQL", "Redis", "AWS", "Sidekiq", "Twilio", "DocuSign"],
-  "B2B SaaS": ["React", "Node.js", "PostgreSQL", "Redis", "AWS", "Docker", "Stripe", "Segment"],
-};
-
-function generateTechStack(industry: string): string[] {
-  return techPools[industry] || techPools["B2B SaaS"];
+/* ---- Tech stack — no fabricated data ---- */
+function generateTechStack(_industry: string): string[] {
+  // Tech stack must be discovered via real APIs (e.g., BuiltWith, StackShare) or entered by user
+  return [];
 }
 
-/* ---- Competitors ---- */
+/* ---- Competitors — no fabricated data ---- */
 interface Competitor { name: string; domain: string; overlap: string; threatLevel: string; }
 
-const competitorPools: Record<string, { name: string; domain: string }[]> = {
-  Healthcare: [
-    { name: "Epic Systems", domain: "epic.com" },
-    { name: "Cerner", domain: "cerner.com" },
-    { name: "Athenahealth", domain: "athenahealth.com" },
-    { name: "Teladoc", domain: "teladoc.com" },
-    { name: "Veeva Systems", domain: "veeva.com" },
-  ],
-  Fintech: [
-    { name: "Stripe", domain: "stripe.com" },
-    { name: "Plaid", domain: "plaid.com" },
-    { name: "Marqeta", domain: "marqeta.com" },
-    { name: "Brex", domain: "brex.com" },
-    { name: "Mercury", domain: "mercury.com" },
-  ],
-  "E-commerce": [
-    { name: "Shopify", domain: "shopify.com" },
-    { name: "BigCommerce", domain: "bigcommerce.com" },
-    { name: "WooCommerce", domain: "woocommerce.com" },
-    { name: "Squarespace", domain: "squarespace.com" },
-    { name: "Wix", domain: "wix.com" },
-  ],
-  EdTech: [
-    { name: "Coursera", domain: "coursera.org" },
-    { name: "Udemy", domain: "udemy.com" },
-    { name: "Canvas LMS", domain: "instructure.com" },
-    { name: "Blackboard", domain: "blackboard.com" },
-    { name: "Duolingo", domain: "duolingo.com" },
-  ],
-  "Developer Tools": [
-    { name: "GitHub", domain: "github.com" },
-    { name: "GitLab", domain: "gitlab.com" },
-    { name: "Vercel", domain: "vercel.com" },
-    { name: "Docker", domain: "docker.com" },
-    { name: "CircleCI", domain: "circleci.com" },
-  ],
-  "Marketing Tech": [
-    { name: "HubSpot", domain: "hubspot.com" },
-    { name: "Marketo", domain: "marketo.com" },
-    { name: "Segment", domain: "segment.com" },
-    { name: "Amplitude", domain: "amplitude.com" },
-    { name: "Klaviyo", domain: "klaviyo.com" },
-  ],
-  Cybersecurity: [
-    { name: "CrowdStrike", domain: "crowdstrike.com" },
-    { name: "Palo Alto Networks", domain: "paloaltonetworks.com" },
-    { name: "Cloudflare", domain: "cloudflare.com" },
-    { name: "SentinelOne", domain: "sentinelone.com" },
-    { name: "Wiz", domain: "wiz.io" },
-  ],
-  "HR Tech": [
-    { name: "Greenhouse", domain: "greenhouse.io" },
-    { name: "Lever", domain: "lever.co" },
-    { name: "Workday", domain: "workday.com" },
-    { name: "Gusto", domain: "gusto.com" },
-    { name: "BambooHR", domain: "bamboohr.com" },
-  ],
-  "B2B SaaS": [
-    { name: "Salesforce", domain: "salesforce.com" },
-    { name: "HubSpot", domain: "hubspot.com" },
-    { name: "Notion", domain: "notion.so" },
-    { name: "Asana", domain: "asana.com" },
-    { name: "Monday.com", domain: "monday.com" },
-  ],
-};
-
-const overlaps = ["Product", "Pricing", "Feature Set", "Market Segment", "Geography"];
-const threats = ["High", "Medium", "Low"];
-
-function generateCompetitors(industry: string): Competitor[] {
-  const pool = competitorPools[industry] || competitorPools["B2B SaaS"];
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 4).map((c) => ({
-    name: c.name,
-    domain: c.domain,
-    overlap: overlaps[Math.floor(Math.random() * overlaps.length)],
-    threatLevel: threats[Math.floor(Math.random() * threats.length)],
-  }));
+function generateCompetitors(_industry: string): Competitor[] {
+  // Competitors must be discovered via real APIs or entered by user
+  return [];
 }
 
 /* ---- Pain points ---- */
 interface PainPoint { problem: string; evidence: string; impact: string; confidence: number; }
 
-const painPointCatalog: Record<string, PainPoint[]> = {
-  Healthcare: [
-    { problem: "Fragmented patient data across systems", evidence: "Average hospital uses 16+ disconnected EHR platforms", impact: "High", confidence: 94 },
-    { problem: "High administrative overhead", evidence: "Administrative costs consume 25% of healthcare revenue", impact: "High", confidence: 91 },
-    { problem: "Patient no-show rates", evidence: "Industry average no-show rate is 18%, costing $150B annually", impact: "Medium", confidence: 87 },
-    { problem: "Regulatory compliance burden", evidence: "HIPAA violations cost $100K-$1.5M per incident", impact: "High", confidence: 96 },
-  ],
-  Fintech: [
-    { problem: "Payment fraud losses", evidence: "Global payment fraud expected to reach $40B by 2027", impact: "High", confidence: 95 },
-    { problem: "Complex compliance requirements", evidence: "PCI DSS compliance takes 6+ months on average", impact: "High", confidence: 92 },
-    { problem: "Customer churn due to poor UX", evidence: "68% of users abandon fintech apps after one bad experience", impact: "Medium", confidence: 88 },
-    { problem: "Integration with legacy banking", evidence: "Average fintech uses 5+ banking APIs with inconsistent reliability", impact: "Medium", confidence: 85 },
-  ],
-  "E-commerce": [
-    { problem: "Cart abandonment", evidence: "Average cart abandonment rate is 70.19% across industries", impact: "High", confidence: 97 },
-    { problem: "Customer acquisition cost inflation", evidence: "CAC has risen 60% in the last 5 years for DTC brands", impact: "High", confidence: 93 },
-    { problem: "Inventory mismanagement", evidence: "Overstocking costs retailers $1.75T annually globally", impact: "Medium", confidence: 89 },
-    { problem: "Returns processing", evidence: "Return rates average 20-30% for online purchases", impact: "Medium", confidence: 86 },
-  ],
-  EdTech: [
-    { problem: "Low course completion rates", evidence: "MOOC completion rates average only 3-6%", impact: "High", confidence: 93 },
-    { problem: "Engagement decay", evidence: "Student engagement drops 40% after week 3 in online courses", impact: "High", confidence: 90 },
-    { problem: "Content personalization gap", evidence: "78% of educators say one-size-fits-all content is their biggest challenge", impact: "Medium", confidence: 87 },
-    { problem: "Credential verification", evidence: "Fake credentials cost employers $5B annually in bad hires", impact: "Medium", confidence: 84 },
-  ],
-  "Developer Tools": [
-    { problem: "Developer onboarding friction", evidence: "New developers take 3-6 months to reach full productivity", impact: "High", confidence: 91 },
-    { problem: "Tool fragmentation", evidence: "Average developer uses 8-12 different tools daily", impact: "Medium", confidence: 88 },
-    { problem: "CI/CD pipeline failures", evidence: "22% of deployments fail due to environment inconsistencies", impact: "High", confidence: 90 },
-    { problem: "Documentation rot", evidence: "60% of internal docs are outdated within 3 months", impact: "Low", confidence: 82 },
-  ],
-  "Marketing Tech": [
-    { problem: "Data silos across channels", evidence: "Marketers waste 21% of budget due to poor data integration", impact: "High", confidence: 94 },
-    { problem: "Attribution complexity", evidence: "Only 17% of marketers are confident in their attribution models", impact: "High", confidence: 92 },
-    { problem: "Ad fatigue and banner blindness", evidence: "Average click-through rate for display ads is 0.35%", impact: "Medium", confidence: 89 },
-    { problem: "Privacy regulation compliance", evidence: "GDPR fines exceeded EUR2B in 2023 alone", impact: "High", confidence: 95 },
-  ],
-  Cybersecurity: [
-    { problem: "Alert fatigue", evidence: "SOC teams receive 4,000+ alerts daily, 67% are false positives", impact: "High", confidence: 96 },
-    { problem: "Talent shortage", evidence: "3.5M cybersecurity jobs will be unfilled by 2025", impact: "High", confidence: 94 },
-    { problem: "Mean time to detect breaches", evidence: "Average breach detection time is 287 days", impact: "High", confidence: 93 },
-    { problem: "Cloud misconfiguration", evidence: "65% of cloud security incidents are due to misconfiguration", impact: "Medium", confidence: 91 },
-  ],
-  "HR Tech": [
-    { problem: "Time-to-hire increasing", evidence: "Average time-to-hire reached 44 days in 2024", impact: "High", confidence: 92 },
-    { problem: "Candidate ghosting", evidence: "67% of recruiters report increased candidate ghosting", impact: "Medium", confidence: 88 },
-    { problem: "Employee engagement decline", evidence: "Only 15% of global employees feel engaged at work", impact: "High", confidence: 90 },
-    { problem: "Onboarding inefficiency", evidence: "Poor onboarding leads to 50% higher turnover in first year", impact: "Medium", confidence: 87 },
-  ],
-  "B2B SaaS": [
-    { problem: "High customer acquisition cost", evidence: "SaaS companies spend 30-50% of revenue on S&M", impact: "High", confidence: 93 },
-    { problem: "Long sales cycles", evidence: "Enterprise SaaS sales cycles average 3-6 months", impact: "High", confidence: 91 },
-    { problem: "Feature bloat", evidence: "80% of SaaS features are used by less than 5% of users", impact: "Low", confidence: 84 },
-    { problem: "Churn prediction difficulty", evidence: "Unexpected churn accounts for 40% of lost revenue", impact: "Medium", confidence: 88 },
-  ],
-};
-
-function generatePainPoints(industry: string): PainPoint[] {
-  return painPointCatalog[industry] || painPointCatalog["B2B SaaS"];
+function generatePainPoints(_industry: string): PainPoint[] {
+  // Pain points must be discovered via real research or entered by user
+  return [];
 }
 
 /* ---- Decision makers ---- */
@@ -607,9 +404,7 @@ interface DecisionMaker {
   bestChannel: string; firstTouchMessage: string;
 }
 
-const firstNames = ["Sarah","Michael","Jennifer","David","Emily","James","Jessica","Robert","Amanda","William","Laura","Daniel","Michelle","Christopher","Rebecca"];
-const lastNames = ["Chen","Rodriguez","Johnson","Smith","Williams","Brown","Davis","Miller","Wilson","Moore","Taylor","Anderson","Thomas","Jackson","White"];
-
+// No fabricated decision maker data — must be discovered via real APIs or entered by user
 const dmBySize: Record<string, { title: string; dept: string }[]> = {
   "1-50": [
     { title: "CEO & Co-Founder", dept: "Executive" },
@@ -656,26 +451,9 @@ const dmBySize: Record<string, { title: string; dept: string }[]> = {
 
 const outreachChannels = ["Email", "LinkedIn", "Email"];
 
-function generateDecisionMakers(size: string, domain: string): DecisionMaker[] {
-  const roles = dmBySize[size] || dmBySize["1-50"];
-  const h = hashCode(domain);
-  return roles.map((role, i) => {
-    const fn = firstNames[(h + i * 3) % firstNames.length];
-    const ln = lastNames[(h + i * 7) % lastNames.length];
-    const power = Math.max(5, Math.min(10, 10 - i + (h % 3)));
-    const tech = Math.max(4, Math.min(10, 8 - i + ((h + i) % 3)));
-    return {
-      name: `${fn} ${ln}`,
-      title: role.title,
-      department: role.dept,
-      emailPattern: `${fn.toLowerCase()}.${ln.toLowerCase()}@${domain}`,
-      linkedinUrl: `https://linkedin.com/in/${fn.toLowerCase()}-${ln.toLowerCase()}-${(h % 900) + 100}`,
-      powerScore: power,
-      techSavviness: tech,
-      bestChannel: outreachChannels[(h + i) % outreachChannels.length],
-      firstTouchMessage: `Hi ${fn}, I noticed ${domainToName(domain)} is scaling fast in the ${inferIndustry(domain)} space. We\'ve helped similar companies streamline their growth operations. Worth a brief conversation?`,
-    };
-  });
+function generateDecisionMakers(_size: string, _domain: string): DecisionMaker[] {
+  // Decision makers must be discovered via real APIs or entered by user
+  return [];
 }
 
 /* ---- Pitch angles ---- */
@@ -867,6 +645,7 @@ function parseWikipediaData(data: Record<string, unknown>): { entry: WikipediaEn
     summary: (data.extract as string) || "",
     founded: "",
     headquarters: "",
+    revenue: "",
     keyPeople: [],
     industry: "",
     url: (((data.content_urls as Record<string, unknown>)?.desktop as Record<string, unknown>)?.page as string) || `https://en.wikipedia.org/wiki/${(data.title as string) || ""}`,
@@ -1035,7 +814,7 @@ function generateTimeline(
     {
       date: fundingRounds[0]?.date || new Date(Date.now() - 86400000 * (400 + (h % 200))).toISOString(),
       title: "Company Founded",
-      description: `${name} was founded${fundingRounds[0] ? "" : ` in ${locations[h % locations.length]}`} to address ${industry.toLowerCase()} challenges.`,
+      description: `${name} was founded to address ${industry.toLowerCase()} challenges.`,
       category: "milestone",
       source: "Wikipedia / Crunchbase",
       confidence: 70,
@@ -1104,49 +883,14 @@ function generateKeyTerms(industry: string, techStack: string[]): KeyTerm[] {
   return terms.sort((a, b) => b.frequency - a.frequency).slice(0, 20);
 }
 
-function generateCompetitorDetails(industry: string, domain: string): CompetitorDetail[] {
-  const pool = competitorPools[industry] || competitorPools["B2B SaaS"];
-  const h = hashCode(domain);
-  return pool.slice(0, 4).map((c, i) => ({
-    name: c.name,
-    domain: c.domain,
-    founded: foundedYears[(h + i * 3) % foundedYears.length],
-    size: sizes[(h + i * 2) % sizes.length],
-    revenue: revenueRanges[Math.min(revenueRanges.length - 1, (h + i) % revenueRanges.length + 2)],
-    marketShare: `${(3 + (h + i * 7) % 20)}%`,
-    strengths: ["Brand recognition", "Enterprise customer base", "Mature ecosystem"].slice(0, 2 + (h + i) % 2),
-    weaknesses: ["Slow innovation", "Complex pricing", "Legacy tech stack"].slice(0, 1 + (h + i) % 2),
-    overlap: overlaps[(h + i) % overlaps.length],
-    threatLevel: threats[(h + i) % threats.length],
-  }));
+function generateCompetitorDetails(_industry: string, _domain: string): CompetitorDetail[] {
+  // Competitor details must be discovered via real APIs or entered by user
+  return [];
 }
 
-function generateJobPostings(domain: string, _industry: string, _size: string): JobPosting[] {
-  const h = hashCode(domain);
-  const departments: Record<string, string[]> = {
-    Engineering: ["Senior Full-Stack Engineer", "Staff Engineer", "Engineering Manager", "DevOps Engineer", "ML Engineer"],
-    Sales: ["Account Executive", "Sales Development Rep", "Solutions Engineer", "VP Sales"],
-    Marketing: ["Growth Marketing Manager", "Content Strategist", "Product Marketing Manager"],
-    Product: ["Product Manager", "UX Designer", "Product Analyst"],
-    Operations: ["Customer Success Manager", "Operations Analyst", "Technical Support Lead"],
-  };
-  const depts = Object.keys(departments);
-  const jobs: JobPosting[] = [];
-  for (let i = 0; i < 6 + (h % 4); i++) {
-    const dept = depts[(h + i) % depts.length];
-    const title = departments[dept][(h + i) % departments[dept].length];
-    jobs.push({
-      title,
-      department: dept,
-      location: locations[(h + i) % locations.length],
-      postedAt: new Date(Date.now() - 86400000 * ((h + i * 5) % 30)).toISOString(),
-      salaryRange: `$${90 + (h + i * 17) % 110}K - $${140 + (h + i * 23) % 130}K`,
-      remote: (h + i) % 3 !== 0,
-      seniority: ["Senior", "Mid", "Lead", "Staff"][(h + i) % 4],
-      url: `https://${domain}/careers/${title.toLowerCase().replace(/\s/g, "-")}`,
-    });
-  }
-  return jobs;
+function generateJobPostings(_domain: string, _industry: string, _size: string): JobPosting[] {
+  // Job postings must be discovered via real APIs (e.g., Greenhouse, Lever) or entered by user
+  return [];
 }
 
 function generateEmailPatterns(domain: string): EmailPattern[] {
@@ -1167,7 +911,7 @@ function generateEmailPatterns(domain: string): EmailPattern[] {
 async function researchCompany(domain: string): Promise<ExtendedDossier> {
   const name = domainToName(domain);
   const industry = inferIndustry(domain);
-  const size = randomSize(domain);
+  const size = unknownSize(domain);
   const products = generateProducts(industry);
   const techStack = generateTechStack(industry);
   const competitors = generateCompetitors(industry);
@@ -1347,9 +1091,9 @@ async function researchCompany(domain: string): Promise<ExtendedDossier> {
 
   const baseDossier: CompanyDossierData = {
     name, domain, industry, size,
-    founded: wiki.entry?.founded || randomFounded(domain),
-    location: wiki.entry?.headquarters || randomLocation(domain),
-    revenue: randomRevenue(domain),
+    founded: wiki.entry?.founded || unknownFounded(domain),
+    location: wiki.entry?.headquarters || unknownLocation(domain),
+    revenue: wiki.entry?.revenue || unknownRevenue(domain),
     description: wiki.entry?.summary || generateDescription(name, industry, size),
     products, techStack, competitors, painPoints, decisionMakers, pitchAngles,
     researchDate: nowISO(),

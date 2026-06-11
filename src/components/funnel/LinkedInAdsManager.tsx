@@ -864,8 +864,23 @@ export default function LinkedInAdsManager() {
   const [campaigns, setCampaigns] = useState<AdCampaign[]>(() =>
     loadCampaigns().filter(c => c.platform === "linkedin")
   );
-  const [view, setView] = useState<ViewMode>("list");
-  const [editingCampaign, setEditingCampaign] = useState<AdCampaign | null>(null);
+  const [view, setViewRaw] = useState<ViewMode>(() => {
+    try { return (localStorage.getItem("sw_linkedin_view") as ViewMode) || "list"; } catch { return "list"; }
+  });
+  const setView = (v: ViewMode) => {
+    setViewRaw(v);
+    try { localStorage.setItem("sw_linkedin_view", v); } catch { /* silent */ }
+  };
+  const [editingCampaign, setEditingCampaignRaw] = useState<AdCampaign | null>(() => {
+    try {
+      const saved = localStorage.getItem("sw_linkedin_selected");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const setEditingCampaign = (c: AdCampaign | null) => {
+    setEditingCampaignRaw(c);
+    try { if (c) localStorage.setItem("sw_linkedin_selected", JSON.stringify(c)); else localStorage.removeItem("sw_linkedin_selected"); } catch { /* silent */ }
+  };
   const [leadGenForms, setLeadGenForms] = useState<LeadGenForm[]>([]);
 
   // Filter state

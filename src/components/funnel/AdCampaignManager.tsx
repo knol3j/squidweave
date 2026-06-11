@@ -69,10 +69,28 @@ export default function AdCampaignManager() {
   /* ── sort / filter state ───────────────────────────────────────── */
   const [sortKey, setSortKey] = useState<SortKey>("createdAt" as SortKey);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [filterPlatform, setFilterPlatform] = useState<AdPlatform | "all">("all");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterPlatform, setFilterPlatformRaw] = useState<AdPlatform | "all">(() => {
+    try { return (localStorage.getItem("sw_ad_campaigns_view_platform") as AdPlatform | "all") || "all"; } catch { return "all"; }
+  });
+  const setFilterPlatform = (p: AdPlatform | "all") => {
+    setFilterPlatformRaw(p);
+    try { localStorage.setItem("sw_ad_campaigns_view_platform", p); } catch { /* silent */ }
+  };
+  const [filterStatus, setFilterStatusRaw] = useState<string>(() => {
+    try { return localStorage.getItem("sw_ad_campaigns_view_status") || "all"; } catch { return "all"; }
+  });
+  const setFilterStatus = (s: string) => {
+    setFilterStatusRaw(s);
+    try { localStorage.setItem("sw_ad_campaigns_view_status", s); } catch { /* silent */ }
+  };
   const [searchQuery, setSearchQuery] = useState("");
-  const [timelineMetric, setTimelineMetric] = useState<TimelineMetric>("impressions");
+  const [timelineMetric, setTimelineMetricRaw] = useState<TimelineMetric>(() => {
+    try { return (localStorage.getItem("sw_ad_campaigns_view_timeline") as TimelineMetric) || "impressions"; } catch { return "impressions"; }
+  });
+  const setTimelineMetric = (m: TimelineMetric) => {
+    setTimelineMetricRaw(m);
+    try { localStorage.setItem("sw_ad_campaigns_view_timeline", m); } catch { /* silent */ }
+  };
 
   /* ── actions ───────────────────────────────────────────────────── */
   const handleDelete = useCallback((id: string) => {
@@ -248,7 +266,7 @@ export default function AdCampaignManager() {
             return (
               <button
                 key={p}
-                onClick={() => setFilterPlatform(fp => fp === p ? "all" : p)}
+                onClick={() => setFilterPlatform(filterPlatform === p ? "all" : p)}
                 className={`relative rounded-xl border ${filterPlatform === p ? meta.border : "border-white/[0.06]"} ${filterPlatform === p ? meta.bg : "bg-white/[0.02]"}
                   p-3 text-left hover:bg-white/[0.04] transition-all group cursor-pointer`}
               >
