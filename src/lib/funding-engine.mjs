@@ -1,5 +1,6 @@
 import { enrichInvestorEmail, batchEnrichInvestors, extractDomain } from "./email-enrichment-engine.mjs";
 import { enrichCompanyDomain, enrichPersonEmail, isSerperConfigured } from "./serper-enrichment.mjs";
+import { getInvestorActionability, isActionableInvestor } from "./actionability.mjs";
 
 function unique(values = []) {
   return [...new Set(values.map(value => String(value || "").trim()).filter(Boolean))];
@@ -228,7 +229,8 @@ export class FundingEngine {
     const investors = this.store.listInvestorRecords(campaignId);
     const withScores = investors.map(investor => {
       const scored = scoreInvestor(investor, campaign);
-      return { ...investor, ...scored };
+      const actionability = getInvestorActionability(investor);
+      return { ...investor, ...scored, actionability };
     });
 
     const byStatus = new Map();
@@ -245,6 +247,8 @@ export class FundingEngine {
       generatedAt: nowIso(),
       counts: {
         total: withScores.length,
+        actionable: withScores.filter(isActionableInvestor).length,
+        needsAction: withScores.filter(item => !isActionableInvestor(item)).length,
         byStatus: Object.fromEntries(byStatus.entries()),
       },
       prioritized,
@@ -255,6 +259,7 @@ export class FundingEngine {
     const pipeline = this.buildPipeline(campaignId, { prioritizedLimit: limit || 50 });
     const candidates = pipeline.prioritized
       .filter(item => ["sourced", "enriched", "ready", "follow_up"].includes(item.status))
+      .filter(isActionableInvestor)
       .slice(0, Math.max(1, Number(maxPerRun) || 20));
 
     const ts = nowIso();
@@ -281,6 +286,7 @@ export class FundingEngine {
       createdAt: ts,
       type: "funding-sequence",
       processedInvestors: events.length,
+      skippedInvestors: pipeline.prioritized.filter(item => !isActionableInvestor(item)).map(getInvestorActionability),
       status: "completed",
       deckOutreach: null,
     };

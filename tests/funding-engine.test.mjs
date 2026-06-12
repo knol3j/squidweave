@@ -58,8 +58,8 @@ test("FundingEngine runCampaign sequences outreach and records run", async () =>
   const engine = new FundingEngine({ store });
 
   const imported = engine.importInvestors("c1", [
-    { fundName: "A", thesisMatch: 0.9, stageMatch: 0.9, checkSizeMatch: 0.9, warmPath: 0.9 },
-    { fundName: "B", thesisMatch: 0.8, stageMatch: 0.8, checkSizeMatch: 0.8, warmPath: 0.8 },
+    { fundName: "A", partnerName: "A Partner", email: "a@example.com", thesisMatch: 0.9, stageMatch: 0.9, checkSizeMatch: 0.9, warmPath: 0.9 },
+    { fundName: "B", partnerName: "B Partner", email: "b@example.com", thesisMatch: 0.8, stageMatch: 0.8, checkSizeMatch: 0.8, warmPath: 0.8 },
   ]);
   await store.addInvestorRecords(imported);
 

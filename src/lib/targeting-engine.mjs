@@ -1,3 +1,5 @@
+import { isActionableResearchRecord } from "./actionability.mjs";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function clampScore(value) {
@@ -178,7 +180,10 @@ export class TargetingEngine {
   }
 
   rankTargets(campaignId) {
-    const researchRecords = this.store.listResearchRecords(campaignId);
+    const campaign = this.store.getCampaign ? this.store.getCampaign(campaignId) : {};
+    const researchRecords = this.store
+      .listResearchRecords(campaignId)
+      .filter(record => isActionableResearchRecord(record, campaign));
     const outreachEvents = this.store.listOutreachEvents(campaignId);
     const playbooks = this.store.listPlaybooks ? this.store.listPlaybooks(campaignId) : [];
     const grouped = new Map();

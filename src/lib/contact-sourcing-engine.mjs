@@ -1,3 +1,5 @@
+import { isActionableResearchRecord } from "./actionability.mjs";
+
 const DEFAULT_ROLE_CLUSTERS = [
   "VP Marketing",
   "Head of Growth",
@@ -116,6 +118,7 @@ export class ContactSourcingEngine {
       ? this.memoryEngine.buildDecisionContext(campaignId)
       : null;
     const records = this.store.listResearchRecords(campaignId)
+      .filter(record => isActionableResearchRecord(record, campaign))
       .slice()
       .sort((a, b) => (typeof b.fitScore === "number" ? b.fitScore : 0) - (typeof a.fitScore === "number" ? a.fitScore : 0));
     const topAccounts = shortList(records, 8).map(record => ({
@@ -164,6 +167,7 @@ export class ContactSourcingEngine {
     const campaign = this.getCampaign(campaignId);
     const limit = Number(options.limit) || 20;
     const records = this.store.listResearchRecords(campaignId)
+      .filter(record => isActionableResearchRecord(record, campaign))
       .slice()
       .sort((a, b) => {
         const left = average([a.fitScore, a.intentScore, a.recencyScore]) || 0;

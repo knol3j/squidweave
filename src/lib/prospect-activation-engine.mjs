@@ -1,3 +1,5 @@
+import { getContactActionability, isActionableContact } from "./actionability.mjs";
+
 function unique(values = []) {
   return [...new Set(values.map(value => String(value || "").trim()).filter(Boolean))];
 }
@@ -190,7 +192,7 @@ export class ProspectActivationEngine {
       if (["needs-enrichment", "ready-for-enrichment", "awaiting-provider"].includes(contact.contactStatus)) {
         acc.readyForEnrichment += 1;
       }
-      if (contact.contactStatus === "ready-for-sequencing") {
+      if (contact.contactStatus === "ready-for-sequencing" && isActionableContact(contact)) {
         acc.readyForSequencing += 1;
       }
       if (["sequenced", "queued-for-dispatch"].includes(contact.contactStatus)) {
@@ -206,6 +208,8 @@ export class ProspectActivationEngine {
       readyForSequencing: 0,
       sequenced: 0,
       suppressed: 0,
+      actionableContacts: contacts.filter(isActionableContact).length,
+      needsAction: contacts.filter(contact => !isActionableContact(contact)).length,
       byStatus: {},
       byCompliance: {},
       bySequence: {},
@@ -289,6 +293,7 @@ export class ProspectActivationEngine {
     const candidates = contacts.filter(contact => (
       contact.contactStatus === "ready-for-sequencing"
       && contact.complianceStatus !== "suppressed"
+      && isActionableContact(contact)
     ));
 
     const limit = Number(options.limit) > 0 ? Number(options.limit) : candidates.length;
@@ -341,6 +346,7 @@ export class ProspectActivationEngine {
       action: options.dispatch ? "sequence-and-dispatch" : "sequence",
       status: connectorIssues.length ? "attention" : "completed",
       processedContacts: updatedContacts.length,
+      skippedContacts: contacts.filter(contact => contact.contactStatus === "ready-for-sequencing" && !isActionableContact(contact)).map(getContactActionability),
       connectorResults,
       connectorIssues,
       createdAt: nowIso(),

@@ -306,6 +306,21 @@ export interface ResearchRecord {
   [key: string]: unknown;
 }
 
+export interface ResearchVerification {
+  campaignId: string | null;
+  ready: boolean;
+  status: string;
+  blockingStage?: string | null;
+  blockingReason?: string | null;
+  totalRecords: number;
+  verifiedCount: number;
+  actionableCount: number;
+  needsReviewCount: number;
+  questions: Array<{ id: string; question: string; reason?: string }>;
+  checks: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
 export interface ProspectingPlan {
   id: string;
   campaignId: string;
@@ -941,6 +956,22 @@ export const dataService = {
     return api<ResearchRecord[]>(
       `/research/records?campaignId=${encodeURIComponent(campaignId)}`
     );
+  },
+
+  async getResearchVerification(campaignId: string): Promise<ResearchVerification> {
+    return api<ResearchVerification>(
+      `/research/verification?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async confirmResearchVerification(
+    campaignId: string,
+    payload: { recordIds?: string[]; answers?: Record<string, unknown>; recordUpdates?: Array<Record<string, unknown>> } = {}
+  ): Promise<ResearchVerification> {
+    return api<ResearchVerification>("/research/verification/confirm", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, ...payload }),
+    });
   },
 
   async addResearchRecord(

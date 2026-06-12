@@ -33,6 +33,7 @@ function buildStore() {
         recencyScore: 0.8,
         metadata: {
           sourceUrl: "https://example.com/acme",
+          verificationStatus: "source-verified",
           evidence: ["Recent expansion", "Hiring SDR leaders"],
         },
       },
@@ -50,6 +51,8 @@ function buildStore() {
         intentScore: 0.74,
         recencyScore: 0.69,
         metadata: {
+          sourceUrl: "https://example.com/northwind",
+          verificationStatus: "source-verified",
           evidence: ["New pricing page", "Product launch"],
         },
       },

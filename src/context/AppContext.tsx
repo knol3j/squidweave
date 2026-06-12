@@ -103,6 +103,7 @@ interface AppState {
   scheduler: any | null;
   connectorDrafts: Record<string, { baseUrl: string; token: string }>;
   researchDossiers: any[];
+  researchVerification: any | null;
 }
 
 interface AppContextValue {
@@ -169,7 +170,8 @@ function computeStages(
   profile: BusinessProfile, markets: TargetMarket[], pitches: PitchOption[]
 ): StageInfo[] {
   const hasBusinessProfile = profile.businessName && profile.website && profile.goals;
-  const hasResearch = profile.researchStatus === "completed" || (data.researchRecords?.length || 0) > 0;
+  const researchGate = data.researchVerification || null;
+  const hasResearch = researchGate?.ready === true || (profile.researchStatus === "completed" && !researchGate);
   const hasDataSources = (data.researchRecords?.length || 0) > 0 || (data.analyticsEvents?.length || 0) > 0 || (data.outreachEvents?.length || 0) > 0;
   const hasTargets = (data.targets?.length || 0) > 0;
   const hasPlaybooks = (data.playbooks?.length || 0) > 0;
@@ -187,9 +189,9 @@ function computeStages(
   // Setup: completed when business profile saved, active when campaign exists
   const s0: StageStatus = hasBusinessProfile ? "completed" : campaign ? "active" : "active";
   // Research: unlocked when Setup has profile, completed when research data exists
-  const s1: StageStatus = !hasBusinessProfile ? "locked" : hasResearch || hasDataSources ? "completed" : "active";
+  const s1: StageStatus = !hasBusinessProfile ? "locked" : hasResearch ? "completed" : hasDataSources ? "active" : "active";
   // Targets: unlocked when Research completed, completed when targets/markets exist
-  const s2: StageStatus = s1 === "locked" ? "locked" : hasTargets || hasPlaybooks || hasMarkets ? "completed" : "active";
+  const s2: StageStatus = s1 !== "completed" ? "locked" : hasTargets || hasPlaybooks || hasMarkets ? "completed" : "active";
   // Pitches: unlocked when Targets completed, completed when content approved
   const s3: StageStatus = s2 === "locked" ? "locked" : hasApprovedContent || hasApprovedPitches ? "completed" : hasContent || hasPitches ? "active" : "ready";
   // Launch: unlocked when Pitches completed, active when gates open
@@ -200,7 +202,7 @@ function computeStages(
 
   return [
     { id: 0, name: "Setup", status: s0, accent: "#6366f1", data: { campaign, profile } },
-    { id: 1, name: "Research", status: s1, accent: "#06b6d4", data: { researchRecords: data.researchRecords, connectors: data.connectors, profile } },
+    { id: 1, name: "Research", status: s1, accent: "#06b6d4", data: { researchRecords: data.researchRecords, connectors: data.connectors, profile, verification: researchGate } },
     { id: 2, name: "Targets", status: s2, accent: "#f59e0b", data: { targets: data.targets, playbooks: data.playbooks, investors: data.investors, pipeline: data.fundingPipeline, markets } },
     { id: 3, name: "Pitches", status: s3, accent: "#f43f5e", data: { contentPack: campaign?.latestContentPack, approvals, pitches } },
     { id: 4, name: "Launch", status: s4, accent: "#10b981", data: { outreachEvents: data.outreachEvents, dlq: data.dlq, safety: data.safety, approvals } },
@@ -244,6 +246,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [openClawDiagnostics, setOpenClawDiagnosticsRaw] = useState<any[]>([]);
   const [scheduler, setSchedulerRaw] = useState<any | null>(null);
   const [connectorDrafts, setConnectorDraftsRaw] = useState<Record<string, { baseUrl: string; token: string }>>({});
+  const [researchVerification, setResearchVerificationRaw] = useState<any | null>(null);
   const [researchDossiers, _setResearchDossiers] = useState<any[]>(() => {
     try { const s = localStorage.getItem("sw_research_dossiers"); return s ? JSON.parse(s) : []; } catch { return []; }
   });
@@ -265,6 +268,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setupRequirementsRef = useRef(setupRequirements); setupRequirementsRef.current = setupRequirements;
   const openClawDiagnosticsRef = useRef(openClawDiagnostics); openClawDiagnosticsRef.current = openClawDiagnostics;
   const schedulerRef = useRef(scheduler); schedulerRef.current = scheduler;
+  const researchVerificationRef = useRef(researchVerification); researchVerificationRef.current = researchVerification;
   const pendingSafetyCountRef = useRef(pendingSafetyCount); pendingSafetyCountRef.current = pendingSafetyCount;
   const businessProfileRef = useRef(businessProfile); businessProfileRef.current = businessProfile;
   const connectorDraftsRef = useRef(connectorDrafts); connectorDraftsRef.current = connectorDrafts;
@@ -318,6 +322,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const activeCampaign = cid && campaignsMap[cid] ? campaignsMap[cid] : campaignsList[0] || null;
         if (!deepEqual(activeCampaign, campaignRef.current)) { setCampaignRaw(activeCampaign); changed = true; }
 
+        const nextResearchVerification = (stateResult as any).researchVerificationByCampaign?.[cid] || null;
+        if (!deepEqual(nextResearchVerification, researchVerificationRef.current)) { setResearchVerificationRaw(nextResearchVerification); changed = true; }
+
         const nextScheduler = (stateResult as any).scheduler || null;
         if (!deepEqual(nextScheduler, schedulerRef.current)) { setSchedulerRaw(nextScheduler); changed = true; }
 
@@ -335,6 +342,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           safety: (stateResult as any).safetyExecutions || [],
           decisions: (stateResult as any).decisions || [],
           contentPacks: (stateResult as any).contentPacks || [],
+          researchVerification: nextResearchVerification,
         };
         if (!deepEqual(nextStageData, stageDataRef.current)) { setStageDataRaw(nextStageData); changed = true; }
 
@@ -429,6 +437,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const activeCampaign = campaignsMap[cid] || campaignsList[0] || null;
       if (!deepEqual(activeCampaign, campaignRef.current)) { setCampaignRaw(activeCampaign); hasUpdates = true; }
 
+      const nextResearchVerification = (stateResult as any).researchVerificationByCampaign?.[cid] || null;
+      if (!deepEqual(nextResearchVerification, researchVerificationRef.current)) { setResearchVerificationRaw(nextResearchVerification); hasUpdates = true; }
+
       const nextScheduler = (stateResult as any).scheduler || null;
       if (!deepEqual(nextScheduler, schedulerRef.current)) { setSchedulerRaw(nextScheduler); hasUpdates = true; }
 
@@ -446,6 +457,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         safety: (stateResult as any).safetyExecutions || [],
         decisions: (stateResult as any).decisions || [],
         contentPacks: (stateResult as any).contentPacks || [],
+        researchVerification: nextResearchVerification,
       };
       if (!deepEqual(nextStageData, stageDataRef.current)) { setStageDataRaw(nextStageData); hasUpdates = true; }
 
@@ -792,6 +804,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       brainState, connectorStatuses, prospectPipeline, prospectingRuns,
       fundingPipeline, fundingInvestors, fundingRuns, reengagement,
       setupRequirements, openClawDiagnostics, scheduler, connectorDrafts, researchDossiers,
+      researchVerification,
     },
     setActiveStage: setActiveStagePersisted, setCampaignId, refresh, runAutomation, generateContent, clearError,
     toggleApproval, approveVariant, rejectVariant,
@@ -807,6 +820,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     brainState, connectorStatuses, prospectPipeline, prospectingRuns,
     fundingPipeline, fundingInvestors, fundingRuns, reengagement,
     setupRequirements, openClawDiagnostics, scheduler, connectorDrafts, researchDossiers,
+    researchVerification,
     setActiveStagePersisted, setCampaignId, refresh, runAutomation, generateContent, clearError,
     toggleApproval, approveVariant, rejectVariant,
     updateBusinessProfile, setBusinessResearchStatus,

@@ -55,17 +55,22 @@ export class RateLimiter {
   }
 
   /**
-   * Check if a request would be rate-limited (without incrementing).
+   * Check and consume one request for the key.
    */
   check(key) {
     const now = Date.now();
     let bucket = this.buckets.get(key);
     if (!bucket || now - bucket.windowStart > this.windowMs) {
-      return { allowed: true, remaining: this.maxRequests, resetAt: now + this.windowMs };
+      bucket = { windowStart: now, count: 0 };
+      this.buckets.set(key, bucket);
     }
+    const allowed = bucket.count < this.maxRequests;
     const remaining = Math.max(0, this.maxRequests - bucket.count);
+    if (allowed) {
+      bucket.count++;
+    }
     return {
-      allowed: bucket.count <= this.maxRequests,
+      allowed,
       remaining,
       resetAt: bucket.windowStart + this.windowMs,
     };

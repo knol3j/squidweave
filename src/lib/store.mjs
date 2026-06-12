@@ -392,6 +392,33 @@ export class Store {
     return record;
   }
 
+  async updateResearchRecords(campaignId, updates = []) {
+    const nextById = new Map(updates.map(item => [item.id, item]));
+    let changed = 0;
+    this.state.researchRecords = this.state.researchRecords.map(record => {
+      if (record.campaignId !== campaignId) {
+        return record;
+      }
+      const patch = nextById.get(record.id);
+      if (!patch) {
+        return record;
+      }
+      changed += 1;
+      return {
+        ...record,
+        ...patch,
+        metadata: {
+          ...(record.metadata || {}),
+          ...(patch.metadata || {}),
+        },
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    await this.persist();
+    this.emitChange("researchRecords", "updateMany", { campaignId, count: changed, items: updates });
+    return this.listResearchRecords(campaignId);
+  }
+
   listOutreachEvents(campaignId, targetId) {
     return this.state.outreachEvents.filter(event => {
       if (campaignId && event.campaignId !== campaignId) {

@@ -12,6 +12,7 @@ import CompanyDossier from "@/components/funnel/CompanyDossier";
 import type { CompanyDossierData } from "@/components/funnel/CompanyDossier";
 import PainPointAnalyzer from "@/components/funnel/PainPointAnalyzer";
 import DecisionMakerFinder from "@/components/funnel/DecisionMakerFinder";
+import { useApp } from "@/context/AppContext";
 
 const STORAGE_KEY = "sw_research_dossiers";
 
@@ -26,6 +27,8 @@ function loadSavedDossiers(): CompanyDossierData[] {
 type ResearchTab = "data" | "research" | "dossier" | "painpoints" | "contacts";
 
 export default function ResearchRow() {
+  const { state } = useApp();
+  const verification = state.researchVerification;
   const [activeTab, setActiveTabRaw] = useState<ResearchTab>(() => {
     try { const s = localStorage.getItem("sw_tab_research"); return (s as ResearchTab) || "data"; } catch { return "data"; }
   });
@@ -75,6 +78,32 @@ export default function ResearchRow() {
           </button>
         ))}
       </div>
+
+      {verification && !verification.ready && (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.06] p-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
+            <AlertTriangle className="h-4 w-4" />
+            Research verification required
+          </div>
+          <div className="mt-1 text-[11px] text-slate-400">
+            {verification.blockingReason || "Agents need operator answers before downstream stages unlock."}
+          </div>
+          <div className="mt-3 grid gap-2">
+            {(verification.questions || []).slice(0, 4).map((item: any) => (
+              <div key={item.id || item.question} className="rounded-md border border-white/[0.06] bg-slate-950/40 px-3 py-2">
+                <div className="text-xs text-slate-200">{item.question}</div>
+                {item.reason && <div className="mt-1 text-[10px] text-slate-500">{item.reason}</div>}
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-slate-500">
+            <span>{verification.totalRecords || 0} records</span>
+            <span>{verification.verifiedCount || 0} verified</span>
+            <span>{verification.actionableCount || 0} actionable</span>
+            <span>{verification.needsReviewCount || 0} need review</span>
+          </div>
+        </div>
+      )}
 
       {/* Data tab — existing ingestion row */}
       {activeTab === "data" && <IngestionRow />}

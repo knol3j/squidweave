@@ -1,3 +1,5 @@
+import { buildResearchVerificationGate } from "./actionability.mjs";
+
 export class AutomationEngine {
   constructor({ store, decisionEngine, planner, memoryEngine, agentOrchestrator }) {
     this.store = store;
@@ -72,6 +74,34 @@ export class AutomationEngine {
       reason: options.reason || "manual",
       status: "running",
     };
+    const campaign = this.store.getCampaign(campaignId);
+    if (!campaign) {
+      throw new Error(`Unknown campaign: ${campaignId}`);
+    }
+
+    if (!options.skipResearchVerification) {
+      const records = typeof this.store.listResearchRecords === "function"
+        ? this.store.listResearchRecords(campaignId)
+        : [];
+      const researchVerification = buildResearchVerificationGate({ campaign, records });
+      if (!researchVerification.ready) {
+        run.status = "blocked";
+        run.blockedStage = researchVerification.blockingStage;
+        run.blockingReason = researchVerification.blockingReason;
+        run.researchVerification = researchVerification;
+        await this.store.addAutomationRun(run);
+        return {
+          run,
+          blocked: true,
+          researchVerification,
+          questions: researchVerification.questions,
+          decision: null,
+          contentPack: null,
+          agentRuns: [],
+          lifecycle: { coverage: [], activeAgents: 0, blockedStage: researchVerification.blockingStage },
+        };
+      }
+    }
 
     try {
       await this.memoryEngine.consolidateCampaign(campaignId);
@@ -96,7 +126,6 @@ export class AutomationEngine {
       return;
     }
 
-    const campaign = this.store.getCampaign(campaignId);
     let contentPack = null;
     if (this.shouldRefreshContent(campaign, decision)) {
       try {

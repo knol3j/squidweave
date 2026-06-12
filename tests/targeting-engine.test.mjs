@@ -4,6 +4,9 @@ import { normalizeOutreachEvent, normalizeResearchRecord, TargetingEngine } from
 
 function createStore(records = [], outreachEvents = []) {
   return {
+    getCampaign(campaignId) {
+      return { id: campaignId, name: "Test Campaign" };
+    },
     listResearchRecords(campaignId) {
       return records.filter(record => !campaignId || record.campaignId === campaignId);
     },
@@ -24,9 +27,24 @@ function createStore(records = [], outreachEvents = []) {
   };
 }
 
+function actionableResearchRecord(input) {
+  return normalizeResearchRecord({
+    segment: "Mid-market SaaS",
+    region: "US",
+    preferredChannel: "email",
+    ...input,
+    metadata: {
+      sourceUrl: `https://example.com/${input.targetId || "target"}`,
+      evidence: ["Verified company signal"],
+      verificationStatus: "source-verified",
+      ...(input.metadata || {}),
+    },
+  });
+}
+
 test("TargetingEngine ranks fresh high-intent targets above suppressed ones", () => {
   const records = [
-    normalizeResearchRecord({
+    actionableResearchRecord({
       campaignId: "c1",
       targetId: "t1",
       company: "Alpha",
@@ -35,7 +53,7 @@ test("TargetingEngine ranks fresh high-intent targets above suppressed ones", ()
       recencyScore: 0.81,
       capturedAt: "2026-05-07T12:00:00.000Z",
     }),
-    normalizeResearchRecord({
+    actionableResearchRecord({
       campaignId: "c1",
       targetId: "t2",
       company: "Beta",
@@ -64,7 +82,7 @@ test("TargetingEngine ranks fresh high-intent targets above suppressed ones", ()
 
 test("TargetingEngine builds a reengagement queue from real outreach timing", () => {
   const records = [
-    normalizeResearchRecord({
+    actionableResearchRecord({
       campaignId: "c1",
       targetId: "t3",
       company: "Gamma",
@@ -97,7 +115,7 @@ test("TargetingEngine uses learned cadence days for sent-only outreach", () => {
   const sentAt = new Date(now.getTime() - (1 * 24 * 60 * 60 * 1000)).toISOString();
   const expectedNextEligibleAt = new Date(new Date(sentAt).getTime() + (5 * 24 * 60 * 60 * 1000)).toISOString();
   const records = [
-    normalizeResearchRecord({
+    actionableResearchRecord({
       campaignId: "c1",
       targetId: "t4",
       company: "Delta",
@@ -145,14 +163,14 @@ test("TargetingEngine boosts records with higher source reliability", () => {
     capturedAt: "2026-05-07T12:00:00.000Z",
   };
   const records = [
-    normalizeResearchRecord({
+    actionableResearchRecord({
       ...base,
       targetId: "hi",
       company: "Reliable Co",
       source: "sec",
       metadata: { sourceReliability: 0.9 },
     }),
-    normalizeResearchRecord({
+    actionableResearchRecord({
       ...base,
       targetId: "lo",
       company: "Noisy Co",
