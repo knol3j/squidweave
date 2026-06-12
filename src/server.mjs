@@ -100,6 +100,7 @@ import * as adapters from "./adapters/index.mjs";
 import * as calendly from "./adapters/calendly.mjs";
 import { TrackingEngine } from "./lib/tracking-engine.mjs";
 import { RateLimiter } from "./lib/rate-limiter.mjs";
+import { buildResearchVerificationGate } from "./lib/actionability.mjs";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -832,6 +833,60 @@ async function createApp() {
 
     if (request.method === "GET" && url.pathname === "/research/records") {
       sendJson(request, response, 200, store.listResearchRecords(url.searchParams.get("campaignId")));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/research/verification") {
+      const campaignId = resolveCampaignId(store, url.searchParams.get("campaignId"));
+      const campaign = store.getCampaign(campaignId);
+      if (!campaign) {
+        sendJson(request, response, 404, { error: "Campaign not found." });
+        return;
+      }
+      sendJson(request, response, 200, buildResearchVerificationGate({
+        campaign,
+        records: store.listResearchRecords(campaignId),
+      }));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/research/verification/confirm") {
+      const body = await readBody(request);
+      const campaignId = resolveCampaignId(store, body.campaignId);
+      const campaign = store.getCampaign(campaignId);
+      if (!campaign) {
+        sendJson(request, response, 404, { error: "Campaign not found." });
+        return;
+      }
+      const records = store.listResearchRecords(campaignId);
+      const requestedIds = Array.isArray(body.recordIds) ? new Set(body.recordIds.map(value => String(value))) : null;
+      const selected = records.filter(record => !requestedIds || requestedIds.has(record.id));
+      if (!selected.length) {
+        sendJson(request, response, 400, { error: "No research records selected for confirmation." });
+        return;
+      }
+      const updatesById = new Map(Array.isArray(body.recordUpdates)
+        ? body.recordUpdates.map(item => [String(item.id || ""), item])
+        : []);
+      const verifiedAt = new Date().toISOString();
+      await store.updateResearchRecords(campaignId, selected.map(record => {
+        const patch = updatesById.get(record.id) || {};
+        return {
+          id: record.id,
+          ...patch,
+          metadata: {
+            verificationStatus: "user-confirmed",
+            ...(patch.metadata || {}),
+            verificationAnswers: body.answers || {},
+            verifiedAt,
+          },
+        };
+      }));
+      await memoryEngine.consolidateCampaign(campaignId);
+      sendJson(request, response, 200, buildResearchVerificationGate({
+        campaign,
+        records: store.listResearchRecords(campaignId),
+      }));
       return;
     }
 
@@ -2024,6 +2079,40 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
           locales: body.locales,
           reason,
         });
+        if (automation?.blocked) {
+          mark("research_verification", "blocked", {
+            reason: automation.researchVerification?.blockingReason,
+            questions: automation.researchVerification?.questions?.length || 0,
+          });
+          const payload = {
+            campaign,
+            reason,
+            policy,
+            executionLog,
+            sourceIngestion,
+            automation,
+            researchVerification: automation.researchVerification,
+            prospecting: null,
+            enrichment: null,
+            sequencing: null,
+            funding: null,
+            fundingDeck: null,
+            paidExecution: null,
+            socialPublishing: null,
+            slaPolicy: {
+              status: "blocked",
+              blockingStage: automation.researchVerification?.blockingStage || "research-verification",
+            },
+            pipeline: prospectActivationEngine.buildPipeline(campaign.id),
+            fundingPipeline: fundingEngine.buildPipeline(campaign.id),
+          };
+          jobManager.complete(job.id, payload);
+          sendJson(request, response, 200, {
+            job: jobManager.getJob(job.id),
+            ...payload,
+          });
+          return;
+        }
         mark("automation", "completed", { reason, agentRuns: automation?.agentRuns?.length || 0 });
 
         let prospecting = null;
@@ -2283,8 +2372,16 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     }
 
     if (request.method === "GET" && url.pathname === "/state") {
+      const researchVerificationByCampaign = Object.fromEntries(store.listCampaigns().map(campaign => [
+        campaign.id,
+        buildResearchVerificationGate({
+          campaign,
+          records: store.listResearchRecords(campaign.id),
+        }),
+      ]));
       sendJson(request, response, 200, {
         ...store.snapshot(),
+        researchVerificationByCampaign,
         activeProvider: llmProvider.providerName || "none",
         memory: {
           targetProfiles: store.listTargetProfiles(),
@@ -2769,7 +2866,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     }
 
     if (parts[0] === "calendar-events" && parts.length === 2) {
-      await calendarHandlers.handleCalendarEventById(request.method, { id: parts[1] }, request, response, sendJson);
+      await calendarHandlers.handleCalendarEventById(request.method, { id: parts[1] }, request, response, sendJson, readBody);
       return;
     }
 
