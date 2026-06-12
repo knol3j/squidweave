@@ -21,3 +21,7 @@ Thumbs.db
 coverage/
 
 data/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/

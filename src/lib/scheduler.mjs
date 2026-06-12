@@ -207,7 +207,7 @@ export class AutomationScheduler {
       if (Array.isArray(arr) && arr.length > maxLen) {
         const before = arr.length;
         this.store.state[key] = arr.slice(-maxLen);
-        pruned += before - arr.length;
+        pruned += before - this.store.state[key].length;
       }
     }
     if (pruned > 0) {
