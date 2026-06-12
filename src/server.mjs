@@ -95,6 +95,7 @@ import { VcSourcingConnector } from "./connectors/vc-sourcing-connector.mjs";
 import { GhlBridge } from "./integrations/ghl-bridge.mjs";
 import { registerFunnelRoutes, getFunnelCollections } from "./modules/funnel/funnel-routes.mjs";
 import { registerMessagingRoutes, getMessagingCollections } from "./modules/messaging/messaging-routes.mjs";
+import { registerCalendarRoutes, getCalendarCollections } from "./modules/calendar/calendar-routes.mjs";
 import * as adapters from "./adapters/index.mjs";
 import * as calendly from "./adapters/calendly.mjs";
 import { TrackingEngine } from "./lib/tracking-engine.mjs";
@@ -161,6 +162,87 @@ function sendJson(request, response, statusCode, payload) {
     ...buildCorsHeaders(request),
   });
   response.end(JSON.stringify(payload, null, 2));
+}
+
+function getBearerToken(request) {
+  const header = request.headers.authorization || "";
+  const [scheme, token] = String(header).split(/\s+/, 2);
+  return scheme?.toLowerCase() === "bearer" ? token || "" : "";
+}
+
+function requireOpenAiCompatAuth(request, response) {
+  const accepted = new Set([
+    process.env.OPENCLAW_TOKEN,
+    process.env.CLAWDBOT_TOKEN,
+    process.env.AUTH_TOKEN,
+    process.env.SQUIDWEAVE_API_KEY,
+  ].filter(Boolean));
+
+  if (!accepted.size || accepted.has(getBearerToken(request))) {
+    return true;
+  }
+
+  sendJson(request, response, 401, {
+    error: {
+      message: "Unauthorized. Provide a Bearer token matching OPENCLAW_TOKEN or CLAWDBOT_TOKEN.",
+      type: "authentication_error",
+    },
+  });
+  return false;
+}
+
+function sendOpenAiModels(request, response) {
+  sendJson(request, response, 200, {
+    object: "list",
+    data: [
+      {
+        id: "openclaw/default",
+        object: "model",
+        created: 0,
+        owned_by: "squidweave",
+      },
+      {
+        id: "clawdbot/default",
+        object: "model",
+        created: 0,
+        owned_by: "squidweave",
+      },
+    ],
+  });
+}
+
+function buildOpenAiCompatResponse(body = {}) {
+  const connector = String(body.model || "").startsWith("clawdbot/")
+    ? "clawdbot"
+    : "openclaw";
+  const lastMessage = Array.isArray(body.messages) ? body.messages.at(-1)?.content : "";
+  const content = JSON.stringify({
+    outcome: "accepted",
+    summary: `${connector} accepted the request on the SquidWeave backend host.`,
+    followUp: [],
+    usedTools: ["squidweave-backend"],
+    notes: [
+      "This OpenAI-compatible surface is intended for SquidWeave connector health checks and action handoff.",
+      typeof lastMessage === "string" ? lastMessage.slice(0, 500) : "",
+    ].filter(Boolean),
+  });
+
+  return {
+    id: `chatcmpl-${Date.now().toString(36)}`,
+    object: "chat.completion",
+    created: Math.floor(Date.now() / 1000),
+    model: body.model || `${connector}/default`,
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: "assistant",
+          content,
+        },
+        finish_reason: "stop",
+      },
+    ],
+  };
 }
 
 function sendEventStreamHeaders(request, response) {
@@ -558,6 +640,7 @@ async function createApp() {
   });
   const funnelHandlers = registerFunnelRoutes({ store, workflowEngine, pipelineEngine });
   const messagingHandlers = registerMessagingRoutes({ store, workflowEngine });
+  const calendarHandlers = registerCalendarRoutes({ store, workflowEngine });
   const executionGuard = new ExecutionGuard({ store, config });
   const trackingEngine = new TrackingEngine({ store });
   const rateLimiter = new RateLimiter({
@@ -582,10 +665,23 @@ async function createApp() {
       return;
     }
 
-    if (!requireApiKey(request, response)) return;
-
     const url = new URL(request.url, `http://${request.headers.host}`);
     const parts = splitPath(url.pathname);
+
+    if (request.method === "GET" && url.pathname === "/v1/models") {
+      if (!requireOpenAiCompatAuth(request, response)) return;
+      sendOpenAiModels(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/v1/chat/completions") {
+      if (!requireOpenAiCompatAuth(request, response)) return;
+      const body = await readBody(request);
+      sendJson(request, response, 200, buildOpenAiCompatResponse(body));
+      return;
+    }
+
+    if (!requireApiKey(request, response)) return;
 
     if (request.method === "GET" && url.pathname === "/health") {
       sendJson(request, response, 200, {
@@ -2666,6 +2762,22 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       return;
     }
 
+    // ── Calendar routes ──────────────────────────────────────
+    if (parts[0] === "calendar-events" && parts.length === 1) {
+      await calendarHandlers.handleCalendarEvents(request.method, { campaignId: req.url && new URL(req.url, "http://x").searchParams.get("campaignId") }, request, response, sendJson, readBody);
+      return;
+    }
+
+    if (parts[0] === "calendar-events" && parts.length === 2) {
+      await calendarHandlers.handleCalendarEventById(request.method, { id: parts[1] }, request, response, sendJson);
+      return;
+    }
+
+    if (parts[0] === "calendars" && parts[1] === "sync") {
+      await calendarHandlers.handleCalendarSync(request.method, {}, request, response, sendJson, readBody);
+      return;
+    }
+
     if (request.method === "GET" && config.staticDir && !requireUiAuth(request, response)) {
       return;
     }
@@ -2802,7 +2914,9 @@ export async function startServer({ port = config.port, host = process.env.HOST 
     server.listen(port, host, resolve);
   });
   console.log(`SquidWeave listening on http://${host}:${port}`);
-  scheduler.start();
+  if (String(process.env.SCHEDULER_AUTOSTART || "true").toLowerCase() !== "false") {
+    scheduler.start();
+  }
   return server;
 }
 

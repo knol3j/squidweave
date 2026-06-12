@@ -5,5 +5,6 @@ const processType = process.env.SQUIDWEAVE_PROCESS || process.env.RAILWAY_PROCES
 if (processType === 'agent' || processType === 'clawdbot') {
   await import('./clawdbot-agent.mjs');
 } else {
-  await import('../src/server.mjs');
+  const { startServer } = await import('../src/server.mjs');
+  await startServer();
 }
