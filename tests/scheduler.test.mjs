@@ -64,18 +64,18 @@ describe('AutomationScheduler', () => {
   });
 
   it('pruneState removes old entries', () => {
-    scheduler = new AutomationScheduler({
+    const localScheduler = new AutomationScheduler({
       store: createMockStore(),
       automationEngine: { runCampaign: async () => ({}) },
     });
-    scheduler.store.state.agentRuns = new Array(600).fill({ id: 'x' });
-    scheduler.store.state.decisions = new Array(300).fill({ id: 'x' });
-    scheduler.store.state.researchRecords = new Array(100).fill({ id: 'x' });
+    localScheduler.store.state.agentRuns = new Array(600).fill({ id: 'x' });
+    localScheduler.store.state.decisions = new Array(300).fill({ id: 'x' });
+    localScheduler.store.state.researchRecords = new Array(100).fill({ id: 'x' });
 
-    const pruned = scheduler.pruneState();
+    const pruned = localScheduler.pruneState();
     assert.ok(pruned > 0);
-    assert.ok(scheduler.store.state.agentRuns.length <= 500);
-    assert.ok(scheduler.store.state.decisions.length <= 200);
+    assert.ok(localScheduler.store.state.agentRuns.length <= 500);
+    assert.ok(localScheduler.store.state.decisions.length <= 200);
   });
 
   it('cleanupOrphanedReceipts marks stale receipts as failed', () => {

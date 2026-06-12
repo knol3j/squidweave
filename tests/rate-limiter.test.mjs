@@ -18,18 +18,18 @@ describe('RateLimiter', () => {
 
   it('blocks requests over limit', () => {
     limiter = new RateLimiter({ windowMs: 60_000, maxRequests: 3 });
-    limiter.check('key1');
-    limiter.check('key1');
-    limiter.check('key1');
-    const result = limiter.check('key1');
+    limiter.consume('key1');
+    limiter.consume('key1');
+    limiter.consume('key1');
+    const result = limiter.consume('key1');
     assert.equal(result.allowed, false);
     assert.equal(result.remaining, 0);
   });
 
   it('resets after window expires', async () => {
     limiter = new RateLimiter({ windowMs: 100, maxRequests: 2 });
-    limiter.check('key1');
-    limiter.check('key1');
+    limiter.consume('key1');
+    limiter.consume('key1');
     assert.equal(limiter.check('key1').allowed, false);
 
     // Wait for window to expire
@@ -39,8 +39,8 @@ describe('RateLimiter', () => {
 
   it('tracks different keys independently', () => {
     limiter = new RateLimiter({ windowMs: 60_000, maxRequests: 2 });
-    limiter.check('key1');
-    limiter.check('key1');
+    limiter.consume('key1');
+    limiter.consume('key1');
     assert.equal(limiter.check('key1').allowed, false);
     assert.equal(limiter.check('key2').allowed, true);
   });

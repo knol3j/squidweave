@@ -20,37 +20,49 @@ export class RateLimiter {
   middleware() {
     return (request, response, next) => {
       const key = this.keyGenerator(request);
-      const now = Date.now();
-
-      let bucket = this.buckets.get(key);
-      if (!bucket || now - bucket.windowStart > this.windowMs) {
-        bucket = { windowStart: now, count: 0 };
-        this.buckets.set(key, bucket);
-      }
-
-      bucket.count++;
-
-      const remaining = Math.max(0, this.maxRequests - bucket.count);
-      const resetAt = bucket.windowStart + this.windowMs;
+      const result = this.consume(key);
 
       response.setHeader('X-RateLimit-Limit', this.maxRequests);
-      response.setHeader('X-RateLimit-Remaining', remaining);
-      response.setHeader('X-RateLimit-Reset', Math.ceil(resetAt / 1000));
+      response.setHeader('X-RateLimit-Remaining', result.remaining);
+      response.setHeader('X-RateLimit-Reset', Math.ceil(result.resetAt / 1000));
 
-      if (bucket.count > this.maxRequests) {
+      if (!result.allowed) {
         response.writeHead(429, {
           'content-type': 'application/json; charset=utf-8',
-          'Retry-After': Math.ceil((resetAt - now) / 1000),
+          'Retry-After': result.retryAfter,
           ...response.getHeaders(),
         });
         response.end(JSON.stringify({
           error: 'Too many requests',
-          retryAfter: Math.ceil((resetAt - now) / 1000),
+          retryAfter: result.retryAfter,
         }));
         return;
       }
 
       next();
+    };
+  }
+
+  /**
+   * Consume one request from a bucket.
+   */
+  consume(key) {
+    const now = Date.now();
+    let bucket = this.buckets.get(key);
+    if (!bucket || now - bucket.windowStart > this.windowMs) {
+      bucket = { windowStart: now, count: 0 };
+      this.buckets.set(key, bucket);
+    }
+
+    bucket.count++;
+
+    const resetAt = bucket.windowStart + this.windowMs;
+    const retryAfter = Math.max(0, Math.ceil((resetAt - now) / 1000));
+    return {
+      allowed: bucket.count <= this.maxRequests,
+      remaining: Math.max(0, this.maxRequests - bucket.count),
+      resetAt,
+      retryAfter,
     };
   }
 
@@ -65,7 +77,7 @@ export class RateLimiter {
     }
     const remaining = Math.max(0, this.maxRequests - bucket.count);
     return {
-      allowed: bucket.count <= this.maxRequests,
+      allowed: bucket.count < this.maxRequests,
       remaining,
       resetAt: bucket.windowStart + this.windowMs,
     };
