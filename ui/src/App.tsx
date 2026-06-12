@@ -15,6 +15,9 @@ import { CollaborationProvider, useCollaboration } from './components/Collaborat
 import { dataService, getApiUrl, getAuthEventName, setAuthCredentials, clearAuthCredentials, hasAuthCredentials } from './services/dataService';
 import { SquidCompatProvider } from './lib/squid';
 
+const assetBase = import.meta.env.BASE_URL || '/';
+const assetPath = (path: string) => `${assetBase}${path.replace(/^\/+/, '')}`;
+
 const Onboarding = lazy(() => import('./components/Onboarding'));
 const BrainDashboard = lazy(() => import('./components/BrainDashboard'));
 const ChatPanel = lazy(() => import('./components/ChatPanel'));
@@ -77,7 +80,7 @@ function LoginGate({ children }: { children: React.ReactNode }) {
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#020617', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
       <form onSubmit={handleSubmit} style={{ background: '#0f172a', padding: '2.5rem 2rem', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.08)', width: '380px', boxShadow: '0 0 60px -15px rgba(112, 48, 192, 0.15)' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <img src="/logo-login.png" alt="SquidWeave" style={{ height: '100px', margin: '0 auto 1rem', display: 'block', objectFit: 'contain' }} />
+          <img src={assetPath('logo-login.png')} alt="SquidWeave" style={{ height: '100px', margin: '0 auto 1rem', display: 'block', objectFit: 'contain' }} />
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#e2e8f0', marginBottom: '0.25rem' }}>Welcome Back</h2>
           <p style={{ fontSize: '0.75rem', color: '#64748b', letterSpacing: '0.05em' }}>Sign in to SquidWeave</p>
         </div>

@@ -1,5 +1,8 @@
 import React from 'react';
 
+const assetBase = import.meta.env.BASE_URL || '/';
+const assetPath = (path: string) => `${assetBase}${path.replace(/^\/+/, '')}`;
+
 export default function SquidLogo({
   className = '',
   showWordmark = true,
@@ -17,7 +20,7 @@ export default function SquidLogo({
     <div className={`inline-flex items-center gap-3 ${className}`}>
       <div className={`${iconSizes[size]} flex-shrink-0 overflow-hidden rounded-xl`}>
         <img
-          src="/logo-icon.png"
+          src={assetPath('logo-icon.png')}
           alt="SquidWeave"
           className="h-full w-full object-contain"
           onError={(e) => {

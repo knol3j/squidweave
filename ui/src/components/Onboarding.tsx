@@ -33,6 +33,9 @@ const steps = [
   },
 ];
 
+const assetBase = import.meta.env.BASE_URL || '/';
+const assetPath = (path: string) => `${assetBase}${path.replace(/^\/+/, '')}`;
+
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -68,7 +71,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               animate={{ scale: 1, opacity: 1 }}
               className="mb-8"
             >
-              <img src="/logo-login.png" alt="SquidWeave" className="h-24 w-auto object-contain mx-auto" />
+              <img src={assetPath('logo-login.png')} alt="SquidWeave" className="h-24 w-auto object-contain mx-auto" />
             </motion.div>
           ) : (
             <motion.div 
