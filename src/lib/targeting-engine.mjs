@@ -60,6 +60,12 @@ export function normalizeResearchRecord(input) {
     throw new Error("targetId is required");
   }
 
+  const sourceUrl = input.sourceUrl || input.url || input.metadata?.sourceUrl || input.metadata?.url || "";
+  const evidence = dedupeStrings(input.evidence || input.metadata?.evidence || []);
+  if (!sourceUrl && evidence.length === 0) {
+    throw new Error("sourceUrl or evidence is required");
+  }
+
   return {
     id: input.id || crypto.randomUUID(),
     campaignId: input.campaignId,
@@ -77,7 +83,15 @@ export function normalizeResearchRecord(input) {
     recencyScore: clampScore(input.recencyScore),
     estimatedReach: Number.isFinite(Number(input.estimatedReach)) ? Number(input.estimatedReach) : null,
     notes: input.notes || "",
-    metadata: input.metadata || {},
+    sourceUrl,
+    evidence,
+    verificationStatus: input.verificationStatus || input.metadata?.verificationStatus || "",
+    metadata: {
+      ...(input.metadata || {}),
+      sourceUrl,
+      evidence,
+      verificationStatus: input.verificationStatus || input.metadata?.verificationStatus || input.metadata?.verificationStatus || "",
+    },
     capturedAt: normalizeTimestamp(input.capturedAt),
   };
 }

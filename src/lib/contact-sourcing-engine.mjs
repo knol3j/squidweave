@@ -96,6 +96,10 @@ function candidateScore(record, role) {
   return Number(Math.min(1, ((fit + intent + recency) / 3) + seniorityBoost).toFixed(4));
 }
 
+function collectEvidence(...items) {
+  return unique(items.flatMap(item => Array.isArray(item) ? item : [item]).filter(Boolean));
+}
+
 export class ContactSourcingEngine {
   constructor({ store, targetingEngine, memoryEngine }) {
     this.store = store;
@@ -129,7 +133,7 @@ export class ContactSourcingEngine {
       sourceMix: determineSourceMix(record, campaign),
       roleClusters: inferRoleCluster(record, campaign),
       preferredChannel: record.preferredChannel || campaign.channel || null,
-      evidence: shortList(record.metadata?.evidence || [], 3),
+      evidence: shortList(record.evidence || record.metadata?.evidence || [], 3),
     }));
 
     return {
@@ -196,8 +200,8 @@ export class ContactSourcingEngine {
           enrichmentStatus: "pending",
           verificationStatus: "pending",
           sequenceStatus: "unplanned",
-          evidence: shortList(record.metadata?.evidence || [], 3),
-          sourceUrl: record.metadata?.sourceUrl || null,
+          evidence: shortList(record.evidence || record.metadata?.evidence || [], 3),
+          sourceUrl: record.sourceUrl || record.metadata?.sourceUrl || null,
           score: candidateScore(record, role),
           complianceStatus: "pending-review",
           createdAt: new Date().toISOString(),
@@ -251,14 +255,17 @@ export class ContactSourcingEngine {
         preferredChannel: String(contact.preferredChannel || "").trim(),
         contactStatus: contact.contactStatus || "ready-for-enrichment",
         complianceStatus: contact.complianceStatus || "reviewed",
-        enrichmentStatus: contact.enrichmentStatus || (contact.email || contact.linkedinUrl ? "completed" : "pending"),
-        verificationStatus: contact.verificationStatus || (contact.email ? "verified" : "pending"),
+        enrichmentStatus: contact.enrichmentStatus || (contact.email || contact.linkedinUrl || contact.phone ? "completed" : "pending"),
+        verificationStatus: contact.verificationStatus || (contact.email ? "verified" : contact.linkedinUrl ? "linkedin-route-present" : contact.phone ? "phone-route-present" : "pending"),
         sequenceStatus: contact.sequenceStatus || "unplanned",
         source: contact.source || options.source || "manual-import",
+        sourceUrl: contact.sourceUrl || contact.linkedinUrl || "",
+        evidence: collectEvidence(contact.evidence, contact.sourceUrl, contact.linkedinUrl),
         notes: String(contact.notes || "").trim(),
         createdAt: new Date().toISOString(),
       }))
-      .filter(contact => contact.company || contact.fullName || contact.email);
+      .filter(contact => contact.company || contact.fullName || contact.email)
+      .filter(contact => contact.sourceUrl || (Array.isArray(contact.evidence) && contact.evidence.length));
 
     await this.store.addSourcedContacts(normalized);
     return normalized;

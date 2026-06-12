@@ -821,8 +821,14 @@ async function createApp() {
     if (request.method === "POST" && url.pathname === "/research/records") {
       const body = await readBody(request);
       const records = Array.isArray(body.records) ? body.records : [body];
-      const normalized = records.map(normalizeResearchRecord);
-      if (!normalized.length) { sendJson(request, response, 400, { error: "events array is empty" }); return; }
+      if (!records.length) { sendJson(request, response, 400, { error: "records array is empty" }); return; }
+      let normalized;
+      try {
+        normalized = records.map(normalizeResearchRecord);
+      } catch (error) {
+        sendJson(request, response, 400, { error: error.message });
+        return;
+      }
       for (const record of normalized) {
         await store.addResearchRecord(record);
       }
@@ -923,7 +929,13 @@ async function createApp() {
         return;
       }
 
-      const normalizedResearch = researchRecords.map(record => normalizeResearchRecord({ campaignId, ...record }));
+      let normalizedResearch;
+      try {
+        normalizedResearch = researchRecords.map(record => normalizeResearchRecord({ campaignId, ...record }));
+      } catch (error) {
+        sendJson(request, response, 400, { error: error.message });
+        return;
+      }
       const normalizedOutreach = outreachEvents.map(event => normalizeOutreachEvent({ campaignId, ...event }));
       const normalizedAnalytics = analyticsEvents.map(event => normalizeEvent({ campaignId, ...event }));
 

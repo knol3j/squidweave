@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { normalizeEvent } from "../lib/analytics.mjs";
 import { normalizeOutreachEvent } from "../lib/targeting-engine.mjs";
+import { normalizeResearchRecord } from "../lib/targeting-engine.mjs";
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 
@@ -177,6 +178,11 @@ export class GhlBridge {
       source: `ghl-${eventType}`,
       contactStatus: "ready-for-enrichment",
       complianceStatus: contact.dnd ? "suppressed" : "reviewed",
+      sourceUrl: contact.customFields?.find(f => f.id?.toLowerCase().includes("linkedin"))?.value || contact.website || "",
+      evidence: [
+        ...(contact.customFields?.find(f => f.id?.toLowerCase().includes("linkedin"))?.value ? [contact.customFields.find(f => f.id?.toLowerCase().includes("linkedin"))?.value] : []),
+        ...(contact.website ? [contact.website] : []),
+      ],
     };
 
     if (campaignId) {
@@ -191,8 +197,18 @@ export class GhlBridge {
         title: prospect.title, segment: prospect.segment,
         source: `ghl-${eventType}`,
         channels: contact.dnd ? [] : ["email"],
+        sourceUrl: prospect.sourceUrl,
+        evidence: prospect.evidence,
       };
-      await this.store.addResearchRecord(record);
+      await this.store.addResearchRecord(normalizeResearchRecord({
+        ...record,
+        targetId,
+        campaignId,
+        metadata: {
+          sourceUrl: prospect.sourceUrl,
+          evidence: prospect.evidence,
+        },
+      }));
       results.push({ action: "added_research_record" });
 
       await this.memoryEngine.consolidateCampaign(campaignId);

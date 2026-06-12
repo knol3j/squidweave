@@ -66,7 +66,7 @@ export function getResearchActionability(record = {}, campaign = {}) {
     source: record.source || "",
     sourceUrl: sourceUrl || null,
     confirmed,
-    status: confirmed || issues.length === 0 ? "verified" : "needs-review",
+    status: confirmed && issues.length === 0 ? "verified" : "needs-review",
     actionable: missing.length === 0,
     actionabilityScore: Number(Math.max(0, 1 - missing.length * 0.16).toFixed(2)),
     missingActionFields: missing,
@@ -82,13 +82,14 @@ export function isActionableResearchRecord(record = {}, campaign = {}) {
 export function getContactActionability(contact = {}) {
   const missing = [];
   const route = text(contact.email) || text(contact.linkedinUrl) || text(contact.phone);
+  const sourceUrl = text(contact.sourceUrl) || text(contact.linkedinUrl);
   if (!text(contact.company)) missing.push("company");
   if (!text(contact.fullName) && !text(contact.firstName) && !text(contact.role) && !text(contact.title)) missing.push("identity");
   if (!text(contact.role) && !text(contact.title)) missing.push("title_or_role");
   if (!route) missing.push("contact_route");
   if (contact.complianceStatus !== "reviewed") missing.push("compliance_review");
   if (!["verified", "phone-route-present", "linkedin-route-present"].includes(text(contact.verificationStatus))) missing.push("verified_route");
-  if (!text(contact.sourceUrl) && !(Array.isArray(contact.evidence) && contact.evidence.length)) missing.push("source_or_evidence");
+  if (!sourceUrl && !(Array.isArray(contact.evidence) && contact.evidence.length)) missing.push("source_or_evidence");
 
   return {
     id: contact.id || null,

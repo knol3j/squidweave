@@ -185,3 +185,24 @@ test("TargetingEngine boosts records with higher source reliability", () => {
   assert.ok(rankings[0].score > rankings[1].score);
   assert.equal(rankings[0].sourceReliability, 0.9);
 });
+
+test("normalizeResearchRecord preserves provenance and rejects synthetic input", () => {
+  const normalized = normalizeResearchRecord({
+    campaignId: "c1",
+    targetId: "t5",
+    company: "Sigma",
+    source: "github",
+    sourceUrl: "https://github.com/org/repo",
+    evidence: ["Repository activity"],
+  });
+
+  assert.equal(normalized.sourceUrl, "https://github.com/org/repo");
+  assert.deepEqual(normalized.evidence, ["Repository activity"]);
+  assert.equal(normalized.metadata.sourceUrl, "https://github.com/org/repo");
+
+  assert.throws(() => normalizeResearchRecord({
+    campaignId: "c1",
+    targetId: "t6",
+    company: "Synthetic Co",
+  }), /sourceUrl or evidence is required/);
+});

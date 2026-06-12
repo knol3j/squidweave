@@ -40,6 +40,7 @@ function buildStore() {
         contactStatus: "ready-for-sequencing",
         verificationStatus: "linkedin-route-present",
         linkedinUrl: "https://linkedin.com/in/jamie",
+        sourceUrl: "https://linkedin.com/in/jamie",
         evidence: ["Verified profile"],
         createdAt: new Date().toISOString(),
       },

@@ -30,6 +30,7 @@ test("research records must be verified and actionable before downstream use", (
 
   assert.equal(isActionableResearchRecord(weak), false);
   assert.equal(isActionableResearchRecord(strong), true);
+  assert.equal(buildResearchVerificationGate({ campaign: { id: "c1", name: "Acme" }, records: [strong] }).ready, true);
 
   const gate = buildResearchVerificationGate({ campaign: { id: "c1", name: "Acme" }, records: [weak] });
   assert.equal(gate.ready, false);
@@ -49,6 +50,16 @@ test("contacts need route, evidence, verification, and compliance review", () =>
     email: "morgan@acme.example",
     evidence: ["Verified profile"],
     verificationStatus: "verified",
+    complianceStatus: "reviewed",
+  }), true);
+
+  assert.equal(isActionableContact({
+    company: "Acme",
+    role: "VP Marketing",
+    linkedinUrl: "https://linkedin.com/in/morgan",
+    sourceUrl: "https://linkedin.com/in/morgan",
+    evidence: ["Profile verified"],
+    verificationStatus: "linkedin-route-present",
     complianceStatus: "reviewed",
   }), true);
 });
