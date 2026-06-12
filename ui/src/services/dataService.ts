@@ -58,6 +58,28 @@ export class ApiError extends Error {
   }
 }
 
+function summarizeApiError(status: number, contentType: string | null, body: string) {
+  const trimmed = body.trim();
+
+  if (contentType?.includes('application/json') && trimmed) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed?.error === 'string') return parsed.error;
+      if (typeof parsed?.message === 'string') return parsed.message;
+    } catch {
+      // Fall through to the generic handling below.
+    }
+  }
+
+  if (contentType?.includes('text/html') || trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')) {
+    return status === 404
+      ? 'API endpoint not found. Check VITE_BRAIN_API_BASE for this deployment.'
+      : `API returned HTML instead of JSON (${status}).`;
+  }
+
+  return trimmed.slice(0, 240) || `API error ${status}`;
+}
+
 export interface Campaign {
   id: string;
   name?: string;
@@ -458,7 +480,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     if (response.status === 401) {
       clearAuthCredentials();
     }
-    throw new ApiError(response.status, text || `API error ${response.status}`);
+    throw new ApiError(response.status, summarizeApiError(response.status, response.headers.get('content-type'), text));
   }
   return response.json() as Promise<T>;
 }
