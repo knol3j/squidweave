@@ -864,9 +864,47 @@ async function createApp() {
         sendJson(request, response, 404, { error: "Campaign not found." });
         return;
       }
-      const records = store.listResearchRecords(campaignId);
+      const allRecords = store.listResearchRecords(campaignId);
       const requestedIds = Array.isArray(body.recordIds) ? new Set(body.recordIds.map(value => String(value))) : null;
-      const selected = records.filter(record => !requestedIds || requestedIds.has(record.id));
+      let selected = allRecords.filter(record => !requestedIds || requestedIds.has(record.id));
+
+      const action =
+        body.action === "archive_duplicates_by_target" || body.action === "dedupe_by_target";
+
+      if (action && !selected.length) {
+        const byTarget = new Map();
+        for (const record of records) {
+          if (!record?.targetId) continue;
+          if (!byTarget.has(record.targetId)) byTarget.set(record.targetId, record);
+        }
+        const keepTargets = new Set(byTarget.values().map((record) => record.targetId));
+        const toArchive = records.filter((record) => record.targetId && !keepTargets.has(record.targetId));
+        if (!toArchive.length) {
+          sendJson(request, response, 400, { error: "No duplicate records found for archive." });
+          return;
+        }
+        const archivedAt = new Date().toISOString();
+        await store.updateResearchRecords(campaignId, toArchive.map((record) => ({
+          id: record.id,
+          verificationStatus: "archived-duplicate",
+          archivedAt,
+          metadata: {
+            ...(record.metadata || {}),
+            verificationStatus: "archived-duplicate",
+            archivedAt,
+            archivedReason: "duplicate-target-id",
+          },
+        })));
+        await memoryEngine.consolidateCampaign(campaignId);
+        sendJson(request, response, 200, {
+          ok: true,
+          action: "archive_duplicates_by_target",
+          archived: toArchive.length,
+          campaignId,
+        });
+        return;
+      }
+
       if (!selected.length) {
         sendJson(request, response, 400, { error: "No research records selected for confirmation." });
         return;
@@ -1298,11 +1336,54 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     if (request.method === "POST" && url.pathname === "/sources/ingest") {
       const body = await readBody(request);
       const campaignId = resolveCampaignId(store, body.campaignId);
+      const MAX_INGEST = Number(process.env.MAX_INGEST_LIMIT) || 20;
+      const MAX_TOTAL = Number(process.env.MAX_INGEST_TOTAL) || 120;
+      const MAX_CONNECTORS = Number(process.env.MAX_INGEST_CONNECTORS) || 6;
+      const limit = Number.isFinite(Number(body.limit)) ? Math.min(Number(body.limit), MAX_INGEST) : 5;
+      const offset = Number.isFinite(Number(body.offset)) ? Math.max(0, Number(body.offset)) : 0;
+
+      const existingCampaign = store.getCampaign ? store.getCampaign(campaignId) : null;
+      const metadataMerged = { ...(existingCampaign || {}), ...(body.metadata || {}) };
+      if (body.query || body.prompt) {
+        metadataMerged.query = body.query || body.prompt;
+      }
+      if (typeof metadataMerged.objective === "undefined" && metadataMerged.query) {
+        metadataMerged.objective = metadataMerged.query;
+      }
+
+      if (existingCampaign && store.upsertCampaign) {
+        try {
+          await store.upsertCampaign({ ...existingCampaign, ...metadataMerged });
+        } catch (mergeError) {
+          console.warn("Campaign metadata merge skipped:", mergeError.message);
+        }
+      }
+
       const result = await sourceIngestionEngine.ingestCampaign(campaignId, {
-        query: String(body.query || body.prompt || store.getCampaign(campaignId)?.objective || "market intelligence"),
-        limit: Number.isFinite(Number(body.limit)) ? Number(body.limit) : 5,
+        query: String(body.query || body.prompt || metadataMerged.objective || "market intelligence"),
+        limit,
+        offset,
+        maxTotal: MAX_TOTAL,
+        maxPerConnector: MAX_INGEST,
+        maxConnectors: MAX_CONNECTORS,
       });
-      sendJson(request, response, 200, result);
+      const updatedCampaign = store.getCampaign ? store.getCampaign(campaignId) : metadataMerged;
+      sendJson(request, response, 200, {
+        ok: true,
+        mode: "scrape",
+        campaignId,
+        limit,
+        offset,
+        maxTotal: MAX_TOTAL,
+        maxConnectors: MAX_CONNECTORS,
+        query: String(body.query || body.prompt || metadataMerged.objective || "market intelligence"),
+        metadata: {
+          objective: updatedCampaign?.objective || metadataMerged?.objective || null,
+          audience: updatedCampaign?.audience || metadataMerged?.audience || null,
+          brandVoice: updatedCampaign?.brandVoice || metadataMerged?.brandVoice || null,
+        },
+        result,
+      });
       return;
     }
 
@@ -2078,13 +2159,59 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         jobManager.push(job.id, "running", "Autopilot orchestration started from prompt.");
         mark("policy", "completed", { classification: policy.classification });
 
+        const manifest = {
+          prompt: body.prompt,
+          campaignId: campaign.id,
+          researchObjectives: body.researchObjectives || null,
+          successMetrics: body.successMetrics || null,
+          connectors: body.connectors || campaign.connectors || null,
+          budget: body.budget || null,
+          backfill: body.backfill || null,
+          sanitizedAt: new Date().toISOString(),
+        };
+
+        if (store.upsertCampaign) {
+          try {
+            await store.upsertCampaign({
+              ...campaign,
+              researchObjectives: manifest.researchObjectives,
+              successMetrics: manifest.successMetrics,
+              connectors: manifest.connectors,
+            });
+          } catch (mergeError) {
+            console.warn("Autopilot manifest merge skipped:", mergeError.message);
+          }
+        }
+
+        const sourceQuery =
+          body.sourceQuery ||
+          manifest.prompt ||
+          campaign.objective ||
+          "market intelligence";
+
+        const sourceLimit = Number.isFinite(Number(body.sourceLimit))
+          ? Math.min(Number(body.sourceLimit), Number(process.env.MAX_INGEST_LIMIT) || 20)
+          : 5;
+
+        const sourceOffset = Number.isFinite(Number(body.sourceOffset))
+          ? Math.max(0, Number(body.sourceOffset))
+          : 0;
+
         const sourceIngestion = await sourceIngestionEngine.ingestCampaign(campaign.id, {
-          query: String(body.prompt || campaign.objective || "market intelligence"),
-          limit: Number.isFinite(Number(body.sourceLimit)) ? Number(body.sourceLimit) : 5,
+          query: String(sourceQuery),
+          limit: sourceLimit,
+          offset: sourceOffset,
+          maxTotal: Number(process.env.MAX_INGEST_TOTAL) || 120,
+          maxPerConnector: Number(process.env.MAX_INGEST_LIMIT) || 20,
+          maxConnectors: Number(process.env.MAX_INGEST_CONNECTORS) || 6,
+          manifest,
+          mode: "loop",
+          backfill: manifest.backfill === true,
         });
         mark("free_source_ingestion", "completed", {
           ingestedResearch: sourceIngestion?.researchRecords?.length || 0,
           ingestedInvestors: sourceIngestion?.investorRecords?.length || 0,
+          sourceRuns: sourceIngestion?.sourceRuns?.length || 0,
         });
 
         const automation = await automationEngine.runCampaign(campaign.id, {
