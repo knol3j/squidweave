@@ -1,57 +1,45 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-@theme {
-  --color-night-950: #020617;
-  --color-night-900: #08111f;
-  --color-night-850: #0d1727;
-  --color-night-800: #132033;
-  --color-night-700: #1c2d45;
-  --color-indigo-400: #818cf8;
-  --color-indigo-500: #6366f1;
-  --color-indigo-600: #4f46e5;
-  --color-fuchsia-400: #e879f9;
-  --color-fuchsia-500: #d946ef;
-
-  --animate-ticker: ticker 30s linear infinite;
-
-  @keyframes ticker {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   :root {
-    color-scheme: dark;
+    --bg-primary: #020617;
+    --bg-surface: #08111f;
+    --bg-surface-2: #0f172a;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148,163,184,0.35) transparent;
   }
 
   body {
-    @apply bg-[#020617] text-slate-100 antialiased selection:bg-indigo-500/40;
+    @apply bg-[#020617] text-slate-100 antialiased;
     background-image:
       radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 32%),
       radial-gradient(circle at top right, rgba(244, 114, 182, 0.1), transparent 24%),
       linear-gradient(180deg, #020617 0%, #08111f 55%, #020617 100%);
   }
-  
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 5px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.35);
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.55);
-  }
+
+  .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.35); border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.55); }
 }
 
-.glass-panel {
-  @apply rounded-2xl border border-white/10 bg-[#08111f]/88 shadow-[0_16px_60px_rgba(2,6,23,0.45)] backdrop-blur-xl;
-}
-
-.glass-card {
-  @apply rounded-xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_14px_40px_rgba(2,6,23,0.3)] transition-all hover:bg-white/[0.06];
+@layer components {
+  .glass-panel {
+    @apply rounded-2xl border border-white/10 bg-[#08111f]/88 shadow-[0_16px_60px_rgba(2,6,23,0.45)] backdrop-blur-xl;
+  }
+  .stage-border-indigo { border-left: 3px solid #6366f1; }
+  .stage-border-cyan   { border-left: 3px solid #06b6d4; }
+  .stage-border-amber  { border-left: 3px solid #f59e0b; }
+  .stage-border-rose   { border-left: 3px solid #f43f5e; }
+  .stage-border-emerald{ border-left: 3px solid #10b981; }
+  .stage-border-violet { border-left: 3px solid #8b5cf6; }
+  .stage-border-locked { border-left: 3px solid rgba(255,255,255,0.06); }
 }

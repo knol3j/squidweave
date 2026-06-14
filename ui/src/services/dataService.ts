@@ -1,183 +1,221 @@
-// In production behind a reverse proxy (Cloudflare tunnel, nginx, etc.),
-// use relative paths so the browser hits the same origin.
-// In dev (localhost), fall back to explicit host:port.
-const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-const API_BASE = import.meta.env.VITE_BRAIN_API_BASE || (isDev ? 'http://127.0.0.1:4010' : '');
+/**
+ * SquidWeave API Service
+ * All data from real backend endpoints. Zero mock data.
+ */
 
-// ── Auth helpers ──────────────────────────────────────────────
-// Store/retrieve Basic Auth credentials in sessionStorage so the
-// frontend can include Authorization headers in every API call.
-// This avoids the browser limitation where fetch() fails when the
-// page URL contains embedded credentials (user:pass@host).
-const AUTH_KEY = 'squidweave_auth';
-const AUTH_EVENT = 'squidweave-auth-changed';
+// ─── 1. API INFRASTRUCTURE ───────────────────────────────────────────────────
 
-function getAuthHeaders(): Record<string, string> {
-  const stored = sessionStorage.getItem(AUTH_KEY);
-  if (stored) {
-    return { Authorization: `Basic ${stored}` };
-  }
-  return {};
+const RAILWAY_BASE = "https://squidweave-api-production.up.railway.app";
+let API_BASE = RAILWAY_BASE;
+
+// ─── Backend selection with localStorage persistence ───
+const STORAGE_KEY = "sw_api_base";
+
+function loadSavedBase(): string | null {
+  try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
+}
+function saveBase(base: string) {
+  try { localStorage.setItem(STORAGE_KEY, base); } catch { /* silent */ }
+}
+function clearSavedBase() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* silent */ }
 }
 
-function notifyAuthChange() {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(AUTH_EVENT));
-  }
+// Initialize: use saved base, or probe for local
+const saved = loadSavedBase();
+if (saved) {
+  API_BASE = saved;
+  console.log("[SquidWeave] Using saved backend:", API_BASE);
+} else {
+  // Probe for local backend once (backend may not be ready yet)
+  const LOCAL_ENDPOINTS = ["http://127.0.0.1:4010", "http://localhost:4010"];
+  (async () => {
+    for (const ep of LOCAL_ENDPOINTS) {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 1500);
+        const res = await fetch(`${ep}/health`, { signal: ctrl.signal });
+        clearTimeout(t);
+        if (res.ok) {
+          API_BASE = ep;
+          saveBase(ep);
+          console.log("[SquidWeave] Auto-connected to local backend:", ep);
+          return;
+        }
+      } catch { /* silent */ }
+    }
+    console.log("[SquidWeave] Using Railway backend");
+  })();
 }
 
-export function setAuthCredentials(user: string, pass: string) {
+// Manual switch (called from UI button)
+export function switchToLocalBackend(endpoint: string): void {
+  API_BASE = endpoint;
+  saveBase(endpoint);
+  console.log("[SquidWeave] Switched to:", API_BASE);
+}
+
+export function resetToRailway(): void {
+  API_BASE = RAILWAY_BASE;
+  clearSavedBase();
+  console.log("[SquidWeave] Reset to Railway");
+}
+
+export function getApiBase(): string {
+  return API_BASE;
+}
+
+const AUTH_KEY = "squidweave_auth";
+
+export function getApiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
+export function getAuthEventName(): string {
+  return "squidweave_auth_changed";
+}
+
+export function setAuthCredentials(user: string, pass: string): void {
   sessionStorage.setItem(AUTH_KEY, btoa(`${user}:${pass}`));
-  notifyAuthChange();
+  window.dispatchEvent(new Event(getAuthEventName()));
 }
 
-export function clearAuthCredentials() {
+export function clearAuthCredentials(): void {
   sessionStorage.removeItem(AUTH_KEY);
-  notifyAuthChange();
+  window.dispatchEvent(new Event(getAuthEventName()));
 }
 
 export function hasAuthCredentials(): boolean {
   return !!sessionStorage.getItem(AUTH_KEY);
 }
 
-export function getApiUrl(path: string) {
-  return `${API_BASE}${path}`;
-}
-
-export function getAuthEventName() {
-  return AUTH_EVENT;
+function getAuthHeaders(): Record<string, string> {
+  const stored = sessionStorage.getItem(AUTH_KEY);
+  if (stored) return { Authorization: `Basic ${stored}` };
+  return {};
 }
 
 export class ApiError extends Error {
   status: number;
-
   constructor(status: number, message: string) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
   }
 }
 
-function summarizeApiError(status: number, contentType: string | null, body: string) {
-  const trimmed = body.trim();
-
-  if (contentType?.includes('application/json') && trimmed) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (typeof parsed?.error === 'string') return parsed.error;
-      if (typeof parsed?.message === 'string') return parsed.message;
-    } catch {
-      // Fall through to the generic handling below.
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(getApiUrl(path), {
+    ...init,
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": "squidweave-local-dev",
+      ...getAuthHeaders(),
+      ...(init?.headers || {}),
+    },
+  });
+  if (!response.ok) {
+    if (response.status === 401) {
+      sessionStorage.removeItem(AUTH_KEY);
+      window.dispatchEvent(new Event(getAuthEventName()));
     }
+    const text = await response.text();
+    throw new ApiError(response.status, text);
   }
-
-  if (contentType?.includes('text/html') || trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')) {
-    return status === 404
-      ? 'API endpoint not found. Check VITE_BRAIN_API_BASE for this deployment.'
-      : `API returned HTML instead of JSON (${status}).`;
-  }
-
-  return trimmed.slice(0, 240) || `API error ${status}`;
+  return response.json() as Promise<T>;
 }
+
+// ─── 2. TYPE DEFINITIONS ─────────────────────────────────────────────────────
 
 export interface Campaign {
   id: string;
-  name?: string;
-  clientName?: string;
-  connector?: string;
-  connectors?: string[];
-  activePrompt: string;
-  activeTab: string;
+  name: string;
+  status: string;
+  goal: string;
+  latestContentPack?: ContentPack | null;
+  metrics?: CampaignMetrics;
+  createdAt?: string;
   updatedAt?: string;
-  enabledModules?: string[];
-  locales?: string[];
-  sourceLocale?: string;
-  objective?: string;
-  audience?: string;
-  offer?: string;
-  brandVoice?: string;
-  channel?: string;
-  automationEnabled?: boolean;
-  clientNeed?: string;
-  intakeStatus?: string;
-  successDefinition?: string;
-  constraints?: string;
-  differentiators?: string;
-  researchNotes?: string;
-  markets?: string[];
-  researchObjectives?: string[];
-  successMetrics?: string[];
-  designTheme?: string;
-  designPalette?: string[];
-  designGuidelines?: string[];
-  contentAngles?: string[];
-  baseBody?: string;
-  baseHeadline?: string;
-  baseSubject?: string;
-  basePreheader?: string;
-  baseCta?: string;
+  [key: string]: unknown;
+}
+
+export interface ContentPack {
+  id: string;
+  campaignId: string;
+  variants: Variation[];
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+export interface CampaignMetrics {
+  impressions?: number;
+  clicks?: number;
+  conversions?: number;
+  sent?: number;
+  opened?: number;
+  replied?: number;
+  booked?: number;
+  [key: string]: unknown;
 }
 
 export interface Variation {
   id: string;
-  label: string;
-  copy: string;
-  ctr: number | null;
-  conv: number | null;
-  image?: string | null;
-  status: 'winner' | 'contender' | null;
-  platform: string | null;
-  audience: string | null;
-  trend: 'up' | 'down' | 'stable' | null;
+  locale: string;
+  headline: string;
+  body: string;
+  cta: string;
+  subject?: string;
+  preheader?: string;
+  angle?: string;
+  tone?: string;
+  status?: string;
+  approved?: boolean;
+  [key: string]: unknown;
 }
 
 export interface Persona {
   id: string;
   name: string;
-  demographics: string;
-  pains: string[];
-  gains: string[];
-  engagementScore: number;
+  segment: string;
+  painPoints: string[];
+  channels: string[];
+  fitScore: number;
+  status: string;
+  description?: string;
+  estimatedReach?: number;
+  [key: string]: unknown;
 }
 
 export interface Metric {
   id: string;
-  timestamp: { toDate: () => Date };
-  ctr: number;
-  conv: number;
-  spend: number;
+  name: string;
+  value: number;
+  unit: string;
+  timestamp: string;
+  change?: number;
+  [key: string]: unknown;
 }
 
 export interface Keyword {
   id: string;
   term: string;
-  volume: string;
-  difficulty: string;
+  volume: number;
+  difficulty: number;
   intent: string;
-}
-
-function titleCase(value: string) {
-  return value
-    .split(/[\s_-]+/)
-    .filter(Boolean)
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+  source: string;
+  [key: string]: unknown;
 }
 
 export interface MemoryPlaybook {
   id: string;
   campaignId: string;
-  segment: string;
-  region: string;
-  recommendedChannel: string;
-  cadenceDays: number;
-  minSamples: number;
-  winRate: number;
-  riskRate: number;
-  confidence: number;
-  rationale: string;
-  lastValidatedAt: string | null;
-  status: string;
+  title: string;
+  content: string;
+  tactics: string[];
+  observations: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
 }
 
 export interface TargetProfile {
@@ -185,958 +223,1392 @@ export interface TargetProfile {
   campaignId: string;
   targetId: string;
   company: string;
-  contactName: string;
-  title: string;
   segment: string;
-  region: string;
-  preferredChannel: string;
-  channels: string[];
-  fitScore: number | null;
-  intentScore: number | null;
-  recencyScore: number | null;
-  memoryScore: number | null;
-  status: string;
-  latestResearchAt: string | null;
-  lastEngagementAt: string | null;
-  nextEligibleAt: string | null;
-  estimatedReach: number | null;
+  fitScore: number;
+  decisionMaker?: string;
+  signals?: string[];
+  enrichment?: Record<string, unknown>;
+  createdAt?: string;
+  [key: string]: unknown;
 }
 
 export interface MemoryRecall {
-  updatedAt: string;
-  targetProfile: TargetProfile | null;
-  episodicMemories: {
-    researchRecords: any[];
-    outreachEvents: any[];
-    decisions: any[];
-  };
-  semanticMemories: {
-    targetProfiles: TargetProfile[];
-    tacticObservations: any[];
-  };
-  proceduralMemories: MemoryPlaybook[];
+  campaignId: string;
+  targetProfile?: TargetProfile;
+  semanticMemories?: SemanticMemories;
+  episodicMemories?: unknown[];
+  tacticalInsights?: string[];
+  [key: string]: unknown;
+}
+
+export interface SemanticMemories {
+  tacticObservations?: string[];
+  strategyPatterns?: string[];
+  channelInsights?: string[];
+  [key: string]: unknown;
 }
 
 export interface ConnectorStatus {
   connector: string;
+  enabled: boolean;
   configured: boolean;
-  dryRun: boolean;
-  baseUrl: string | null;
-  tokenConfigured: boolean;
-  mode: string;
-  reachable: boolean | null;
-  checkedAt: string;
-  error: string | null;
-  tokenLikelyRotated?: boolean;
-  lastAuthErrorAt?: string | null;
-  diagnosis?: OpenClawDiagnostic;
+  lastSync?: string;
+  error?: string;
+  details?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export interface OpenClawDiagnostic {
   connector: string;
-  configured: boolean;
-  baseUrl: string | null;
-  gatewayReachable: boolean;
-  authAccepted: boolean;
-  openAiHttpSurfaceReachable: boolean;
-  requiresOpenAiHttpSurface: boolean;
-  ready: boolean;
-  summary: string;
-  recommendations: string[];
+  reachable: boolean;
+  latencyMs: number;
+  error?: string;
+  lastChecked?: string;
+  [key: string]: unknown;
 }
 
 export interface ConnectorConfig {
   connector: string;
-  baseUrl: string | null;
-  dryRun: boolean;
-  tokenConfigured: boolean;
-  updatedAt: string | null;
+  settings: Record<string, unknown>;
+  secrets?: string[];
+  requiredFields?: string[];
+  [key: string]: unknown;
 }
 
 export interface SetupRequirements {
-  generatedAt: string;
-  environment: {
-    requiredForLiveConnectors: string[];
-    operational: string[];
-  };
-  outreachEventTypes: string[];
-  analyticsEventTypes: string[];
-  requiredResearchFields: string[];
-  recommendedResearchFields: string[];
-  sourceSystems: {
-    research: string[];
-    outreach: string[];
-    analytics: string[];
-  };
+  ready: boolean;
+  missing: string[];
+  optional: string[];
+  [key: string]: unknown;
 }
 
 export interface OpenClawDiagnosticResponse {
-  generatedAt: string;
-  diagnostics: OpenClawDiagnostic[];
+  overall: string;
+  checks: OpenClawDiagnostic[];
+  timestamp: string;
+  [key: string]: unknown;
 }
 
 export interface ResearchRecord {
   id: string;
   campaignId: string;
-  targetId: string;
   source: string;
-  company: string;
-  contactName: string;
-  title: string;
-  segment: string;
-  region: string;
-  preferredChannel: string;
-  channels: string[];
-  fitScore: number | null;
-  intentScore: number | null;
-  recencyScore: number | null;
-  estimatedReach: number | null;
-  notes: string;
-  capturedAt: string;
-  metadata?: {
-    sourceUrl?: string;
-    supportingUrls?: string[];
-    publishedAt?: string;
-    evidence?: string[];
-    scoreMapping?: Record<string, string>;
-  };
+  url?: string;
+  domain?: string;
+  title?: string;
+  insight?: string;
+  summary?: string;
+  finding?: string;
+  content?: string;
+  origin?: string;
+  sourceUrl?: string;
+  createdAt?: string;
+  [key: string]: unknown;
 }
 
 export interface ProspectingPlan {
+  id: string;
   campaignId: string;
-  generatedAt: string;
-  objective: string;
-  audience: string;
-  offer: string;
-  channel: string;
-  topAccounts: Array<{
-    targetId: string;
-    company: string;
-    segment: string;
-    region: string;
-    sourceMix: string[];
-    roleClusters: string[];
-    preferredChannel: string | null;
-    evidence: string[];
-  }>;
-  sourcingWorkflow: string[];
-  enrichmentChecklist: string[];
-  proceduralSignals: Array<{
-    segment: string;
-    region: string;
-    channel: string;
-    confidence: number;
-  }>;
-  targetSummary: {
-    totalTargets: number;
-    actionableTargets: number;
-  };
+  strategy: string;
+  sources: string[];
+  filters: Record<string, unknown>;
+  idealPersona?: Record<string, unknown>;
+  createdAt?: string;
+  [key: string]: unknown;
 }
 
 export interface SourcedContact {
   id: string;
-  campaignId: string;
-  targetId: string;
-  company: string;
-  fullName?: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
   title?: string;
-  role?: string;
-  email?: string;
   linkedinUrl?: string;
-  companyWebsite?: string;
-  phone?: string;
-  region?: string;
-  segment?: string;
-  preferredChannel?: string;
-  sourceMix?: string[];
-  searchQuery?: string;
-  contactStatus: string;
-  complianceStatus: string;
-  enrichmentStatus?: string;
-  verificationStatus?: string;
-  sequenceStatus?: string;
-  sequencePlan?: {
-    channel: string;
-    offer: string;
-    steps: string[];
-    personalizationAngles: string[];
-    createdAt: string;
-  };
-  source?: string;
+  source: string;
   score?: number;
-  evidence?: string[];
-  notes?: string;
-  createdAt: string;
+  status?: string;
+  [key: string]: unknown;
 }
 
 export interface ProspectingRun {
   id: string;
   campaignId: string;
-  createdAt: string;
-  reason: string;
-  generatedCandidates: number;
-  plan: ProspectingPlan;
+  status: string;
+  source: string;
+  contactsFound: number;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+  [key: string]: unknown;
 }
 
 export interface ProspectPipeline {
   campaignId: string;
-  generatedAt: string;
-  counts: {
-    total: number;
-    readyForEnrichment: number;
-    readyForSequencing: number;
-    sequenced: number;
-    suppressed: number;
-    byStatus: Record<string, number>;
-    byCompliance: Record<string, number>;
-    bySequence: Record<string, number>;
-  };
-  recentRuns: ActivationRun[];
+  stages: ProspectStage[];
+  totalProspects: number;
+  lastUpdated?: string;
+  [key: string]: unknown;
+}
+
+export interface ProspectStage {
+  name: string;
+  count: number;
+  prospects: SourcedContact[];
+  [key: string]: unknown;
 }
 
 export interface ActivationRun {
   id: string;
   campaignId: string;
-  action: string;
   status: string;
-  provider?: string;
-  processedContacts: number;
-  createdAt: string;
-  connectorResults?: any[];
+  channels: string[];
+  contactsActivated: number;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+  [key: string]: unknown;
 }
 
 export interface FundingInvestor {
   id: string;
   campaignId: string;
-  createdAt: string;
-  updatedAt: string;
-  fundName: string;
-  partnerName: string | null;
-  stageFocus: string[];
-  geoFocus: string[];
-  sectors: string[];
-  checkSize: string | null;
-  thesis: string;
-  warmIntroPath: string;
-  thesisMatch: number;
-  stageMatch: number;
-  checkSizeMatch: number;
-  warmPath: number;
+  name: string;
+  firm: string;
+  type: string;
   status: string;
-  notes: string;
-  lastContactAt: string | null;
-  nextActionAt: string | null;
-  sequenceStep: number;
+  matchScore: number;
+  email?: string;
+  linkedin?: string;
+  checkSize?: string;
+  focus?: string[];
+  stage?: string;
+  location?: string;
+  enrichment?: Record<string, unknown>;
+  lastEnrichedAt?: string;
+  createdAt?: string;
+  [key: string]: unknown;
 }
 
 export interface FundingPipeline {
   campaignId: string;
-  generatedAt: string;
-  counts: {
-    total: number;
-    byStatus: Record<string, number>;
-  };
-  prioritized: Array<FundingInvestor & {
-    score: number;
-    reasons: string[];
-    campaignStage: string | null;
-  }>;
+  investors: FundingInvestor[];
+  stages: FundingStage[];
+  summary: FundingSummary;
+  lastUpdated?: string;
+  [key: string]: unknown;
+}
+
+export interface FundingStage {
+  name: string;
+  count: number;
+  investors: FundingInvestor[];
+  [key: string]: unknown;
+}
+
+export interface FundingSummary {
+  total: number;
+  reached: number;
+  responded: number;
+  interested: number;
+  committed: number;
+  passed: number;
+  [key: string]: unknown;
 }
 
 export interface FundingOutreachEvent {
   id: string;
   campaignId: string;
   investorId: string;
+  investorName: string;
   type: string;
   channel: string;
-  timestamp: string;
-  sequenceStep: number;
-  metadata?: {
-    score?: number;
-    reasons?: string[];
-  };
+  status: string;
+  sentAt?: string;
+  respondedAt?: string;
+  subject?: string;
+  body?: string;
+  error?: string;
+  [key: string]: unknown;
 }
 
 export interface FundingRun {
   id: string;
   campaignId: string;
-  createdAt: string;
-  type: string;
-  processedInvestors: number;
   status: string;
+  investorsTargeted: number;
+  investorsReached: number;
+  responses: number;
+  meetingsBooked: number;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+  [key: string]: unknown;
 }
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(getApiUrl(path), {
-    ...init,
-    headers: {
-      'content-type': 'application/json',
-      ...getAuthHeaders(),
-      ...(init?.headers || {}),
-    },
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    if (response.status === 401) {
-      clearAuthCredentials();
-    }
-    throw new ApiError(response.status, summarizeApiError(response.status, response.headers.get('content-type'), text));
-  }
-  return response.json() as Promise<T>;
+export interface OutreachEvent {
+  id: string;
+  campaignId: string;
+  targetId?: string;
+  type: string;
+  channel: string;
+  status: string;
+  sentAt?: string;
+  subject?: string;
+  error?: string;
+  [key: string]: unknown;
 }
 
-function makeTimestamp(value?: string) {
-  const date = value ? new Date(value) : new Date();
-  return { toDate: () => date };
+export interface DlqMessage {
+  id: string;
+  campaignId: string;
+  error: string;
+  payload?: Record<string, unknown>;
+  createdAt?: string;
+  [key: string]: unknown;
 }
 
-function buildVariations(state: any): Variation[] {
-  const campaign = state.campaigns?.['main-campaign'] || Object.values(state.campaigns || {})[0] as Campaign | undefined;
-  const packs = state.contentPacks || [];
-  const latestPack = packs.at(-1);
-
-  if (!latestPack?.variants?.length || !campaign) {
-    return [];
-  }
-
-  return latestPack.variants.map((variant: any, index: number) => ({
-    id: variant.id || `${latestPack.id}-${variant.locale}-${index}`,
-    label: `${variant.locale} Variant ${String.fromCharCode(65 + index)}`,
-    copy: variant.body,
-    ctr: typeof variant.ctr === 'number' ? variant.ctr : null,
-    conv: typeof variant.conv === 'number' ? variant.conv : null,
-    image: variant.image || null,
-    status: variant.status === 'winner' || variant.status === 'contender' ? variant.status : null,
-    platform: variant.channel || campaign.channel || null,
-    audience: variant.audience || campaign.audience || null,
-    trend: variant.trend === 'up' || variant.trend === 'down' || variant.trend === 'stable' ? variant.trend : null,
-  }));
+export interface DlqState {
+  messages: DlqMessage[];
+  count: number;
+  lastMessage?: string;
+  [key: string]: unknown;
 }
 
-function buildMetrics(state: any): Metric[] {
-  const decisions = state.decisions || [];
-  return decisions.map((decision: any, index: number) => ({
-    id: decision.id || `metric-${index}`,
-    timestamp: makeTimestamp(decision.createdAt),
-    ctr: Number((((decision.summary?.derived?.ctr || 0) * 100)).toFixed(2)),
-    conv: Number((((decision.summary?.derived?.cvr || 0) * 100)).toFixed(2)),
-    spend: Number((decision.summary?.totals?.spend || 0).toFixed(2)),
-  }));
+export interface SafetyExecution {
+  id: string;
+  campaignId: string;
+  status: string;
+  rule: string;
+  checkedAt?: string;
+  passed?: boolean;
+  details?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
-function poll<T>(fetcher: () => Promise<T>, callback: (data: T) => void, intervalMs = 4000) {
-  let active = true;
-  const run = async () => {
+export interface AnalyticsEvent {
+  id: string;
+  campaignId: string;
+  type: string;
+  channel: string;
+  count: number;
+  date?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface Contact {
+  id: string;
+  locationId?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  companyName?: string;
+  tags?: string[];
+  customFields?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+export interface Opportunity {
+  id: string;
+  pipelineId?: string;
+  contactId?: string;
+  name: string;
+  status: string;
+  monetaryValue?: number;
+  stage?: string;
+  customFields?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+export interface Pipeline {
+  id: string;
+  locationId?: string;
+  name: string;
+  stages?: PipelineStage[];
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+export interface PipelineStage {
+  id: string;
+  name: string;
+  position?: number;
+  [key: string]: unknown;
+}
+
+export interface Workflow {
+  id: string;
+  locationId?: string;
+  name: string;
+  status?: string;
+  steps?: WorkflowStep[];
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+export interface WorkflowStep {
+  id: string;
+  name: string;
+  type: string;
+  position?: number;
+  config?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface Note {
+  id: string;
+  contactId: string;
+  body: string;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+export interface Task {
+  id: string;
+  contactId?: string;
+  title: string;
+  description?: string;
+  status: string;
+  dueDate?: string;
+  completedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+export interface CalendarEvent {
+  id: string;
+  contactId?: string;
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+export interface Tag {
+  id: string;
+  locationId?: string;
+  name: string;
+  color?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+export interface IngestOutcomePayload {
+  outcomes: Array<{
+    type: string;
+    source: string;
+    data: Record<string, unknown>;
+  }>;
+  [key: string]: unknown;
+}
+
+export interface AutomationPayload {
+  campaignId?: string;
+  reason?: string;
+  [key: string]: unknown;
+}
+
+export interface PromptAutopilotPayload {
+  prompt: string;
+  options?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface ContentGeneratePayload {
+  campaignId: string;
+  locales?: string[];
+  reason?: string;
+  [key: string]: unknown;
+}
+
+export interface GhlSyncOptions {
+  locationId?: string;
+  limit?: number;
+  [key: string]: unknown;
+}
+
+// ─── 3. HELPER FUNCTIONS ─────────────────────────────────────────────────────
+
+export function titleCase(str: string): string {
+  return str
+    .split(/[_\s]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+export function makeTimestamp(): string {
+  return new Date().toISOString();
+}
+
+export function formatPercent(n: number): string {
+  return `${(n * 100).toFixed(1)}%`;
+}
+
+export function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString();
+}
+
+export function buildVariations(state: Record<string, unknown>): Variation[] {
+  const cp = state?.latestContentPack as
+    | ContentPack
+    | undefined;
+  if (cp && Array.isArray(cp.variants)) return cp.variants;
+  return [];
+}
+
+export function buildMetrics(state: Record<string, unknown>): Metric[] {
+  const m = state?.metrics as CampaignMetrics | undefined;
+  if (!m) return [];
+  const out: Metric[] = [];
+  if (m.impressions != null)
+    out.push({
+      id: "impressions",
+      name: "Impressions",
+      value: m.impressions,
+      unit: "count",
+      timestamp: makeTimestamp(),
+    });
+  if (m.clicks != null)
+    out.push({
+      id: "clicks",
+      name: "Clicks",
+      value: m.clicks,
+      unit: "count",
+      timestamp: makeTimestamp(),
+    });
+  if (m.conversions != null)
+    out.push({
+      id: "conversions",
+      name: "Conversions",
+      value: m.conversions,
+      unit: "count",
+      timestamp: makeTimestamp(),
+    });
+  if (m.sent != null)
+    out.push({
+      id: "sent",
+      name: "Sent",
+      value: m.sent,
+      unit: "count",
+      timestamp: makeTimestamp(),
+    });
+  if (m.opened != null)
+    out.push({
+      id: "opened",
+      name: "Opened",
+      value: m.opened,
+      unit: "count",
+      timestamp: makeTimestamp(),
+    });
+  if (m.replied != null)
+    out.push({
+      id: "replied",
+      name: "Replied",
+      value: m.replied,
+      unit: "count",
+      timestamp: makeTimestamp(),
+    });
+  if (m.booked != null)
+    out.push({
+      id: "booked",
+      name: "Booked",
+      value: m.booked,
+      unit: "count",
+      timestamp: makeTimestamp(),
+    });
+  return out;
+}
+
+export function poll<T>(
+  fetcher: () => Promise<T>,
+  callback: (data: T) => void,
+  intervalMs: number
+): () => void {
+  let alive = true;
+  const tick = async () => {
+    if (!alive) return;
     try {
       const data = await fetcher();
-      if (active) {
-        callback(data);
-      }
-    } catch (error) {
-      console.error(error);
+      if (alive) callback(data);
+    } catch {
+      /* silent */
     }
+    if (alive) setTimeout(tick, intervalMs);
   };
-  run();
-  const timer = window.setInterval(run, intervalMs);
+  tick();
   return () => {
-    active = false;
-    window.clearInterval(timer);
+    alive = false;
   };
 }
 
+
+// ─── 4. DATA SERVICE EXPORT ──────────────────────────────────────────────────
+
 export const dataService = {
-  async verifyCredentials() {
-    return api<any>('/state');
+  // ─── Auth ──────────────────────────────────────────────────────────────────
+  async verifyCredentials(): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/state");
   },
 
-  async getCampaign(campaignId: string) {
-    return api<Campaign | null>(`/campaigns/${campaignId}`);
+  // ─── Campaigns ─────────────────────────────────────────────────────────────
+  async getCampaign(campaignId: string): Promise<Campaign> {
+    return api<Campaign>(`/campaigns/${encodeURIComponent(campaignId)}`);
   },
 
-  async updateCampaign(campaignId: string, data: Partial<Campaign>) {
-    return api<Campaign>('/campaigns', {
-      method: 'POST',
-      body: JSON.stringify({
-        id: campaignId,
-        ...(data.name ? { name: data.name } : {}),
-        ...data,
-      }),
+  async updateCampaign(
+    campaignId: string,
+    data: Record<string, unknown>
+  ): Promise<Campaign> {
+    return api<Campaign>("/campaigns", {
+      method: "POST",
+      body: JSON.stringify({ id: campaignId, ...data }),
     });
   },
 
-  async getState() {
-    return api<any>('/state');
+  async getCampaigns(): Promise<Campaign[]> {
+    return api<Campaign[]>("/campaigns");
   },
 
-  async getMemoryRecall(campaignId: string, targetId?: string) {
-    const search = new URLSearchParams({ campaignId });
-    if (targetId) {
-      search.set('targetId', targetId);
-    }
-    return api<MemoryRecall>(`/memory/recall?${search.toString()}`);
+  async getState(): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/state");
   },
 
-  async getPlaybooks(campaignId: string) {
-    return api<MemoryPlaybook[]>(`/memory/playbooks?campaignId=${encodeURIComponent(campaignId)}`);
+  // ─── Memory ────────────────────────────────────────────────────────────────
+  async getMemoryRecall(
+    campaignId: string,
+    targetId?: string
+  ): Promise<MemoryRecall> {
+    const qs = new URLSearchParams({ campaignId });
+    if (targetId) qs.append("targetId", targetId);
+    return api<MemoryRecall>(`/memory/recall?${qs.toString()}`);
   },
 
-  async getTargets(campaignId: string) {
-    return api<any[]>(`/targets?campaignId=${encodeURIComponent(campaignId)}`);
+  async getPlaybooks(campaignId: string): Promise<MemoryPlaybook[]> {
+    return api<MemoryPlaybook[]>(
+      `/memory/playbooks?campaignId=${encodeURIComponent(campaignId)}`
+    );
   },
 
-  async getTargetProfiles(campaignId: string) {
-    return api<TargetProfile[]>(`/memory/targets?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async getReengagementQueue(campaignId: string) {
-    return api<{ campaignId: string; updatedAt: string; queue: any[] }>(`/reengagement?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async getResearchRecords(campaignId: string) {
-    return api<ResearchRecord[]>(`/research/records?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async getProspectingPlan(campaignId: string) {
-    return api<ProspectingPlan>(`/prospecting/plan?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async generateProspects(campaignId: string, payload?: { reason?: string; limit?: number }) {
-    return api<{ run: ProspectingRun; plan: ProspectingPlan; candidates: SourcedContact[] }>('/prospecting/generate', {
-      method: 'POST',
-      body: JSON.stringify({
-        campaignId,
-        ...payload,
-      }),
-    });
-  },
-
-  async getProspects(campaignId: string) {
-    return api<SourcedContact[]>(`/prospects?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async importProspects(campaignId: string, contacts: Partial<SourcedContact>[], source = 'manual-import') {
-    return api<SourcedContact[]>('/prospects/import', {
-      method: 'POST',
-      body: JSON.stringify({
-        campaignId,
-        source,
-        contacts,
-      }),
-    });
-  },
-
-  async getProspectingRuns(campaignId: string) {
-    return api<ProspectingRun[]>(`/prospecting/runs?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async getProspectPipeline(campaignId: string) {
-    return api<ProspectPipeline>(`/prospects/pipeline?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async enrichProspects(campaignId: string, payload?: { provider?: string; limit?: number; dispatch?: boolean; connectors?: string[] }) {
-    return api<{ run: ActivationRun; contacts: SourcedContact[]; pipeline: ProspectPipeline }>('/prospects/enrich', {
-      method: 'POST',
-      body: JSON.stringify({
-        campaignId,
-        ...payload,
-      }),
-    });
-  },
-
-  async sequenceProspects(campaignId: string, payload?: { limit?: number; dispatch?: boolean; connectors?: string[] }) {
-    return api<{ run: ActivationRun; contacts: SourcedContact[]; pipeline: ProspectPipeline }>('/prospects/sequence', {
-      method: 'POST',
-      body: JSON.stringify({
-        campaignId,
-        ...payload,
-      }),
-    });
-  },
-
-  async getActivationRuns(campaignId: string) {
-    return api<ActivationRun[]>(`/prospects/activation-runs?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async importFundingInvestors(campaignId: string, records: Array<Partial<FundingInvestor>>) {
-    return api<FundingInvestor[]>('/funding/investors', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, records }),
-    });
-  },
-
-  async getFundingInvestors(campaignId: string) {
-    return api<FundingInvestor[]>(`/funding/investors?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async getFundingPipeline(campaignId: string) {
-    return api<FundingPipeline>(`/funding/pipeline?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async runFundingSequence(campaignId: string, payload?: { limit?: number }) {
-    return api<{ run: FundingRun; events: FundingOutreachEvent[]; pipeline: FundingPipeline }>('/funding/sequence', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, ...payload }),
-    });
-  },
-
-  async runFundingCampaign(campaignId: string, payload?: { limit?: number }) {
-    return api<{ campaignId: string; pipeline: FundingPipeline; sequence: { run: FundingRun; events: FundingOutreachEvent[]; pipeline: FundingPipeline } }>('/funding/run', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, ...payload }),
-    });
-  },
-
-  /** Alias: runFunding */
-  async runFunding(campaignId: string) {
-    return this.runFundingCampaign(campaignId);
-  },
-
-  async getFundingRuns(campaignId: string) {
-    return api<FundingRun[]>(`/funding/runs?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async getFundingOutreachEvents(campaignId: string) {
-    return api<FundingOutreachEvent[]>(`/funding/outreach-events?campaignId=${encodeURIComponent(campaignId)}`);
-  },
-
-  async getEnrichmentProvidersStatus() {
-    return api<{ hunter: { configured: boolean; keyPrefix: string | null }; apollo: { configured: boolean; keyPrefix: string | null } }>('/funding/enrichment-status');
-  },
-
-  async runEnrichment(campaignId: string) {
-    return api<{ enriched: number; skipped: number; errors: number }>('/funding/enrich', {
-      method: 'POST',
+  async consolidateMemory(campaignId: string): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/memory/consolidate", {
+      method: "POST",
       body: JSON.stringify({ campaignId }),
     });
   },
 
-  async sendInvestorDeck(campaignId: string, investorId: string) {
-    return api<FundingOutreachEvent>('/funding/send-deck', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, investorId }),
+  // ─── Targets ───────────────────────────────────────────────────────────────
+  async getTargets(campaignId: string): Promise<TargetProfile[]> {
+    return api<TargetProfile[]>(
+      `/targets?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async getTargetProfiles(campaignId: string): Promise<TargetProfile[]> {
+    return api<TargetProfile[]>(
+      `/memory/targets?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async getTargetDecision(
+    campaignId: string
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/targets/decide", {
+      method: "POST",
+      body: JSON.stringify({ campaignId }),
     });
   },
 
-  async logInvestorEvent(campaignId: string, investorId: string, payload: { type: string; channel: string; notes?: string }) {
-    return api<FundingOutreachEvent>('/funding/log-event', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, investorId, ...payload }),
-    });
+  async getReengagementQueue(
+    campaignId: string
+  ): Promise<Record<string, unknown>[]> {
+    return api<Record<string, unknown>[]>(
+      `/reengagement?campaignId=${encodeURIComponent(campaignId)}`
+    );
   },
 
-  async addResearchRecord(record: Partial<ResearchRecord> & { campaignId: string; targetId: string }) {
-    return api<ResearchRecord>('/research/records', {
-      method: 'POST',
+  // ─── Research ──────────────────────────────────────────────────────────────
+  async getResearchRecords(campaignId: string): Promise<ResearchRecord[]> {
+    return api<ResearchRecord[]>(
+      `/research/records?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async addResearchRecord(
+    record: Partial<ResearchRecord>
+  ): Promise<ResearchRecord> {
+    return api<ResearchRecord>("/research/records", {
+      method: "POST",
       body: JSON.stringify(record),
     });
   },
 
-  async getAnalyticsEvents(campaignId: string) {
-    return api<any[]>(`/analytics/events?campaignId=${encodeURIComponent(campaignId)}`);
+  // ─── Prospecting ───────────────────────────────────────────────────────────
+  async getProspectingPlan(campaignId: string): Promise<ProspectingPlan> {
+    return api<ProspectingPlan>(
+      `/prospecting/plan?campaignId=${encodeURIComponent(campaignId)}`
+    );
   },
 
-  async getOutreachEvents(campaignId: string, targetId?: string) {
-    const search = new URLSearchParams({ campaignId });
-    if (targetId) {
-      search.set('targetId', targetId);
-    }
-    return api<any[]>(`/outreach/events?${search.toString()}`);
+  async generateProspects(
+    campaignId: string,
+    payload?: Record<string, unknown>
+  ): Promise<ProspectingRun> {
+    return api<ProspectingRun>("/prospecting/generate", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, ...payload }),
+    });
   },
 
-  async getTargetDecision(campaignId: string) {
-    return api<any>('/targets/decide', {
-      method: 'POST',
+  async getProspects(campaignId: string): Promise<SourcedContact[]> {
+    return api<SourcedContact[]>(
+      `/prospects?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async importProspects(
+    campaignId: string,
+    contacts: SourcedContact[],
+    source?: string
+  ): Promise<{ imported: number; skipped: number }> {
+    return api<{ imported: number; skipped: number }>("/prospects/import", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, contacts, source }),
+    });
+  },
+
+  async getProspectingRuns(campaignId: string): Promise<ProspectingRun[]> {
+    return api<ProspectingRun[]>(
+      `/prospecting/runs?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async getProspectPipeline(campaignId: string): Promise<ProspectPipeline> {
+    return api<ProspectPipeline>(
+      `/prospects/pipeline?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async enrichProspects(
+    campaignId: string,
+    payload?: Record<string, unknown>
+  ): Promise<{ enriched: number }> {
+    return api<{ enriched: number }>("/prospects/enrich", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, ...payload }),
+    });
+  },
+
+  async sequenceProspects(
+    campaignId: string,
+    payload?: Record<string, unknown>
+  ): Promise<{ sequenced: number }> {
+    return api<{ sequenced: number }>("/prospects/sequence", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, ...payload }),
+    });
+  },
+
+  async getActivationRuns(campaignId: string): Promise<ActivationRun[]> {
+    return api<ActivationRun[]>(
+      `/prospects/activation-runs?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  // ─── Funding ───────────────────────────────────────────────────────────────
+  async importFundingInvestors(
+    campaignId: string,
+    records: Partial<FundingInvestor>[]
+  ): Promise<{ imported: number; errors: string[] }> {
+    return api<{ imported: number; errors: string[] }>("/funding/investors", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, records }),
+    });
+  },
+
+  async getFundingInvestors(campaignId: string): Promise<FundingInvestor[]> {
+    return api<FundingInvestor[]>(
+      `/funding/investors?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async getFundingPipeline(campaignId: string): Promise<FundingPipeline> {
+    return api<FundingPipeline>(
+      `/funding/pipeline?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async runFundingSequence(
+    campaignId: string,
+    payload?: Record<string, unknown>
+  ): Promise<FundingRun> {
+    return api<FundingRun>("/funding/sequence", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, ...payload }),
+    });
+  },
+
+  async runFundingCampaign(
+    campaignId: string,
+    payload?: Record<string, unknown>
+  ): Promise<FundingRun> {
+    return api<FundingRun>("/funding/run", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, ...payload }),
+    });
+  },
+
+  async runFunding(campaignId: string): Promise<FundingRun> {
+    return api<FundingRun>("/funding/run", {
+      method: "POST",
       body: JSON.stringify({ campaignId }),
     });
   },
 
-  async getConnectorStatuses(probe = false) {
-    return api<ConnectorStatus[]>(`/connectors/status?probe=${probe ? 'true' : 'false'}`);
+  async getFundingRuns(campaignId: string): Promise<FundingRun[]> {
+    return api<FundingRun[]>(
+      `/funding/runs?campaignId=${encodeURIComponent(campaignId)}`
+    );
   },
 
-  async getSetupRequirements() {
-    return api<SetupRequirements>('/setup/requirements');
+  async getFundingOutreachEvents(
+    campaignId: string
+  ): Promise<FundingOutreachEvent[]> {
+    return api<FundingOutreachEvent[]>(
+      `/funding/outreach-events?campaignId=${encodeURIComponent(campaignId)}`
+    );
   },
 
-  async getOpenClawDiagnostics() {
-    return api<OpenClawDiagnosticResponse>('/diagnostics/openclaw');
+  async getEnrichmentProvidersStatus(): Promise<
+    Array<{ provider: string; available: boolean }>
+  > {
+    return api<Array<{ provider: string; available: boolean }>>(
+      "/funding/enrichment-status"
+    );
   },
 
-  async getConnectorConfig(connector: string) {
-    return api<ConnectorConfig>(`/connectors/${encodeURIComponent(connector)}/config`);
+  async runEnrichment(
+    campaignId: string
+  ): Promise<{ enriched: number; errors: string[] }> {
+    return api<{ enriched: number; errors: string[] }>("/funding/enrich", {
+      method: "POST",
+      body: JSON.stringify({ campaignId }),
+    });
   },
 
-  async updateConnectorConfig(connector: string, payload: { baseUrl: string; token: string; dryRun?: boolean; probe?: boolean }) {
-    return api<{ config: ConnectorConfig; status: ConnectorStatus }>(`/connectors/${encodeURIComponent(connector)}/config`, {
-      method: 'POST',
+  async sendInvestorDeck(
+    campaignId: string,
+    investorId: string
+  ): Promise<{ sent: boolean }> {
+    return api<{ sent: boolean }>("/funding/send-deck", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, investorId }),
+    });
+  },
+
+  async logInvestorEvent(
+    campaignId: string,
+    investorId: string,
+    payload: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/funding/log-event", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, investorId, ...payload }),
+    });
+  },
+
+  // ─── Analytics & Outreach ──────────────────────────────────────────────────
+  async getAnalyticsEvents(campaignId: string): Promise<AnalyticsEvent[]> {
+    return api<AnalyticsEvent[]>(
+      `/analytics/events?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async getOutreachEvents(
+    campaignId: string,
+    targetId?: string
+  ): Promise<OutreachEvent[]> {
+    const qs = new URLSearchParams({ campaignId });
+    if (targetId) qs.append("targetId", targetId);
+    return api<OutreachEvent[]>(`/outreach/events?${qs.toString()}`);
+  },
+
+  // ─── Connectors ────────────────────────────────────────────────────────────
+  async getConnectorStatuses(
+    probe?: boolean
+  ): Promise<ConnectorStatus[]> {
+    const qs = new URLSearchParams();
+    if (probe !== undefined) qs.append("probe", String(probe));
+    const query = qs.toString();
+    return api<ConnectorStatus[]>(
+      `/connectors/status${query ? `?${query}` : ""}`
+    );
+  },
+
+  async getSetupRequirements(): Promise<SetupRequirements> {
+    return api<SetupRequirements>("/setup/requirements");
+  },
+
+  async getOpenClawDiagnostics(): Promise<OpenClawDiagnosticResponse> {
+    return api<OpenClawDiagnosticResponse>("/diagnostics/openclaw");
+  },
+
+  async getConnectorConfig(connector: string): Promise<ConnectorConfig> {
+    return api<ConnectorConfig>(
+      `/connectors/${encodeURIComponent(connector)}/config`
+    );
+  },
+
+  async updateConnectorConfig(
+    connector: string,
+    payload: Record<string, unknown>
+  ): Promise<ConnectorConfig> {
+    return api<ConnectorConfig>(
+      `/connectors/${encodeURIComponent(connector)}/config`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
+  },
+
+  // ─── Content & Automation ──────────────────────────────────────────────────
+  async ingestOutcomes(
+    payload: IngestOutcomePayload
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/ingest/outcomes", {
+      method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
-  async ingestOutcomes(payload: { campaignId: string; researchRecords?: any[]; outreachEvents?: any[]; analyticsEvents?: any[] }) {
-    return api<any>('/ingest/outcomes', {
-      method: 'POST',
-      body: JSON.stringify(payload),
+  async runAutomation(
+    campaignId?: string,
+    reason?: string
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/automation/run", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, reason: reason || "ui-request" }),
     });
   },
 
-  subscribeToVariations(campaignId: string, callback: (variations: Variation[]) => void) {
-    return poll(async () => buildVariations(await this.getState()), callback);
-  },
-
-  async addVariation() {
-    return null;
-  },
-
-  subscribeToPersonas(campaignId: string, callback: (personas: Persona[]) => void) {
-    return poll(async () => {
-      const profiles = await this.getTargetProfiles(campaignId);
-      const grouped = new Map<string, TargetProfile[]>();
-      for (const profile of profiles) {
-        const key = `${profile.segment || 'unknown'}::${profile.region || 'global'}`;
-        grouped.set(key, [...(grouped.get(key) || []), profile]);
-      }
-      return [...grouped.entries()].map(([key, items]) => {
-        const [segment, region] = key.split('::');
-        const topTitles = [...new Set(items.map(item => item.title).filter(Boolean))].slice(0, 3);
-        const topChannels = [...new Set(items.flatMap(item => item.channels || []).filter(Boolean))].slice(0, 3);
-        const avgScore = items.reduce((sum, item) => {
-          const parts = [item.fitScore, item.intentScore, item.recencyScore].filter((value): value is number => typeof value === 'number');
-          return sum + (parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : 0);
-        }, 0) / Math.max(items.length, 1);
-        return {
-          id: `persona-${segment}-${region}`,
-          name: `${titleCase(segment)} ${region === 'global' ? 'Operators' : titleCase(region)}`,
-          demographics: `${items.length} live targets`,
-          pains: topTitles.length ? topTitles.map(title => `Active title cluster: ${title}`) : ['No title signals captured yet'],
-          gains: topChannels.length ? topChannels.map(channel => `Best observed automation rail: ${channel}`) : ['No preferred channel captured yet'],
-          engagementScore: Number(avgScore.toFixed(2)),
-        };
-      });
-    }, callback);
-  },
-
-  async addPersona() {
-    return null;
-  },
-
-  async addMetric() {
-    return null;
-  },
-
-  subscribeToKeywords(campaignId: string, callback: (keywords: Keyword[]) => void) {
-    return poll(async () => {
-      const records = await this.getResearchRecords(campaignId);
-      const tally = new Map<string, number>();
-      for (const record of records) {
-        const fragments = [
-          record.segment,
-          record.region,
-          record.title,
-          record.company,
-          ...(record.metadata?.evidence || []),
-        ]
-          .filter(Boolean)
-          .flatMap(value => String(value).toLowerCase().split(/[^a-z0-9+#-]+/g))
-          .filter(token => token.length >= 4);
-
-        for (const token of fragments) {
-          tally.set(token, (tally.get(token) || 0) + 1);
-        }
-      }
-
-      return [...tally.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 12)
-        .map(([term, count], index) => ({
-          id: `keyword-${index}-${term}`,
-          term,
-          volume: `${count} signals`,
-          difficulty: count >= 4 ? 'high' : count >= 2 ? 'medium' : 'low',
-          intent: 'backend-derived',
-        }));
-    }, callback);
-  },
-
-  async addKeyword() {
-    return null;
-  },
-
-  subscribeToMetrics(campaignId: string, callback: (metrics: Metric[]) => void) {
-    return poll(async () => buildMetrics(await this.getState()), callback);
-  },
-
-  async runAutomation(campaignId?: string, reason = 'ui-request') {
-    return api<any>('/automation/run', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, reason }),
+  async runPromptAutopilot(
+    prompt: string,
+    options?: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/automation/prompt-run", {
+      method: "POST",
+      body: JSON.stringify({ prompt, ...options }),
     });
   },
 
-  async runPromptAutopilot(prompt: string, options?: {
-    campaignId?: string;
-    reason?: string;
-    locales?: string[];
-    enrichLimit?: number;
-    sequenceLimit?: number;
-    fundingLimit?: number;
-  }) {
-    return api<any>('/automation/prompt-run', {
-      method: 'POST',
+  async generateContent(
+    campaignId: string,
+    locales?: string[]
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/content/generate", {
+      method: "POST",
       body: JSON.stringify({
-        prompt,
-        campaignId: options?.campaignId,
-        reason: options?.reason || 'ui-prompt-autopilot',
-        locales: options?.locales,
-        enrichLimit: options?.enrichLimit,
-        sequenceLimit: options?.sequenceLimit,
-        fundingLimit: options?.fundingLimit,
+        campaignId,
+        locales,
+        reason: "ui-request",
       }),
     });
   },
 
-  async generateContent(campaignId: string, locales?: string[]) {
-    return api<any>('/content/generate', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, locales, reason: 'ui-request' }),
+  // ─── Dedupe ────────────────────────────────────────────────────────────────
+  async dedupeCheck(key: string): Promise<{ exists: boolean; key: string }> {
+    return api<{ exists: boolean; key: string }>(
+      `/dedupe/check?key=${encodeURIComponent(key)}`
+    );
+  },
+
+  // ─── DLQ & Safety ──────────────────────────────────────────────────────────
+  async getDlq(campaignId: string): Promise<DlqState> {
+    return api<DlqState>(`/dlq?campaignId=${encodeURIComponent(campaignId)}`);
+  },
+
+  async getSafetyExecutions(
+    campaignId: string,
+    status?: string
+  ): Promise<SafetyExecution[]> {
+    const qs = new URLSearchParams({ campaignId });
+    if (status) qs.append("status", status);
+    return api<SafetyExecution[]>(`/safety/executions?${qs.toString()}`);
+  },
+
+  // ─── Health ────────────────────────────────────────────────────────────────
+  async getHealth(): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/health");
+  },
+
+
+  // ─── CRM - Contacts ────────────────────────────────────────────────────────
+  async getContacts(
+    locationId?: string,
+    campaignId?: string
+  ): Promise<Contact[]> {
+    const qs = new URLSearchParams();
+    if (locationId) qs.append("locationId", locationId);
+    if (campaignId) qs.append("campaignId", campaignId);
+    const query = qs.toString();
+    return api<Contact[]>(`/contacts${query ? `?${query}` : ""}`);
+  },
+
+  async getContact(id: string): Promise<Contact> {
+    return api<Contact>(`/contacts/${encodeURIComponent(id)}`);
+  },
+
+  async saveContact(data: Partial<Contact>): Promise<Contact> {
+    return api<Contact>("/contacts", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 
-  // ── Entity type definitions ───────────────────────────────────
-  async getContacts(locationId?: string, campaignId?: string) {
-    const search = new URLSearchParams();
-    if (locationId) search.set('locationId', locationId);
-    if (campaignId) search.set('campaignId', campaignId);
-    const qs = search.toString();
-    return api<any[]>(`/contacts${qs ? '?' + qs : ''}`);
-  },
-
-  async getContact(id: string) {
-    return api<any>(`/contacts/${id}`);
-  },
-
-  async saveContact(data: any) {
-    return api<any>('/contacts', { method: 'POST', body: JSON.stringify(data) });
-  },
-
-  async deleteContact(id: string) {
-    return api<any>(`/contacts/${id}`, { method: 'DELETE' });
-  },
-
-  async getOpportunities(pipelineId?: string, contactId?: string) {
-    const search = new URLSearchParams();
-    if (pipelineId) search.set('pipelineId', pipelineId);
-    if (contactId) search.set('contactId', contactId);
-    const qs = search.toString();
-    return api<any[]>(`/opportunities${qs ? '?' + qs : ''}`);
-  },
-
-  async getOpportunity(id: string) {
-    return api<any>(`/opportunities/${id}`);
-  },
-
-  async saveOpportunity(data: any) {
-    return api<any>('/opportunities', { method: 'POST', body: JSON.stringify(data) });
-  },
-
-  async deleteOpportunity(id: string) {
-    return api<any>(`/opportunities/${id}`, { method: 'DELETE' });
-  },
-
-  async getPipelines(locationId?: string) {
-    const search = locationId ? `?locationId=${encodeURIComponent(locationId)}` : '';
-    return api<any[]>(`/pipelines${search}`);
-  },
-
-  async getPipeline(id: string) {
-    return api<any>(`/pipelines/${id}`);
-  },
-
-  async savePipeline(data: any) {
-    return api<any>('/pipelines', { method: 'POST', body: JSON.stringify(data) });
-  },
-
-  async deletePipeline(id: string) {
-    return api<any>(`/pipelines/${id}`, { method: 'DELETE' });
-  },
-
-  async getWorkflows(locationId?: string) {
-    const search = locationId ? `?locationId=${encodeURIComponent(locationId)}` : '';
-    return api<any[]>(`/workflows${search}`);
-  },
-
-  async getWorkflow(id: string) {
-    return api<any>(`/workflows/${id}`);
-  },
-
-  async saveWorkflow(data: any) {
-    return api<any>('/workflows', { method: 'POST', body: JSON.stringify(data) });
-  },
-
-  async deleteWorkflow(id: string) {
-    return api<any>(`/workflows/${id}`, { method: 'DELETE' });
-  },
-
-  async getNotes(contactId?: string) {
-    const search = contactId ? `?contactId=${encodeURIComponent(contactId)}` : '';
-    return api<any[]>(`/notes${search}`);
-  },
-
-  async saveNote(data: any) {
-    return api<any>('/notes', { method: 'POST', body: JSON.stringify(data) });
-  },
-
-  async deleteNote(id: string) {
-    return api<any>(`/notes/${id}`, { method: 'DELETE' });
-  },
-
-  async getTasks(contactId?: string) {
-    const search = contactId ? `?contactId=${encodeURIComponent(contactId)}` : '';
-    return api<any[]>(`/tasks${search}`);
-  },
-
-  async saveTask(data: any) {
-    return api<any>('/tasks', { method: 'POST', body: JSON.stringify(data) });
-  },
-
-  async deleteTask(id: string) {
-    return api<any>(`/tasks/${id}`, { method: 'DELETE' });
-  },
-
-  async getCalendarEvents(contactId?: string) {
-    const search = contactId ? `?contactId=${encodeURIComponent(contactId)}` : '';
-    return api<any[]>(`/calendarEvents${search}`);
-  },
-
-  async saveCalendarEvent(data: any) {
-    return api<any>('/calendarEvents', { method: 'POST', body: JSON.stringify(data) });
-  },
-
-  async deleteCalendarEvent(id: string) {
-    return api<any>(`/calendarEvents/${id}`, { method: 'DELETE' });
-  },
-
-  async getTags(locationId?: string) {
-    const search = locationId ? `?locationId=${encodeURIComponent(locationId)}` : '';
-    return api<any[]>(`/tags${search}`);
-  },
-
-  async saveTag(data: any) {
-    return api<any>('/tags', { method: 'POST', body: JSON.stringify(data) });
-  },
-
-  async deleteTag(id: string) {
-    return api<any>(`/tags/${id}`, { method: 'DELETE' });
-  },
-
-  // ── Relationship queries ──────────────────────────────────────
-  async getContactOpportunities(contactId: string) {
-    return api<any[]>(`/contacts/${contactId}/opportunities`);
-  },
-
-  async getContactNotes(contactId: string) {
-    return api<any[]>(`/contacts/${contactId}/notes`);
-  },
-
-  async getContactTasks(contactId: string) {
-    return api<any[]>(`/contacts/${contactId}/tasks`);
-  },
-
-  async getPipelineOpportunities(pipelineId: string) {
-    return api<any[]>(`/pipelines/${pipelineId}/opportunities`);
-  },
-
-  async getWorkflowSteps(workflowId: string) {
-    return api<any[]>(`/workflows/${workflowId}/steps`);
-  },
-
-  // ── GHL Bridge ────────────────────────────────────────────────
-  async ghlWebhook(body: any, campaignId?: string) {
-    const search = campaignId ? `?campaignId=${encodeURIComponent(campaignId)}` : '';
-    return api<any>(`/integrations/ghl/webhook${search}`, {
-      method: 'POST',
-      body: JSON.stringify(body),
+  async deleteContact(id: string): Promise<{ success: boolean }> {
+    return api<{ success: boolean }>(`/contacts/${encodeURIComponent(id)}`, {
+      method: "DELETE",
     });
   },
 
-  async ghlSyncContacts(campaignId: string, options?: any) {
-    return api<any>('/integrations/ghl/sync/contacts', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, options }),
+  // ─── CRM - Opportunities ───────────────────────────────────────────────────
+  async getOpportunities(
+    pipelineId?: string,
+    contactId?: string
+  ): Promise<Opportunity[]> {
+    const qs = new URLSearchParams();
+    if (pipelineId) qs.append("pipelineId", pipelineId);
+    if (contactId) qs.append("contactId", contactId);
+    const query = qs.toString();
+    return api<Opportunity[]>(`/opportunities${query ? `?${query}` : ""}`);
+  },
+
+  async getOpportunity(id: string): Promise<Opportunity> {
+    return api<Opportunity>(`/opportunities/${encodeURIComponent(id)}`);
+  },
+
+  async saveOpportunity(data: Partial<Opportunity>): Promise<Opportunity> {
+    return api<Opportunity>("/opportunities", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 
-  async ghlSyncOpportunities(campaignId: string, options?: any) {
-    return api<any>('/integrations/ghl/sync/opportunities', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, options }),
+  async deleteOpportunity(id: string): Promise<{ success: boolean }> {
+    return api<{ success: boolean }>(
+      `/opportunities/${encodeURIComponent(id)}`,
+      { method: "DELETE" }
+    );
+  },
+
+  // ─── CRM - Pipelines ───────────────────────────────────────────────────────
+  async getPipelines(locationId?: string): Promise<Pipeline[]> {
+    const qs = new URLSearchParams();
+    if (locationId) qs.append("locationId", locationId);
+    const query = qs.toString();
+    return api<Pipeline[]>(`/pipelines${query ? `?${query}` : ""}`);
+  },
+
+  async getPipeline(id: string): Promise<Pipeline> {
+    return api<Pipeline>(`/pipelines/${encodeURIComponent(id)}`);
+  },
+
+  async savePipeline(data: Partial<Pipeline>): Promise<Pipeline> {
+    return api<Pipeline>("/pipelines", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 
-  async ghlSyncPipelines(campaignId: string, options?: any) {
-    return api<any>('/integrations/ghl/sync/pipelines', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, options }),
+  async deletePipeline(id: string): Promise<{ success: boolean }> {
+    return api<{ success: boolean }>(
+      `/pipelines/${encodeURIComponent(id)}`,
+      { method: "DELETE" }
+    );
+  },
+
+  // ─── CRM - Workflows ───────────────────────────────────────────────────────
+  async getWorkflows(locationId?: string): Promise<Workflow[]> {
+    const qs = new URLSearchParams();
+    if (locationId) qs.append("locationId", locationId);
+    const query = qs.toString();
+    return api<Workflow[]>(`/workflows${query ? `?${query}` : ""}`);
+  },
+
+  async getWorkflow(id: string): Promise<Workflow> {
+    return api<Workflow>(`/workflows/${encodeURIComponent(id)}`);
+  },
+
+  async saveWorkflow(data: Partial<Workflow>): Promise<Workflow> {
+    return api<Workflow>("/workflows", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 
-  async ghlSyncWorkflows(campaignId: string, options?: any) {
-    return api<any>('/integrations/ghl/sync/workflows', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, options }),
+  async deleteWorkflow(id: string): Promise<{ success: boolean }> {
+    return api<{ success: boolean }>(
+      `/workflows/${encodeURIComponent(id)}`,
+      { method: "DELETE" }
+    );
+  },
+
+  // ─── CRM - Notes ───────────────────────────────────────────────────────────
+  async getNotes(contactId?: string): Promise<Note[]> {
+    const qs = new URLSearchParams();
+    if (contactId) qs.append("contactId", contactId);
+    const query = qs.toString();
+    return api<Note[]>(`/notes${query ? `?${query}` : ""}`);
+  },
+
+  async saveNote(data: Partial<Note>): Promise<Note> {
+    return api<Note>("/notes", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 
-  async ghlSyncForms(campaignId: string, options?: any) {
-    return api<any>('/integrations/ghl/sync/forms', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, options }),
+  async deleteNote(id: string): Promise<{ success: boolean }> {
+    return api<{ success: boolean }>(`/notes/${encodeURIComponent(id)}`, {
+      method: "DELETE",
     });
   },
 
-  async ghlSyncCalendars(campaignId: string, options?: any) {
-    return api<any>('/integrations/ghl/sync/calendars', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, options }),
+  // ─── CRM - Tasks ───────────────────────────────────────────────────────────
+  async getTasks(contactId?: string): Promise<Task[]> {
+    const qs = new URLSearchParams();
+    if (contactId) qs.append("contactId", contactId);
+    const query = qs.toString();
+    return api<Task[]>(`/tasks${query ? `?${query}` : ""}`);
+  },
+
+  async saveTask(data: Partial<Task>): Promise<Task> {
+    return api<Task>("/tasks", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 
-  async ghlFullSync(campaignId: string, options?: any) {
-    return api<any>('/integrations/ghl/sync/full', {
-      method: 'POST',
-      body: JSON.stringify({ campaignId, options }),
+  async deleteTask(id: string): Promise<{ success: boolean }> {
+    return api<{ success: boolean }>(`/tasks/${encodeURIComponent(id)}`, {
+      method: "DELETE",
     });
   },
 
-  async ghlPushContact(contact: any, campaignId?: string) {
-    return api<any>('/integrations/ghl/push/contact', {
-      method: 'POST',
-      body: JSON.stringify({ contact, campaignId }),
+  // ─── CRM - Calendar ────────────────────────────────────────────────────────
+  async getCalendarEvents(contactId?: string): Promise<CalendarEvent[]> {
+    const qs = new URLSearchParams();
+    if (contactId) qs.append("contactId", contactId);
+    const query = qs.toString();
+    return api<CalendarEvent[]>(
+      `/calendarEvents${query ? `?${query}` : ""}`
+    );
+  },
+
+  async saveCalendarEvent(data: Partial<CalendarEvent>): Promise<CalendarEvent> {
+    return api<CalendarEvent>("/calendarEvents", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 
-  async ghlPushOpportunity(opportunity: any, campaignId?: string) {
-    return api<any>('/integrations/ghl/push/opportunity', {
-      method: 'POST',
-      body: JSON.stringify({ opportunity, campaignId }),
+  async deleteCalendarEvent(id: string): Promise<{ success: boolean }> {
+    return api<{ success: boolean }>(
+      `/calendarEvents/${encodeURIComponent(id)}`,
+      { method: "DELETE" }
+    );
+  },
+
+  // ─── CRM - Tags ────────────────────────────────────────────────────────────
+  async getTags(locationId?: string): Promise<Tag[]> {
+    const qs = new URLSearchParams();
+    if (locationId) qs.append("locationId", locationId);
+    const query = qs.toString();
+    return api<Tag[]>(`/tags${query ? `?${query}` : ""}`);
+  },
+
+  async saveTag(data: Partial<Tag>): Promise<Tag> {
+    return api<Tag>("/tags", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 
-  async ghlPushNote(note: any, campaignId?: string) {
-    return api<any>('/integrations/ghl/push/note', {
-      method: 'POST',
-      body: JSON.stringify({ note, campaignId }),
+  async deleteTag(id: string): Promise<{ success: boolean }> {
+    return api<{ success: boolean }>(`/tags/${encodeURIComponent(id)}`, {
+      method: "DELETE",
     });
   },
 
-  async ghlPushTask(task: any, campaignId?: string) {
-    return api<any>('/integrations/ghl/push/task', {
-      method: 'POST',
-      body: JSON.stringify({ task, campaignId }),
-    });
+  // ─── CRM - Relationships ───────────────────────────────────────────────────
+  async getContactOpportunities(contactId: string): Promise<Opportunity[]> {
+    return api<Opportunity[]>(
+      `/contacts/${encodeURIComponent(contactId)}/opportunities`
+    );
   },
 
-  async migrateSourcedContacts() {
-    return api<{ migrated: number }>('/migration/migrate-sourced');
+  async getContactNotes(contactId: string): Promise<Note[]> {
+    return api<Note[]>(`/contacts/${encodeURIComponent(contactId)}/notes`);
+  },
+
+  async getContactTasks(contactId: string): Promise<Task[]> {
+    return api<Task[]>(`/contacts/${encodeURIComponent(contactId)}/tasks`);
+  },
+
+  async getPipelineOpportunities(pipelineId: string): Promise<Opportunity[]> {
+    return api<Opportunity[]>(
+      `/pipelines/${encodeURIComponent(pipelineId)}/opportunities`
+    );
+  },
+
+  async getWorkflowSteps(workflowId: string): Promise<WorkflowStep[]> {
+    return api<WorkflowStep[]>(
+      `/workflows/${encodeURIComponent(workflowId)}/steps`
+    );
+  },
+
+
+  // ─── GHL Integration ───────────────────────────────────────────────────────
+  async ghlWebhook(
+    body: Record<string, unknown>,
+    campaignId?: string
+  ): Promise<Record<string, unknown>> {
+    const qs = new URLSearchParams();
+    if (campaignId) qs.append("campaignId", campaignId);
+    const query = qs.toString();
+    return api<Record<string, unknown>>(
+      `/integrations/ghl/webhook${query ? `?${query}` : ""}`,
+      { method: "POST", body: JSON.stringify(body) }
+    );
+  },
+
+  async ghlSyncContacts(
+    campaignId: string,
+    options?: GhlSyncOptions
+  ): Promise<{ synced: number; errors: string[] }> {
+    return api<{ synced: number; errors: string[] }>(
+      "/integrations/ghl/sync/contacts",
+      {
+        method: "POST",
+        body: JSON.stringify({ campaignId, ...options }),
+      }
+    );
+  },
+
+  async ghlSyncOpportunities(
+    campaignId: string,
+    options?: GhlSyncOptions
+  ): Promise<{ synced: number; errors: string[] }> {
+    return api<{ synced: number; errors: string[] }>(
+      "/integrations/ghl/sync/opportunities",
+      {
+        method: "POST",
+        body: JSON.stringify({ campaignId, ...options }),
+      }
+    );
+  },
+
+  async ghlSyncPipelines(
+    campaignId: string,
+    options?: GhlSyncOptions
+  ): Promise<{ synced: number; errors: string[] }> {
+    return api<{ synced: number; errors: string[] }>(
+      "/integrations/ghl/sync/pipelines",
+      {
+        method: "POST",
+        body: JSON.stringify({ campaignId, ...options }),
+      }
+    );
+  },
+
+  async ghlSyncWorkflows(
+    campaignId: string,
+    options?: GhlSyncOptions
+  ): Promise<{ synced: number; errors: string[] }> {
+    return api<{ synced: number; errors: string[] }>(
+      "/integrations/ghl/sync/workflows",
+      {
+        method: "POST",
+        body: JSON.stringify({ campaignId, ...options }),
+      }
+    );
+  },
+
+  async ghlSyncForms(
+    campaignId: string,
+    options?: GhlSyncOptions
+  ): Promise<{ synced: number; errors: string[] }> {
+    return api<{ synced: number; errors: string[] }>(
+      "/integrations/ghl/sync/forms",
+      {
+        method: "POST",
+        body: JSON.stringify({ campaignId, ...options }),
+      }
+    );
+  },
+
+  async ghlSyncCalendars(
+    campaignId: string,
+    options?: GhlSyncOptions
+  ): Promise<{ synced: number; errors: string[] }> {
+    return api<{ synced: number; errors: string[] }>(
+      "/integrations/ghl/sync/calendars",
+      {
+        method: "POST",
+        body: JSON.stringify({ campaignId, ...options }),
+      }
+    );
+  },
+
+  async ghlFullSync(
+    campaignId: string,
+    options?: GhlSyncOptions
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>(
+      "/integrations/ghl/sync/full",
+      {
+        method: "POST",
+        body: JSON.stringify({ campaignId, ...options }),
+      }
+    );
+  },
+
+  async ghlPushContact(
+    contact: Partial<Contact>,
+    campaignId?: string
+  ): Promise<{ pushed: boolean; id?: string }> {
+    return api<{ pushed: boolean; id?: string }>(
+      "/integrations/ghl/push/contact",
+      {
+        method: "POST",
+        body: JSON.stringify({ ...contact, campaignId }),
+      }
+    );
+  },
+
+  async ghlPushOpportunity(
+    opportunity: Partial<Opportunity>,
+    campaignId?: string
+  ): Promise<{ pushed: boolean; id?: string }> {
+    return api<{ pushed: boolean; id?: string }>(
+      "/integrations/ghl/push/opportunity",
+      {
+        method: "POST",
+        body: JSON.stringify({ ...opportunity, campaignId }),
+      }
+    );
+  },
+
+  // ─── Polling subscriptions ─────────────────────────────────────────────────
+  subscribeToVariations(
+    campaignId: string,
+    callback: (variations: Variation[]) => void,
+    intervalMs = 5000
+  ): () => void {
+    return poll(
+      () => this.getState(),
+      (state: Record<string, unknown>) => {
+        const cid = campaignId;
+        void cid;
+        callback(buildVariations(state));
+      },
+      intervalMs
+    );
+  },
+
+  subscribeToPersonas(
+    campaignId: string,
+    callback: (personas: Persona[]) => void,
+    intervalMs = 5000
+  ): () => void {
+    return poll(
+      () => this.getTargetProfiles(campaignId),
+      (profiles: TargetProfile[]) => {
+        const personas: Persona[] = profiles.map((p) => ({
+          id: p.id,
+          name: p.company || p.targetId || p.id,
+          segment: p.segment || "",
+          painPoints: p.signals || [],
+          channels: [],
+          fitScore: p.fitScore || 0,
+          status: "active",
+          description: p.enrichment
+            ? JSON.stringify(p.enrichment).slice(0, 200)
+            : "",
+          estimatedReach: 0,
+        }));
+        callback(personas);
+      },
+      intervalMs
+    );
+  },
+
+  subscribeToKeywords(
+    campaignId: string,
+    callback: (keywords: Keyword[]) => void,
+    intervalMs = 5000
+  ): () => void {
+    return poll(
+      () => this.getResearchRecords(campaignId),
+      (records: ResearchRecord[]) => {
+        const keywords: Keyword[] = records.slice(0, 20).map((r, i) => ({
+          id: r.id || `kw-${i}`,
+          term: r.title || r.source || `record-${i}`,
+          volume: 0,
+          difficulty: 0,
+          intent: "research",
+          source: r.source || "unknown",
+        }));
+        callback(keywords);
+      },
+      intervalMs
+    );
+  },
+
+  subscribeToMetrics(
+    campaignId: string,
+    callback: (metrics: Metric[]) => void,
+    intervalMs = 5000
+  ): () => void {
+    return poll(
+      () => this.getState(),
+      (state: Record<string, unknown>) => {
+        const cid = campaignId;
+        void cid;
+        callback(buildMetrics(state));
+      },
+      intervalMs
+    );
+  },
+
+  // ─── Stubs ─────────────────────────────────────────────────────────────────
+  addVariation(): null {
+    return null;
+  },
+
+  addPersona(): null {
+    return null;
+  },
+
+  addMetric(): null {
+    return null;
+  },
+
+  addKeyword(): null {
+    return null;
   },
 };

@@ -20882,6 +20882,48 @@
       "status": "running",
       "startedAt": "2026-06-14T20:36:14.081Z",
       "phases": []
+    },
+    {
+      "campaignId": "smoke-1781248094496",
+      "executionType": "campaign_run_manifest",
+      "status": "running",
+      "startedAt": "2026-06-14T20:38:14.082Z",
+      "phases": []
+    },
+    {
+      "campaignId": "smoke-1781248094496",
+      "executionType": "campaign_run_manifest",
+      "status": "running",
+      "startedAt": "2026-06-14T20:40:14.089Z",
+      "phases": []
+    },
+    {
+      "campaignId": "smoke-1781248094496",
+      "executionType": "campaign_run_manifest",
+      "status": "running",
+      "startedAt": "2026-06-14T20:42:14.094Z",
+      "phases": []
+    },
+    {
+      "campaignId": "smoke-1781248094496",
+      "executionType": "campaign_run_manifest",
+      "status": "running",
+      "startedAt": "2026-06-14T20:44:14.097Z",
+      "phases": []
+    },
+    {
+      "campaignId": "smoke-1781248094496",
+      "executionType": "campaign_run_manifest",
+      "status": "running",
+      "startedAt": "2026-06-14T20:46:14.097Z",
+      "phases": []
+    },
+    {
+      "campaignId": "smoke-1781248094496",
+      "executionType": "campaign_run_manifest",
+      "status": "running",
+      "startedAt": "2026-06-14T20:48:14.099Z",
+      "phases": []
     }
   ],
   "collections": {
