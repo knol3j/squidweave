@@ -35,19 +35,13 @@ jobs:
       - name: Install UI dependencies
         run: npm ci
 
-      - name: Build site
-        env:
-          # Set VITE_BRAIN_API_BASE in GitHub repository variables (Settings > Variables)
-          VITE_BRAIN_API_BASE: ${{ vars.VITE_BRAIN_API_BASE }}
-        run: npm run build
-
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ui/dist
+          path: ui/dist-deploy
 
   deploy:
     needs: build
