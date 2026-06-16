@@ -1,50 +1,27 @@
-/**
- * SquidWeave v2 — Mission Control + Neural Net
- * All data from real backend API calls. Zero mock data.
- */
-import { Suspense, lazy, useState } from "react";
-import { motion } from "framer-motion";
-import { Zap } from "lucide-react";
-import { AppProvider } from "@/context/AppContext";
-import Navbar from "@/components/Navbar";
+import Navbar from './components/Navbar';
+import Hero from './sections/Hero';
+import Problem from './sections/Problem';
+import Solution from './sections/Solution';
+import Capabilities from './sections/Capabilities';
+import Competitive from './sections/Competitive';
+import Traction from './sections/Traction';
+import Pricing from './sections/Pricing';
+import Footer from './sections/Footer';
 
-const MissionControl = lazy(() => import("@/pages/MissionControl"));
-const NeuralNet = lazy(() => import("@/pages/NeuralNet"));
-
-function LoadingFallback() {
+function App() {
   return (
-    <div className="flex h-screen items-center justify-center bg-[#020617]">
-      <div className="text-center space-y-4">
-        <motion.div
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10"
-        >
-          <Zap className="w-8 h-8 text-indigo-400" />
-        </motion.div>
-        <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Loading SquidWeave v2</div>
-      </div>
+    <div className="min-h-screen bg-[#0a0e1a]">
+      <Navbar />
+      <Hero />
+      <Problem />
+      <Solution />
+      <Capabilities />
+      <Competitive />
+      <Traction />
+      <Pricing />
+      <Footer />
     </div>
   );
 }
 
-function AppShell() {
-  const [view, setView] = useState<"mission" | "neural">("mission");
-
-  return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#020617]">
-      <Navbar view={view} onSwitchView={setView} />
-      <Suspense fallback={<LoadingFallback />}>
-        {view === "mission" ? <MissionControl /> : <NeuralNet />}
-      </Suspense>
-    </div>
-  );
-}
-
-export default function App() {
-  return (
-    <AppProvider>
-      <AppShell />
-    </AppProvider>
-  );
-}
+export default App;
