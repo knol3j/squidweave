@@ -10,7 +10,13 @@ export default function DecisionRow() {
   const { state, approveTargetMarket, rejectTargetMarket, discoverMarkets, generateProspects, enrichProspects, sequenceProspects } = useApp();
   const { campaign, businessProfile, targetMarkets } = state;
   const campaignId = campaign?.id || "";
-  const [tab, setTab] = useState<"markets" | "targets" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive">("markets");
+  const [tab, setTabRaw] = useState<"markets" | "targets" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive">(() => {
+    try { const s = localStorage.getItem("sw_tab_decision"); return (s as any) || "markets"; } catch { return "markets"; }
+  });
+  const setTab = (t: "markets" | "targets" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive") => {
+    setTabRaw(t);
+    try { localStorage.setItem("sw_tab_decision", t); } catch { /* silent */ }
+  };
   const [targets, setTargets] = useState<any[]>([]);
   const [playbooks, setPlaybooks] = useState<any[]>([]);
   const [investors, setInvestors] = useState<any[]>([]);
@@ -41,8 +47,9 @@ export default function DecisionRow() {
 
   const handleDiscover = async () => {
     setGeneratingMarkets(true);
-    await discoverMarkets();
-    setGeneratingMarkets(false);
+    try { await discoverMarkets(); }
+    catch (err: any) { setError(err.message || "Failed to discover markets"); }
+    finally { setGeneratingMarkets(false); }
   };
 
   if (!campaignId) return <Empty message="Select a campaign first" />;
@@ -61,9 +68,9 @@ export default function DecisionRow() {
 
   return (
     <div className="space-y-3 pt-3">
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1" role="tablist">
         {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
+          <button key={t.key} onClick={() => setTab(t.key)} role="tab" aria-selected={tab === t.key}
             className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors"
             style={tab === t.key ? { background: "rgba(245,158,11,0.12)", color: "#fbbf24" } : { color: "#475569" }}>
             <t.icon className="w-3 h-3" />{t.label}
@@ -85,7 +92,6 @@ export default function DecisionRow() {
               {generatingMarkets ? "Analyzing..." : "Discover Markets"}
             </button>
           </div>
-
           {targetMarkets.length === 0 && (
             <div className="py-6 text-center">
               <p className="text-xs text-slate-600">No target markets discovered yet.</p>
@@ -96,7 +102,6 @@ export default function DecisionRow() {
               </p>
             </div>
           )}
-
           <div className="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto custom-scrollbar">
             {targetMarkets.map((market) => (
               <div key={market.id}
@@ -117,17 +122,17 @@ export default function DecisionRow() {
                     </div>
                     <p className="text-[10px] text-slate-500 mt-1">{market.description}</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
-                      {market.channels.map(ch => (
+                      {market.channels?.map(ch => (
                         <span key={ch} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-500">{ch}</span>
                       ))}
                     </div>
                     <div className="flex gap-3 mt-2 text-[10px]">
                       <span className="text-slate-600">Reach: <span className="text-slate-300">{market.estimatedReach?.toLocaleString()}</span></span>
-                      <span className="text-slate-600">Fit: <span style={{ color: market.fitScore > 85 ? "#34d399" : "#fbbf24" }}>{market.fitScore}%</span></span>
+                      <span className="text-slate-600">Fit: <span style={{ color: market.fitScore && market.fitScore > 85 ? "#34d399" : "#fbbf24" }}>{market.fitScore ?? 0}%</span></span>
                     </div>
-                    {market.painPoints.length > 0 && (
+                    {market.painPoints?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
-                        {market.painPoints.map((p, i) => (
+                        {market.painPoints?.map((p, i) => (
                           <span key={i} className="text-[9px] text-slate-600">{p}</span>
                         ))}
                       </div>
@@ -135,11 +140,11 @@ export default function DecisionRow() {
                   </div>
                   {market.status === "discovered" && (
                     <div className="flex flex-col gap-1 shrink-0">
-                      <button onClick={() => approveTargetMarket(market.id)}
+                      <button onClick={() => approveTargetMarket(market.id)} aria-label="Approve market"
                         className="p-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => rejectTargetMarket(market.id)}
+                      <button onClick={() => rejectTargetMarket(market.id)} aria-label="Reject market"
                         className="p-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -153,47 +158,57 @@ export default function DecisionRow() {
       )}
 
       {/* Ranked Targets Tab */}
-      {tab === "targets" && targets.length === 0 && <Empty message="No targets ranked yet" />}
-      {tab === "targets" && targets.length > 0 && (
-        <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
-          {targets.slice(0, 20).map((t: any) => (
-            <div key={t.targetId || t.id} className="flex items-center gap-3 p-2.5 rounded-xl border border-white/[0.06] bg-[#0f172a]">
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium truncate text-slate-100">{t.company || t.targetId}</div>
-                <div className="text-[10px] mt-0.5 text-slate-600">{t.segment} \u00b7 {t.region || "\u2014"}</div>
-              </div>
-              <div className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300">{t.recommendedChannel || "\u2014"}</div>
-              {t.score != null && <ScoreBar value={t.score} accent="#f59e0b" />}
-            </div>
-          ))}
-          {state.brainState?.decisions?.length > 0 && (
-            <div className="mt-4 p-3 rounded-xl border border-violet-500/15 bg-violet-500/[0.04]">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400 mb-2">Target Decisioning</div>
-              <div className="text-xs text-slate-400">
-                Latest: {state.brainState.decisions[state.brainState.decisions.length - 1]?.plan?.recommendedAction?.type || 'Analysis'}
-              </div>
+      {tab === "targets" && (
+        <div>
+          {targets.length === 0 && <Empty message="No targets ranked yet" />}
+          {targets.length > 0 && (
+            <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
+              {targets.slice(0, 20).map((t: any) => (
+                <div key={t.targetId || t.id} className="flex items-center gap-3 p-2.5 rounded-xl border border-white/[0.06] bg-[#0f172a]">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate text-slate-100">{t.company || t.targetId}</div>
+                    <div className="text-[10px] mt-0.5 text-slate-600">{t.segment} &middot; {t.region || "\u2014"}</div>
+                  </div>
+                  <div className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300">{t.recommendedChannel || "\u2014"}</div>
+                  {t.score != null && <ScoreBar value={t.score} accent="#f59e0b" />}
+                </div>
+              ))}
+              {state.brainState?.decisions?.length > 0 && (
+                <div className="mt-4 p-3 rounded-xl border border-violet-500/15 bg-violet-500/[0.04]">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-violet-400 mb-2">Target Decisioning</div>
+                  <div className="text-xs text-slate-400">
+                    Latest: {state.brainState.decisions[state.brainState.decisions.length - 1]?.plan?.recommendedAction?.type || 'Analysis'}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {tab === "playbooks" && playbooks.length === 0 && <Empty message="No playbooks in memory" />}
-      {tab === "playbooks" && playbooks.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto custom-scrollbar">
-          {playbooks.map((pb: any) => (
-            <div key={pb.id} className="p-3 rounded-xl border border-white/[0.06] bg-[#0f172a]">
-              <div className="text-xs font-medium text-slate-100">{pb.segment} \u00b7 {pb.region}</div>
-              <div className="text-[10px] mt-1 text-slate-600">{pb.recommendedChannel} \u00b7 {pb.cadenceDays}d</div>
-              <div className="flex gap-3 mt-2">
-                <Metric label="Win" value={`${(pb.winRate * 100).toFixed(0)}%`} color="#34d399" />
-                <Metric label="Risk" value={`${(pb.riskRate * 100).toFixed(0)}%`} color="#fb7185" />
-                <Metric label="Conf" value={`${(pb.confidence * 100).toFixed(0)}%`} color="#a5b4fc" />
-              </div>
+      {/* Playbooks Tab */}
+      {tab === "playbooks" && (
+        <div>
+          {playbooks.length === 0 && <Empty message="No playbooks in memory" />}
+          {playbooks.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto custom-scrollbar">
+              {playbooks.map((pb: any) => (
+                <div key={pb.id} className="p-3 rounded-xl border border-white/[0.06] bg-[#0f172a]">
+                  <div className="text-xs font-medium text-slate-100">{pb.segment} &middot; {pb.region}</div>
+                  <div className="text-[10px] mt-1 text-slate-600">{pb.recommendedChannel} &middot; {pb.cadenceDays}d</div>
+                  <div className="flex gap-3 mt-2">
+                    <Metric label="Win" value={`${(pb.winRate * 100).toFixed(0)}%`} color="#34d399" />
+                    <Metric label="Risk" value={`${(pb.riskRate * 100).toFixed(0)}%`} color="#fb7185" />
+                    <Metric label="Conf" value={`${(pb.confidence * 100).toFixed(0)}%`} color="#a5b4fc" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
 
+      {/* Funding Tab */}
       {tab === "funding" && (
         <div className="space-y-3">
           {pipeline && (
@@ -228,7 +243,7 @@ export default function DecisionRow() {
         </div>
       )}
 
-      {/* Prospecting Pipeline Tab */}
+      {/* Pipeline Tab */}
       {tab === "pipeline" && (
         <div className="space-y-3">
           {state.prospectPipeline ? (
@@ -249,7 +264,7 @@ export default function DecisionRow() {
                         <span className="text-slate-300">{run.action}</span>
                         <span className={run.status === 'completed' ? 'text-emerald-400' : 'text-amber-400'}>{run.status}</span>
                       </div>
-                      <div className="text-[10px] text-slate-500">{run.processedContacts} contacts \u00b7 {new Date(run.createdAt).toLocaleDateString()}</div>
+                      <div className="text-[10px] text-slate-500">{run.processedContacts} contacts &middot; {new Date(run.createdAt).toLocaleDateString()}</div>
                     </div>
                   ))}
                 </div>
