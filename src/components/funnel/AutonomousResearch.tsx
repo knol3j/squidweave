@@ -1,1 +1,1 @@
-SAME
+Content from /mnt/agents/output/app-recovered/src/components/funnel/AutonomousResearch.tsx
