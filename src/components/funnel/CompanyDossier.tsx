@@ -173,7 +173,7 @@ export default function CompanyDossier({ dossier }: { dossier: CompanyDossierDat
                   <Globe className="w-3 h-3" />
                   {dossier.domain}
                 </span>
-                <span>·</span>
+                <span>&middot;</span>
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
                   {dossier.location}
@@ -268,7 +268,7 @@ export default function CompanyDossier({ dossier }: { dossier: CompanyDossierDat
                 <div className="text-xs font-medium text-slate-300">{c.name}</div>
                 <div className="text-[10px] text-slate-600 flex items-center gap-1">
                   <span>{c.domain}</span>
-                  <span>·</span>
+                  <span>&middot;</span>
                   <span>Overlap: {c.overlap}</span>
                 </div>
               </div>
@@ -324,7 +324,7 @@ export default function CompanyDossier({ dossier }: { dossier: CompanyDossierDat
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-slate-200">{dm.name}</div>
                   <div className="text-[10px] text-slate-500">
-                    {dm.title} · {dm.department}
+                    {dm.title} &middot; {dm.department}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -405,12 +405,10 @@ export default function CompanyDossier({ dossier }: { dossier: CompanyDossierDat
       <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/[0.04] bg-white/[0.01]">
         <Shield className="w-3 h-3 text-slate-600" />
         <span className="text-[10px] text-slate-600">
-          Research conducted on {dateStr} · Confidence score: {dossier.confidence}% · Powered by SquidWeave AI
+          Research conducted on {dateStr} &middot; Confidence score: {dossier.confidence}% &middot; Powered by SquidWeave AI
         </span>
         <Sparkles className="w-3 h-3 text-indigo-500/50 ml-auto" />
       </div>
     </div>
   );
 }
-
-

@@ -100,116 +100,16 @@ export interface EmailWarmingState {
   warmupPhase: "ramp-up" | "steady" | "maintenance";
 }
 
-// ─── Seed Data ───────────────────────────────────────────────────────
-
-const SEED_STATE: EmailWarmingState = {
-  reputation: {
-    domain: "app.squidweave.com",
-    score: 87,
-    previousScore: 82,
-    status: "good",
-    senderscore: 91,
-    ciscoTalos: "Trusted",
-    googlePostmaster: "High",
-    microsoftSNDS: "Green",
-    trend: "up",
-    trendValue: 5,
-    authRecords: {
-      spf: true,
-      dkim: true,
-      dmarc: true,
-      dmarcPolicy: "quarantine",
-      bimi: false,
-    },
-    dnsRecords: {
-      mx: true,
-      a: true,
-      ptr: true,
-    },
-    volumeHistory: [
-      { date: "2025-01-01", sent: 120, delivered: 114 },
-      { date: "2025-01-02", sent: 150, delivered: 142 },
-      { date: "2025-01-03", sent: 180, delivered: 173 },
-      { date: "2025-01-04", sent: 200, delivered: 190 },
-      { date: "2025-01-05", sent: 220, delivered: 209 },
-      { date: "2025-01-06", sent: 260, delivered: 247 },
-      { date: "2025-01-07", sent: 300, delivered: 288 },
-      { date: "2025-01-08", sent: 340, delivered: 328 },
-      { date: "2025-01-09", sent: 380, delivered: 365 },
-      { date: "2025-01-10", sent: 420, delivered: 407 },
-      { date: "2025-01-11", sent: 460, delivered: 442 },
-      { date: "2025-01-12", sent: 500, delivered: 485 },
-      { date: "2025-01-13", sent: 550, delivered: 534 },
-      { date: "2025-01-14", sent: 600, delivered: 582 },
-      { date: "2025-01-15", sent: 650, delivered: 633 },
-    ],
-  },
-  warmupProgress: [
-    { day: 1, date: "Jan 1", emailsSent: 10, emailsReceived: 8, replyRate: 80, inboxRate: 95, spamRate: 5, domain: "gmail.com" },
-    { day: 2, date: "Jan 2", emailsSent: 15, emailsReceived: 13, replyRate: 87, inboxRate: 93, spamRate: 7, domain: "gmail.com" },
-    { day: 3, date: "Jan 3", emailsSent: 25, emailsReceived: 22, replyRate: 88, inboxRate: 96, spamRate: 4, domain: "gmail.com" },
-    { day: 4, date: "Jan 4", emailsSent: 35, emailsReceived: 30, replyRate: 86, inboxRate: 94, spamRate: 6, domain: "gmail.com" },
-    { day: 5, date: "Jan 5", emailsSent: 50, emailsReceived: 44, replyRate: 88, inboxRate: 97, spamRate: 3, domain: "gmail.com" },
-    { day: 6, date: "Jan 6", emailsSent: 65, emailsReceived: 58, replyRate: 89, inboxRate: 95, spamRate: 5, domain: "gmail.com" },
-    { day: 7, date: "Jan 7", emailsSent: 80, emailsReceived: 74, replyRate: 93, inboxRate: 98, spamRate: 2, domain: "gmail.com" },
-    { day: 8, date: "Jan 8", emailsSent: 100, emailsReceived: 93, replyRate: 93, inboxRate: 96, spamRate: 4, domain: "gmail.com" },
-    { day: 9, date: "Jan 9", emailsSent: 125, emailsReceived: 118, replyRate: 94, inboxRate: 97, spamRate: 3, domain: "gmail.com" },
-    { day: 10, date: "Jan 10", emailsSent: 150, emailsReceived: 143, replyRate: 95, inboxRate: 98, spamRate: 2, domain: "gmail.com" },
-    { day: 11, date: "Jan 11", emailsSent: 180, emailsReceived: 173, replyRate: 96, inboxRate: 99, spamRate: 1, domain: "gmail.com" },
-    { day: 12, date: "Jan 12", emailsSent: 210, emailsReceived: 203, replyRate: 97, inboxRate: 98, spamRate: 2, domain: "gmail.com" },
-    { day: 13, date: "Jan 13", emailsSent: 250, emailsReceived: 243, replyRate: 97, inboxRate: 99, spamRate: 1, domain: "gmail.com" },
-    { day: 14, date: "Jan 14", emailsSent: 290, emailsReceived: 283, replyRate: 98, inboxRate: 99, spamRate: 1, domain: "gmail.com" },
-    { day: 15, date: "Jan 15", emailsSent: 340, emailsReceived: 333, replyRate: 98, inboxRate: 100, spamRate: 0, domain: "gmail.com" },
-  ],
-  inboxProviders: [
-    { name: "Gmail", icon: "gmail", inboxPct: 98, spamPct: 2, missingPct: 0, status: "excellent", lastTested: "2025-01-15 09:00" },
-    { name: "Outlook / Hotmail", icon: "outlook", inboxPct: 94, spamPct: 4, missingPct: 2, status: "good", lastTested: "2025-01-15 09:00" },
-    { name: "Yahoo Mail", icon: "yahoo", inboxPct: 96, spamPct: 3, missingPct: 1, status: "excellent", lastTested: "2025-01-15 09:00" },
-    { name: "iCloud / Apple", icon: "icloud", inboxPct: 91, spamPct: 6, missingPct: 3, status: "good", lastTested: "2025-01-15 09:00" },
-    { name: "ProtonMail", icon: "proton", inboxPct: 88, spamPct: 8, missingPct: 4, status: "warning", lastTested: "2025-01-15 09:00" },
-    { name: "Zoho Mail", icon: "zoho", inboxPct: 93, spamPct: 5, missingPct: 2, status: "good", lastTested: "2025-01-15 09:00" },
-  ],
-  spamRules: [
-    { name: "SPF Record", passed: true, score: 0, description: "Sender Policy Framework validates sending server", detail: "v=spf1 include:_spf.google.com include:sendgrid.net ~all" },
-    { name: "DKIM Signature", passed: true, score: 0, description: "Cryptographic signature verifies message integrity", detail: "RSA-SHA256, 2048-bit key, dkim.squidweave.com" },
-    { name: "DMARC Policy", passed: true, score: 0, description: "Domain-based Message Authentication policy", detail: "v=DMARC1; p=quarantine; rua=mailto:dmarc@squidweave.com; pct=100" },
-    { name: "Reverse DNS (PTR)", passed: true, score: 0, description: "IP resolves back to sending domain", detail: "192.168.1.100 → mail.squidweave.com ✓" },
-    { name: "SSL/TLS Encryption", passed: true, score: 0, description: "Transport Layer Security for email delivery", detail: "TLS 1.3, certificate valid until 2026-03-15" },
-    { name: "Custom Domain", passed: true, score: 0, description: "Sending from branded domain", detail: "app.squidweave.com" },
-    { name: "Link Reputation", passed: true, score: 0, description: "Links in email point to reputable domains", detail: "All 3 links pass reputation check" },
-    { name: "Image-to-Text Ratio", passed: false, score: 1.2, description: "Balance between images and text content", detail: "35% image / 65% text — recommend <30% images" },
-    { name: "HTML Validation", passed: true, score: 0, description: "Email HTML structure is valid", detail: "No broken tags, responsive design detected" },
-    { name: "Spam Trigger Words", passed: false, score: 0.8, description: "Content contains common spam keywords", detail: "Found: 'guaranteed', 'act now' — replace with softer language" },
-    { name: "Subject Line Length", passed: true, score: 0, description: "Subject line is optimal length", detail: "42 characters — within 30-60 recommended range" },
-    { name: "Unsubscribe Link", passed: true, score: 0, description: "Clear unsubscribe mechanism present", detail: "One-click unsubscribe, list-unsubscribe header present" },
-  ],
-  blacklists: [
-    { name: "Spamhaus SBL", listed: false, checkedAt: "2025-01-15 08:00", severity: "critical" },
-    { name: "Spamhaus XBL", listed: false, checkedAt: "2025-01-15 08:00", severity: "critical" },
-    { name: "Barracuda", listed: false, checkedAt: "2025-01-15 08:00", severity: "critical" },
-    { name: "SORBS", listed: false, checkedAt: "2025-01-15 08:00", severity: "warning" },
-    { name: "SpamCop", listed: false, checkedAt: "2025-01-15 08:00", severity: "warning" },
-    { name: "URIBL", listed: false, checkedAt: "2025-01-15 08:00", severity: "warning" },
-    { name: "Invaluement", listed: false, checkedAt: "2025-01-15 08:00", severity: "info" },
-    { name: "LashBack", listed: false, checkedAt: "2025-01-15 08:00", severity: "info" },
-  ],
-  isWarming: true,
-  warmupStartDate: "2025-01-01",
-  targetDailyVolume: 1000,
-  currentDailyVolume: 340,
-  warmupPhase: "ramp-up",
-};
-
 // ─── localStorage helpers ────────────────────────────────────────────
 
 const STORAGE_KEY = "sw_email_warming";
 
-function loadState(): EmailWarmingState {
+function loadState(): EmailWarmingState | null {
   try {
     const s = localStorage.getItem(STORAGE_KEY);
     if (s) return JSON.parse(s);
   } catch { /* silent */ }
-  return SEED_STATE;
+  return null;
 }
 
 function saveState(data: EmailWarmingState) {
@@ -260,7 +160,7 @@ function StatusBadge({ status, text }: { status: string; text: string }) {
 // ─── Main Component ──────────────────────────────────────────────────
 
 export default function EmailWarming() {
-  const [data, setData] = useState<EmailWarmingState>(loadState);
+  const [data, setData] = useState<EmailWarmingState | null>(loadState);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     reputation: true,
     warmup: true,
@@ -269,11 +169,40 @@ export default function EmailWarming() {
     blacklist: true,
   });
 
-  useEffect(() => { saveState(data); }, [data]);
+  useEffect(() => { if (data) saveState(data); }, [data]);
 
   const toggleSection = (key: string) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
+
+  // Empty state: no email provider connected
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-sky-500/10 flex items-center justify-center mb-4">
+          <Shield className="w-8 h-8 text-sky-400" />
+        </div>
+        <h2 className="text-lg font-semibold text-slate-100 mb-2">Email Warming Dashboard</h2>
+        <p className="text-sm text-slate-400 max-w-md mb-6">
+          Connect your email provider (SendGrid, Postmark, AWS SES) to monitor deliverability,
+          warmup progress, and inbox placement.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
+          {[
+            { label: "Domain Reputation", desc: "SenderScore, Cisco Talos, Google Postmaster" },
+            { label: "Inbox Placement", desc: "Test across Gmail, Outlook, Yahoo, and more" },
+            { label: "Blacklist Monitor", desc: "Track 50+ blacklists in real-time" },
+          ].map(item => (
+            <div key={item.label} className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+              <div className="text-xs font-medium text-slate-300 mb-1">{item.label}</div>
+              <div className="text-[10px] text-slate-500">{item.desc}</div>
+              <div className="text-[10px] text-slate-600 mt-2 italic">No data</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const totalSpamScore = data.spamRules.filter(r => !r.passed).reduce((acc, r) => acc + r.score, 0);
   const failedRules = data.spamRules.filter(r => !r.passed).length;
@@ -282,7 +211,7 @@ export default function EmailWarming() {
   const avgInboxRate = Math.round(data.inboxProviders.reduce((acc, p) => acc + p.inboxPct, 0) / data.inboxProviders.length);
 
   const toggleWarming = () => {
-    setData(prev => ({ ...prev, isWarming: !prev.isWarming }));
+    setData(prev => prev ? ({ ...prev, isWarming: !prev.isWarming }) : prev);
   };
 
   return (
@@ -295,7 +224,7 @@ export default function EmailWarming() {
             Email Deliverability & Warmup
           </h2>
           <p className="text-[10px] text-slate-500 mt-0.5">
-            {data.reputation.domain} · Phase: <span className="text-sky-400 capitalize">{data.warmupPhase}</span> · Day {currentDay.day} of warmup
+            {data.reputation.domain} &middot; Phase: <span className="text-sky-400 capitalize">{data.warmupPhase}</span> &middot; Day {currentDay.day} of warmup
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -447,7 +376,7 @@ export default function EmailWarming() {
                 return (
                   <div key={day.day} className="flex-1 flex flex-col items-center gap-1 group relative">
                     <div className="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-[9px] text-slate-200 px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10">
-                      {day.emailsSent} sent · {day.inboxRate}% inbox
+                      {day.emailsSent} sent &middot; {day.inboxRate}% inbox
                     </div>
                     <div
                       className={`w-full rounded-sm transition-all ${isToday ? "bg-gradient-to-t from-sky-500 to-sky-400" : "bg-white/[0.08] group-hover:bg-white/[0.14]"}`}
@@ -628,7 +557,7 @@ export default function EmailWarming() {
             return (
               <div key={v.date} className="flex-1 flex flex-col items-center gap-0.5 group relative">
                 <div className="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-[9px] text-slate-200 px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10">
-                  {v.sent} sent · {v.delivered} del
+                  {v.sent} sent &middot; {v.delivered} del
                 </div>
                 <div className="w-full flex justify-center gap-[1px] items-end" style={{ height: `${sentHeight}%` }}>
                   <div className={`w-full rounded-sm ${isLast ? "bg-sky-500/40" : "bg-sky-500/20"}`} style={{ height: "100%" }} />
