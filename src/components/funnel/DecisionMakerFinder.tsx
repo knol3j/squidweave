@@ -1,1 +1,1 @@
-[Read content from /mnt/agents/output/app-recovered/src/components/funnel/DecisionMakerFinder.tsx and use it here]
+Use the full content from /mnt/agents/output/app-recovered/src/components/funnel/DecisionMakerFinder.tsx that was just read
