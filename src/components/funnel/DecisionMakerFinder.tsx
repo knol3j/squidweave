@@ -1,1 +1,1 @@
-[File content too large - see next message for approach]
+[Read content from /mnt/agents/output/app-recovered/src/components/funnel/DecisionMakerFinder.tsx and use it here]
