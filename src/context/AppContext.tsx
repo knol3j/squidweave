@@ -1,8 +1,8 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { dataService } from "@/services/dataService";
 
 /** Deep equality check for state comparison — prevents unnecessary re-renders */
-function deepEqual(a: any, b: any): boolean {
+function deepEqual(a: any, b: any, visited = new WeakSet<object>()): boolean {
   if (a === b) return true;
   if (a == null || b == null) return a === b;
   if (typeof a !== typeof b) return false;
@@ -12,12 +12,14 @@ function deepEqual(a: any, b: any): boolean {
   if (aArr !== bArr) return false;
   if (aArr) {
     if (a.length !== b.length) return false;
-    return a.every((v: any, i: number) => deepEqual(v, b[i]));
+    return a.every((v: any, i: number) => deepEqual(v, b[i], visited));
   }
+  if (visited.has(a)) return true;
+  visited.add(a);
   const aKeys = Object.keys(a);
   const bKeys = Object.keys(b);
   if (aKeys.length !== bKeys.length) return false;
-  return aKeys.every(k => bKeys.includes(k) && deepEqual(a[k], b[k]));
+  return aKeys.every(k => bKeys.includes(k) && deepEqual(a[k], b[k], visited));
 }
 
 export type StageStatus = "locked" | "ready" | "active" | "completed";
@@ -230,6 +232,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const campaignIdRef = useRef(campaignId);
   campaignIdRef.current = campaignId;
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // New backend-data-funnel state
   const [brainState, setBrainStateRaw] = useState<any | null>(null);
@@ -281,21 +284,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Resolve to a valid campaign ID
   const getCampaignId = useCallback(() => campaignId || campaigns[0]?.id || "main-campaign", [campaignId, campaigns]);
 
-  const setCampaignId = useCallback((id: string) => { setCampaignIdState(id); setError(null); }, []);
+  const setCampaignId = useCallback((id: string) => { setCampaignIdState(id); setErrorGuarded(null); }, []);
 
   const setActiveStagePersisted = useCallback((id: number) => {
     setActiveStage(id);
     try { localStorage.setItem("sw_active_stage", String(id)); } catch { /* silent */ }
   }, []);
 
+  // Guarded error setter — syncs both state and ref
+  function setErrorGuarded(msg: string | null) {
+    if (msg !== errorRef.current) { setError(msg); errorRef.current = msg; }
+  }
+
   // Base fetch: /state is PRIMARY, supplementary calls are parallel
-  // CRITICAL: every setX below uses stable setters that deep-compare before updating.
+  // CRITICAL: silent polls skip ALL state changes unless data actually differs.
   // This prevents the "blinking" issue where 5-second polling re-renders the entire tree.
+  const isPollingRef = useRef(false);
+  const isLoadingRef = useRef(true);
+  const errorRef = useRef<string | null>(null);
+
   const fetchAll = useCallback(async (silent = false) => {
-    if (!silent) setIsLoading(true);
-    setError(null);
-    setIsPolling(true);
+    // SILENT POLLS: absolutely no state changes for loading/polling indicators.
+    // This is the #1 fix for the "blinking" issue — background polls must be invisible.
+    if (!silent) {
+      if (!isLoadingRef.current) { setIsLoading(true); isLoadingRef.current = true; }
+      if (errorRef.current !== null) { setErrorGuarded(null); }
+      if (!isPollingRef.current) { setIsPolling(true); isPollingRef.current = true; }
+    }
     let hasUpdates = false;
+    // Capture scroll position BEFORE any state changes
+    const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
     try {
       const stateResult = await dataService.getState();
       const nextBrain = stateResult;
@@ -386,13 +404,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const nextSafetyCount = ((stateResult as any).safetyExecutions || []).filter((r: any) => r.status === "pending").length;
       if (nextSafetyCount !== pendingSafetyCountRef.current) { setPendingSafetyCountRaw(nextSafetyCount); hasUpdates = true; }
 
-      // Only update timestamp when data actually changed — prevents DecisionRow re-fetch on every poll
+      // Only update timestamp when data actually changed
       if (hasUpdates) setLastRefresh(new Date().toLocaleTimeString());
     } catch (err: any) {
-      setError(err.message || "Failed to fetch data");
+      if (!silent) setErrorGuarded(err.message || "Failed to fetch data");
     } finally {
-      setIsLoading(false);
-      setIsPolling(false);
+      // Silent polls: DO NOT touch isPolling or isLoading — stay completely invisible
+      if (!silent) {
+        if (isLoadingRef.current) { setIsLoading(false); isLoadingRef.current = false; }
+        if (isPollingRef.current) { setIsPolling(false); isPollingRef.current = false; }
+      }
+      // Restore scroll position if we had updates (prevents jumping on data refresh)
+      if (hasUpdates && scrollY > 0 && typeof window !== "undefined") {
+        requestAnimationFrame(() => window.scrollTo(0, scrollY));
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getCampaignId]);
@@ -404,7 +429,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchAllRef.current(false);
     timerRef.current = setInterval(() => fetchAllRef.current(true), POLL_INTERVAL);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      abortControllerRef.current?.abort();
+    };
   }, []);
   useEffect(() => { saveApprovals(approvals); }, [approvals]);
   useEffect(() => { saveBusinessProfile(businessProfile); }, [businessProfile]);
@@ -426,8 +454,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [businessProfile.website]);
 
-  // Simple callbacks
-  const clearError = () => setError(null);
+  const clearError = () => setErrorGuarded(null);
   const refresh = useCallback(() => fetchAll(false), [fetchAll]);
 
   const toggleApproval = useCallback((key: keyof ApprovalState) => { setApprovals(prev => ({ ...prev, [key]: !prev[key] })); }, []);
@@ -447,29 +474,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const runAutomation = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.runAutomation(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const generateContent = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.generateContent(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const runResearch = useCallback(async () => {
     setBusinessResearchStatus("researching");
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     const cid = getCampaignId();
     try {
       await dataService.runAutomation(cid);
       const startTime = Date.now();
       let records: any[] = [];
-      while (Date.now() - startTime < AUTO_TIMEOUT) {
+      while (Date.now() - startTime < AUTO_TIMEOUT && !controller.signal.aborted) {
         await new Promise(r => setTimeout(r, AUTO_POLL));
+        if (controller.signal.aborted) break;
         try { records = await dataService.getResearchRecords(cid); } catch { /* silent */ }
         if (records.length > 0) break;
       }
+      if (controller.signal.aborted) return;
       await fetchAll(true);
       const findings = records.length > 0
         ? records.slice(0, 5).map((r: any, i: number) => {
@@ -477,13 +508,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             const insight = r.insight || r.summary || r.title || r.finding || r.content || JSON.stringify(r).slice(0, 80);
             return `${i + 1}. [${source}] ${insight}`;
           })
-        : [
-            `Analyzed ${businessProfile.website} -- identified core offering`,
-            `Discovered target audience: ${businessProfile.targetCustomer || "B2B decision makers"}`,
-            `Extracted value proposition: ${businessProfile.productDescription?.slice(0, 60) || "Premium service offering"}`,
-            `Mapped potential outreach channels`,
-            `Identified key pain points from customer reviews`,
-          ];
+        : [];
       updateBusinessProfile({
         researchStatus: "completed",
         researchFindings: findings,
@@ -496,39 +521,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [getCampaignId, fetchAll, businessProfile, updateBusinessProfile, setBusinessResearchStatus]);
 
   const discoverMarkets = useCallback(async () => {
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     const cid = getCampaignId();
     try {
       await dataService.runAutomation(cid);
       const startTime = Date.now();
       let realTargets: any[] = [];
-      while (Date.now() - startTime < AUTO_TIMEOUT) {
+      while (Date.now() - startTime < AUTO_TIMEOUT && !controller.signal.aborted) {
         await new Promise(r => setTimeout(r, AUTO_POLL));
+        if (controller.signal.aborted) break;
         try { realTargets = await dataService.getTargets(cid); } catch { /* silent */ }
         if (realTargets.length > 0) break;
       }
+      if (controller.signal.aborted) return;
       await fetchAll(true);
       if (realTargets.length > 0) {
         const newMarkets: TargetMarket[] = realTargets.slice(0, 6).map((t: any, i: number) => ({
           id: t.id || t.targetId || `market-${Date.now()}-${i}`,
-          segment: t.segment || t.company || `${businessProfile.industry || "Industry"} Segment ${i + 1}`,
-          description: t.description || t.summary || `Target: ${t.company || t.targetId || "Unknown"} in ${t.region || "global market"}`,
-          estimatedReach: t.estimatedReach || t.reach || t.audienceSize || (5000 + i * 3000),
-          fitScore: t.fitScore || t.score || (90 - i * 5),
-          channels: Array.isArray(t.channels) ? t.channels : (t.recommendedChannel ? [t.recommendedChannel] : ["LinkedIn", "Email"]),
-          painPoints: Array.isArray(t.painPoints) ? t.painPoints : (t.pains || ["Scaling challenges", "Resource constraints"]),
+          segment: t.segment || t.company || "",
+          description: t.description || t.summary || "",
+          estimatedReach: t.estimatedReach || t.reach || t.audienceSize || 0,
+          fitScore: t.fitScore || t.score || 0,
+          channels: Array.isArray(t.channels) ? t.channels : (t.recommendedChannel ? [t.recommendedChannel] : []),
+          painPoints: Array.isArray(t.painPoints) ? t.painPoints : (t.pains || []),
           status: "discovered" as const,
         }));
         setTargetMarkets(prev => [...newMarkets, ...prev].slice(0, 12));
-      } else {
-        const b = businessProfile;
-        const fallbackMarkets: TargetMarket[] = [
-          { id: `market-${Date.now()}-1`, segment: `${b.industry || "Industry"} Decision Makers`, description: `C-suite and VP-level executives at ${b.industry || "mid-market"} companies actively seeking ${b.productDescription?.slice(0, 40) || "solutions"}.`, estimatedReach: 15000, fitScore: 92, channels: ["LinkedIn", "Email"], painPoints: ["Time-consuming processes", "Lack of automation", "Scaling challenges"], status: "discovered" as const },
-          { id: `market-${Date.now()}-2`, segment: "Growth-Stage Startups", description: `Series A-C startups looking to accelerate ${b.goals?.slice(0, 40) || "growth"} with proven methodologies.`, estimatedReach: 28000, fitScore: 85, channels: ["Twitter/X", "Reddit", "Email"], painPoints: ["Limited budget", "Need quick wins", "Competitive market"], status: "discovered" as const },
-          { id: `market-${Date.now()}-3`, segment: "Enterprise Innovators", description: `Enterprise teams piloting new tools for ${b.industry || "their sector"}. High budget, longer sales cycle.`, estimatedReach: 8000, fitScore: 78, channels: ["LinkedIn", "Events"], painPoints: ["Complex procurement", "Risk aversion", "Need ROI proof"], status: "discovered" as const },
-        ];
-        setTargetMarkets(prev => [...fallbackMarkets, ...prev].slice(0, 12));
       }
-    } catch (e: any) { setError(e.message || "Failed to discover markets"); }
+    } catch (e: any) { setErrorGuarded(e.message || "Failed to discover markets"); }
   }, [getCampaignId, fetchAll, businessProfile]);
 
   const generatePitches = useCallback(async () => {
@@ -556,7 +577,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           id: p.id || `pitch-${Date.now()}-${i}`,
           title: p.title || `Pitch Option ${i + 1}`,
           subject: p.subject || p.subjectLine || `Subject for ${businessProfile.businessName || "your campaign"}`,
-          body: p.body || p.message || p.content || makeFallbackBody(businessProfile, i),
+          body: p.body || p.message || p.content || "",
           cta: p.cta || p.callToAction || "Learn more",
           angle: p.angle || p.framework || "Value Proposition",
           tone: p.tone || "Professional",
@@ -568,7 +589,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           id: v.id || `pitch-${Date.now()}-${i}`,
           title: v.title || `Pitch ${i + 1} (${v.locale || "en"})`,
           subject: v.subject || v.headline || "Subject line",
-          body: v.body || v.preheader || v.message || makeFallbackBody(businessProfile, i),
+          body: v.body || v.preheader || v.message || "",
           cta: v.cta || "Get started",
           angle: v.angle || "Direct",
           tone: v.tone || "Professional",
@@ -578,12 +599,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       // Backend failed (no campaign, LM Studio error, etc) — mark but don't stop
-      setError(`Backend: ${err.message}. Using local fallback.`);
-    }
-
-    // Step 4: ALWAYS fall back to profile-based pitches if backend produced nothing
-    if (newPitches.length === 0) {
-      newPitches = makeProfilePitches(businessProfile);
+      setErrorGuarded(`Backend: ${err.message}. Using local fallback.`);
     }
 
     setPitches(prev => [...newPitches, ...prev].slice(0, 10));
@@ -594,59 +610,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const generateProspects = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.generateProspects(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const enrichProspects = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.enrichProspects(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const sequenceProspects = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.sequenceProspects(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const runFunding = useCallback(async () => {
     setIsLoading(true);
     try { await dataService.runFunding(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const updateConnector = useCallback(async (connector: string, baseUrl: string, token: string) => {
     try { await dataService.updateConnectorConfig(connector, { baseUrl, token, probe: true }); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
   }, [fetchAll]);
 
   const runPromptAutopilot = useCallback(async (prompt: string) => {
     setIsLoading(true);
     try { await dataService.runPromptAutopilot(prompt, { campaignId: getCampaignId() }); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
     finally { setIsLoading(false); }
   }, [getCampaignId, fetchAll]);
 
   const ingestOutcomes = useCallback(async (payload: any) => {
     try { await dataService.ingestOutcomes({ campaignId: getCampaignId(), ...payload }); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
   }, [getCampaignId, fetchAll]);
 
   const addResearchRecord = useCallback(async (record: any) => {
     try { await dataService.addResearchRecord({ campaignId: getCampaignId(), ...record }); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
   }, [getCampaignId, fetchAll]);
 
   const getTargetDecision = useCallback(async () => {
     try { await dataService.getTargetDecision(getCampaignId()); await fetchAll(true); }
-    catch (err: any) { setError(err.message); }
+    catch (err: any) { setErrorGuarded(err.message || String(err)); }
   }, [getCampaignId, fetchAll]);
 
-  const stages = computeStages(campaign, stageData, approvals, businessProfile, targetMarkets, pitches);
+  const stages = useMemo(
+    () => computeStages(campaign, stageData, approvals, businessProfile, targetMarkets, pitches),
+    [campaign, stageData, approvals, businessProfile, targetMarkets, pitches]
+  );
 
   const value: AppContextValue = {
     state: {
@@ -676,21 +695,3 @@ export function useApp() {
 }
 
 // helpers
-
-function makeFallbackBody(b: BusinessProfile, idx: number): string {
-  const bodies = [
-    `Hi {{name}},\n\nI noticed {{company}} is focused on ${b.goals || "growth"}. ${b.businessName} helps ${b.industry || "companies"} like yours achieve exactly that through ${b.productDescription?.slice(0, 60) || "our proven methodology"}.\n\nWorth a 10-min chat?`,
-    `Hi {{name}},\n\nMost ${b.industry || "companies"} struggle with ${b.goals || "scaling outreach"}.\n\n${b.businessName} solves this by ${b.productDescription?.slice(0, 60) || "automating your marketing"}.\n\nCurious how?`,
-    `Hi {{name}},\n\n${b.businessName} helps ${b.industry || "teams"} achieve ${b.goals || "their goals"} without the usual headaches.\n\nWant to see how it works for ${b.targetCustomer || "teams like yours"}?`,
-  ];
-  return bodies[idx % bodies.length];
-}
-
-function makeProfilePitches(b: BusinessProfile): PitchOption[] {
-  const ts = Date.now();
-  return [
-    { id: `pitch-${ts}-1`, title: "Direct Value Pitch", subject: `How ${b.businessName || "we"} can accelerate your ${b.goals?.split(" ").slice(0, 3).join(" ") || "results"}`, body: makeFallbackBody(b, 0), cta: "Book a 10-min call", angle: "Direct Value", tone: "Professional", targetSegment: b.targetCustomer || "Decision Makers", status: "draft" as const },
-    { id: `pitch-${ts}-2`, title: "Problem-Agitation-Solution", subject: `The ${b.industry || ""} challenge everyone's facing`, body: makeFallbackBody(b, 1), cta: "See how it works", angle: "PAS Framework", tone: "Conversational", targetSegment: b.targetCustomer || "Growth Leaders", status: "draft" as const },
-    { id: `pitch-${ts}-3`, title: "Social Proof Pitch", subject: `${b.businessName || "We"} helps ${b.industry || ""} teams scale faster`, body: makeFallbackBody(b, 2), cta: "Get the playbook", angle: "Social Proof", tone: "Casual", targetSegment: b.targetCustomer || "Marketing Teams", status: "draft" as const },
-  ];
-}

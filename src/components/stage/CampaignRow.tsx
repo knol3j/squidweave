@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Globe, Palette, Save, Pencil, Building2, Globe2, Target, Sparkles, Loader2, CheckCircle, ScrollText, Bot, Cpu, Clock, Landmark, Radio, Github } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { dataService } from "@/services/dataService";
@@ -29,6 +29,17 @@ export default function CampaignRow() {
     targetCustomer: businessProfile.targetCustomer,
   });
 
+  useEffect(() => {
+    setBizForm({
+      businessName: businessProfile.businessName,
+      website: businessProfile.website,
+      goals: businessProfile.goals,
+      industry: businessProfile.industry,
+      productDescription: businessProfile.productDescription,
+      targetCustomer: businessProfile.targetCustomer,
+    });
+  }, [businessProfile]);
+
   const hasBiz = businessProfile.businessName && businessProfile.website && businessProfile.goals;
   const isResearching = businessProfile.researchStatus === "researching";
   const hasResearch = businessProfile.researchStatus === "completed";
@@ -36,6 +47,7 @@ export default function CampaignRow() {
   const startEdit = () => { setForm({ ...campaign }); setEditing(true); };
 
   const save = async () => {
+    if (!campaign?.id) { alert("No campaign selected"); return; }
     setSaving(true);
     try { await dataService.updateCampaign(campaign.id, form); setEditing(false); }
     catch (e: any) { alert("Save failed: " + e.message); }
@@ -125,7 +137,7 @@ export default function CampaignRow() {
             <Save className="w-3 h-3" /> Save Profile
           </button>
           {hasBiz && (
-            <button onClick={runResearch} disabled={isResearching}
+            <button onClick={() => runResearch().catch(err => console.error("Research failed:", err))} disabled={isResearching}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, #06b6d4, #0891b2)", color: "#fff" }}>
               {isResearching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}

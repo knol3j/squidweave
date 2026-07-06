@@ -28,8 +28,9 @@ export default function ContentRow() {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    await generatePitches();
-    setGenerating(false);
+    try { await generatePitches(); }
+    catch (err: any) { console.error("Generate failed:", err); }
+    finally { setGenerating(false); }
   };
 
   const handleApprovePitch = (id: string) => {
@@ -48,9 +49,9 @@ export default function ContentRow() {
   return (
     <div className="space-y-4 pt-3">
       {/* Tab Navigation */}
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1" role="tablist">
         {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
+          <button key={t.key} onClick={() => setTab(t.key)} role="tab" aria-selected={tab === t.key}
             className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors"
             style={tab === t.key ? { background: "rgba(244,63,94,0.12)", color: "#fb7185" } : { color: "#475569" }}>
             <t.icon className="w-3 h-3" />{t.label}
@@ -287,11 +288,11 @@ function PitchCard({ pitch, isActive, onToggle, onApprove, onReject }: {
           <div className="text-[10px] text-slate-600 mt-0.5">{pitch.angle} \u00b7 {pitch.tone} tone \u00b7 {pitch.targetSegment}</div>
         </div>
         <div className="flex gap-1 shrink-0">
-          <button onClick={(e) => { e.stopPropagation(); onApprove(); }}
+          <button onClick={(e) => { e.stopPropagation(); onApprove(); }} aria-label="Approve pitch"
             className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors">
             <ThumbsUp className="w-3.5 h-3.5" />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onReject(); }}
+          <button onClick={(e) => { e.stopPropagation(); onReject(); }} aria-label="Reject pitch"
             className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
             <ThumbsDown className="w-3.5 h-3.5" />
           </button>
