@@ -1,138 +1,190 @@
-import { useState, useEffect } from "react";
-import { Plug, Database, Wifi, WifiOff, AlertTriangle, Loader2, CheckCircle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Cable,
+  Database,
+  Sparkles,
+  Loader2,
+  CheckCircle,
+  AlertTriangle,
+  Unplug,
+} from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { dataService } from "@/services/dataService";
 
-export default function IngestionRow() {
-  const { state } = useApp();
-  const { campaign, businessProfile } = state;
-  const campaignId = campaign?.id || "";
-  const [tab, setTab] = useState<"connectors" | "research" | "findings">("connectors");
-  const [connectors, setConnectors] = useState<any[]>([]);
-  const [research, setResearch] = useState<any[]>([]);
-  const [analytics, setAnalytics] = useState<any[]>([]);
-  const [outreach, setOutreach] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function Empty({ message }: { message: string }) {
+  return (
+    <div className="p-6 text-center rounded-xl border border-white/[0.06] bg-white/[0.02]">
+      <p className="text-xs text-slate-600">{message}</p>
+    </div>
+  );
+}
+
+export function IngestionRow() {
+  const state = useApp();
+  const campaignId = state.getCampaignId();
+
+  const [tab, setTabRaw] = useState<"connectors" | "research" | "findings">(() => {
+    try { const s = localStorage.getItem("sw_tab_ingestion"); return (s as any) || "connectors"; } catch { return "connectors"; }
+  });
+  const setTab = (t: "connectors" | "research" | "findings") => {
+    setTabRaw(t);
+    try { localStorage.setItem("sw_tab_ingestion", t); } catch { /* silent */ }
+  };
+
+  const [connectorsLoading, setConnectorsLoading] = useState(false);
+  const [researchLoading, setResearchLoading] = useState(false);
+  const [connectorList, setConnectorList] = useState<any[]>([]);
+  const [researchFindings, setResearchFindings] = useState<any[]>([]);
+  const [error, setError] = useState("");
+
+  const loadConnectors = useCallback(async () => {
+    setConnectorsLoading(true);
+    setError("");
+    try {
+      const res = await dataService.getConnectorStatuses(false);
+      setConnectorList(res || []);
+    } catch (e: any) {
+      setError(e.message || "Failed to load connectors");
+    } finally {
+      setConnectorsLoading(false);
+    }
+  }, []);
+
+  const loadResearch = useCallback(async () => {
+    setResearchLoading(true);
+    try {
+      const data = await dataService.getState();
+      setResearchFindings((data as any)?.researchRecords || []);
+    } catch { /* silent */ }
+    setResearchLoading(false);
+  }, []);
 
   useEffect(() => {
-    if (!campaignId) return;
-    setLoading(true);
-    Promise.allSettled([
-      dataService.getConnectorStatuses(),
-      dataService.getResearchRecords(campaignId),
-      dataService.getAnalyticsEvents(campaignId),
-      dataService.getOutreachEvents(campaignId),
-    ]).then(([c, r, a, o]) => {
-      if (c.status === "fulfilled") setConnectors(c.value);
-      if (r.status === "fulfilled") setResearch(r.value);
-      if (a.status === "fulfilled") setAnalytics(a.value);
-      if (o.status === "fulfilled") setOutreach(o.value);
-      setLoading(false);
-    }).catch(e => { setError(e.message); setLoading(false); });
-  }, [campaignId, state.lastRefresh]);
-
-  if (!campaignId) return <Empty message="Select a campaign first" />;
-  if (loading) return <Loading />;
-  if (error) return <ErrorMessage message={error} />;
-
-  const tabs = [
-    { key: "connectors" as const, label: `Connectors (${connectors.length})`, icon: Plug },
-    { key: "research" as const, label: `Data (${research.length + analytics.length + outreach.length})`, icon: Database },
-    { key: "findings" as const, label: "Agent Findings", icon: CheckCircle },
-  ];
+    loadConnectors();
+    loadResearch();
+    // NOTE: intentionally NOT depending on state.lastRefresh — prevents blinking
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId]);
 
   return (
     <div className="space-y-3 pt-3">
-      <div className="flex flex-wrap gap-1">
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
+      <div className="flex flex-wrap gap-1" role="tablist">
+        {[
+          { key: "connectors" as const, label: "Connectors", icon: Cable },
+          { key: "research" as const, label: "Research", icon: Sparkles },
+          { key: "findings" as const, label: "Findings", icon: Database },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            role="tab"
+            aria-selected={tab === t.key}
             className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors"
-            style={tab === t.key ? { background: "rgba(6,182,212,0.12)", color: "#22d3ee" } : { color: "#475569" }}>
-            <t.icon className="w-3 h-3" />{t.label}
+            style={
+              tab === t.key
+                ? { background: "rgba(99,102,241,0.15)", color: "#a5b4fc" }
+                : { color: "#475569" }
+            }
+          >
+            <t.icon className="w-3 h-3" />
+            {t.label}
           </button>
         ))}
       </div>
 
+      {error && (
+        <div className="p-2 rounded-lg border border-red-500/30 bg-red-500/10 text-[10px] text-red-400">
+          {error}
+        </div>
+      )}
+
       {tab === "connectors" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {connectors.length === 0 && <Empty message="No connectors configured" />}
-          {connectors.map((c: any) => (
-            <div key={c.connector} className="p-3 rounded-xl border border-white/[0.06] bg-[#0f172a]">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold capitalize text-slate-100">{c.connector}</span>
-                <span className={`flex items-center gap-1 text-[10px] ${c.reachable ? "text-emerald-400" : "text-red-400"}`}>
-                  {c.reachable ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                  {c.reachable ? "Reachable" : "Unreachable"}
-                </span>
-              </div>
-              <div className="mt-2 space-y-1 text-[10px] text-slate-600">
-                <div>Mode: <span className="text-slate-400">{c.mode || (c.dryRun ? "dry-run" : "live")}</span></div>
-                <div>URL: <span className="text-slate-400">{c.baseUrl || "\u2014"}</span></div>
-                <div>Token: <span className={c.tokenConfigured ? "text-emerald-400" : "text-red-400"}>{c.tokenConfigured ? "Configured" : "Missing"}</span></div>
-                {c.error && <div className="text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{c.error}</div>}
-              </div>
+        <div>
+          {connectorsLoading ? (
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading connectors...
             </div>
-          ))}
+          ) : connectorList.length === 0 ? (
+            <Empty message="No connectors configured" />
+          ) : (
+            <div className="space-y-2">
+              {connectorList.map((c: any) => (
+                <div
+                  key={c.connector}
+                  className="flex items-center justify-between p-2.5 rounded-lg border border-white/[0.06] bg-[#0f172a]"
+                >
+                  <div className="flex items-center gap-2">
+                    <Cable className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="text-xs font-medium text-slate-200">
+                      {c.connector}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded"
+                      style={{
+                        background:
+                          c.mode === "live" || c.mode === "ready"
+                            ? "rgba(16,185,129,0.1)"
+                            : c.mode === "dry-run"
+                              ? "rgba(245,158,11,0.1)"
+                              : "rgba(244,63,94,0.1)",
+                        color:
+                          c.mode === "live" || c.mode === "ready"
+                            ? "#34d399"
+                            : c.mode === "dry-run"
+                              ? "#fbbf24"
+                              : "#fb7185",
+                      }}
+                    >
+                      {c.mode}
+                    </span>
+                    {c.configured ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {tab === "research" && (
-        <div className="space-y-3">
-          <DataTable data={research} columns={[
-            { key: "company", label: "Company" }, { key: "segment", label: "Segment" }, { key: "region", label: "Region" },
-            { key: "fitScore", label: "Fit", render: (v: number) => <ScoreDot value={v} color="#6366f1" /> },
-            { key: "intentScore", label: "Intent", render: (v: number) => <ScoreDot value={v} color="#06b6d4" /> },
-          ]} />
-          <div className="grid grid-cols-2 gap-2 text-[10px]">
-            <div className="p-2 rounded bg-[#0f172a] text-center"><div className="text-lg font-semibold text-cyan-400">{analytics.length}</div><div className="text-slate-600">Analytics Events</div></div>
-            <div className="p-2 rounded bg-[#0f172a] text-center"><div className="text-lg font-semibold text-cyan-400">{outreach.length}</div><div className="text-slate-600">Outreach Events</div></div>
-          </div>
+        <div>
+          {researchLoading ? (
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading research...
+            </div>
+          ) : (
+            <Empty message="Research data appears here when agents complete research tasks" />
+          )}
         </div>
       )}
 
       {tab === "findings" && (
         <div>
-          {businessProfile.researchStatus === "idle" && (
-            <div className="py-6 text-center">
-              <p className="text-xs text-slate-600">No research run yet.</p>
-              <p className="text-[10px] text-slate-700 mt-1">Go to Stage 1 (Setup) and click "Run Agent Research"</p>
-            </div>
-          )}
-          {businessProfile.researchStatus === "researching" && (
-            <div className="py-6 text-center">
-              <Loader2 className="w-5 h-5 animate-spin mx-auto text-cyan-400" />
-              <p className="text-xs text-cyan-400 mt-2">Agents are researching your business...</p>
-            </div>
-          )}
-          {businessProfile.researchStatus === "completed" && (
-            <div className="space-y-3">
-              <div className="p-3 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04]">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Research Complete</span>
+          {researchFindings?.length === 0 ? (
+            <Empty message="No research findings yet" />
+          ) : (
+            <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+              {researchFindings?.map((f: any, i: number) => (
+                <div
+                  key={i}
+                  className="p-2.5 rounded-lg border border-white/[0.06] bg-[#0f172a]"
+                >
+                  <div className="text-xs font-medium text-slate-200">
+                    {f.title || f.topic || `Finding #${i + 1}`}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1">
+                    {f.summary || f.content || "No summary"}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {businessProfile.researchFindings.map((f, i) => (
-                    <div key={i} className="flex items-start gap-2 text-[11px]">
-                      <span className="text-emerald-500/50 mt-0.5">\u2713</span>
-                      <span className="text-slate-400">{f}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {businessProfile.productDescription && (
-                <div className="p-3 rounded-xl border border-white/[0.06] bg-[#0f172a]">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">Product/Service</div>
-                  <div className="text-xs text-slate-300">{businessProfile.productDescription}</div>
-                </div>
-              )}
-              {businessProfile.targetCustomer && (
-                <div className="p-3 rounded-xl border border-white/[0.06] bg-[#0f172a]">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-1">Target Customer</div>
-                  <div className="text-xs text-slate-300">{businessProfile.targetCustomer}</div>
-                </div>
-              )}
+              ))}
             </div>
           )}
         </div>
@@ -140,40 +192,3 @@ export default function IngestionRow() {
     </div>
   );
 }
-
-function ScoreDot({ value, color }: { value: number; color: string }) {
-  if (value == null) return <span className="text-slate-600">\u2014</span>;
-  return (
-    <span className="flex items-center gap-1">
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: color, opacity: value / 100 + 0.2 }} />
-      <span className="text-slate-400">{value}</span>
-    </span>
-  );
-}
-
-function DataTable({ data, columns }: { data: any[]; columns: { key: string; label: string; render?: (v: any) => React.ReactNode }[] }) {
-  if (data.length === 0) return <Empty message="No records found" />;
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-[11px]">
-        <thead><tr className="border-b border-white/[0.06]">
-          {columns.map(c => <th key={c.key} className="text-left py-1.5 px-2 font-medium text-slate-600">{c.label}</th>)}
-        </tr></thead>
-        <tbody>
-          {data.slice(0, 50).map((row, i) => (
-            <tr key={row.id || i} className="hover:bg-white/[0.02] transition-colors border-b border-white/[0.03]">
-              {columns.map(c => (
-                <td key={c.key} className="py-1.5 px-2 text-slate-400">{c.render ? c.render(row[c.key]) : (row[c.key] ?? "\u2014")}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {data.length > 50 && <div className="text-[10px] py-1 text-center text-slate-600">+ {data.length - 50} more</div>}
-    </div>
-  );
-}
-
-function Loading() { return <div className="py-6 text-center text-xs text-slate-600">Loading ingestion data...</div>; }
-function Empty({ message }: { message: string }) { return <div className="py-6 text-center text-xs text-slate-600">{message}</div>; }
-function ErrorMessage({ message }: { message: string }) { return <div className="py-4 text-center text-xs text-red-400">{message}</div>; }

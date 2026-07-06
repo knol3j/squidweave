@@ -1,88 +1,51 @@
-import { useState, useEffect } from "react";
-import {
-  Database,
-  Brain,
-  FileText,
-  AlertTriangle,
-  UserCheck,
-} from "lucide-react";
-import IngestionRow from "./IngestionRow";
-import AutonomousResearch from "@/components/funnel/AutonomousResearch";
-import CompanyDossier from "@/components/funnel/CompanyDossier";
-import type { CompanyDossierData } from "@/components/funnel/CompanyDossier";
-import PainPointAnalyzer from "@/components/funnel/PainPointAnalyzer";
-import DecisionMakerFinder from "@/components/funnel/DecisionMakerFinder";
+import { useState } from "react";
+import { FileText } from "lucide-react";
+import { AutonomousResearch } from "@/components/funnel/AutonomousResearch";
+import { CompanyDossier } from "@/components/funnel/CompanyDossier";
+import { PainPointAnalyzer } from "@/components/funnel/PainPointAnalyzer";
+import { DecisionMakerFinder } from "@/components/funnel/DecisionMakerFinder";
+import { IngestionRow } from "./IngestionRow";
 
-const STORAGE_KEY = "sw_research_dossiers";
-
-function loadSavedDossiers(): CompanyDossierData[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* silent */ }
-  return [];
-}
-
-type ResearchTab = "data" | "research" | "dossier" | "painpoints" | "contacts";
-
-export default function ResearchRow() {
-  const [activeTab, setActiveTabRaw] = useState<ResearchTab>(() => {
-    try { const s = localStorage.getItem("sw_tab_research"); return (s as ResearchTab) || "data"; } catch { return "data"; }
+export function ResearchRow() {
+  const [activeTab, setActiveTab] = useState<"data" | "research" | "dossier" | "painpoints" | "contacts">("data");
+  const [savedDossiers, setSavedDossiers] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sw_dossiers") || "[]"); } catch { return []; }
   });
-  const setActiveTab = (t: ResearchTab) => {
-    setActiveTabRaw(t);
-    try { localStorage.setItem("sw_tab_research", t); } catch { /* silent */ }
-  };
-  const [savedDossiers, setSavedDossiers] = useState<CompanyDossierData[]>(loadSavedDossiers);
-  const [selectedDossier, setSelectedDossier] = useState<CompanyDossierData | null>(null);
+  const [selectedDossier, setSelectedDossier] = useState<any>(null);
 
-  // Refresh dossiers when switching to dossier tab
-  useEffect(() => {
-    if (activeTab === "dossier") {
-      const dossiers = loadSavedDossiers();
-      setSavedDossiers(dossiers);
-      if (dossiers.length > 0 && !selectedDossier) {
-        setSelectedDossier(dossiers[0]);
-      }
-    }
-  }, [activeTab]);
-
-  const tabs: { key: ResearchTab; label: string; icon: React.ElementType }[] = [
-    { key: "data", label: "Data", icon: Database },
-    { key: "research", label: "Research", icon: Brain },
-    { key: "dossier", label: "Dossier", icon: FileText },
-    { key: "painpoints", label: "Pain Points", icon: AlertTriangle },
-    { key: "contacts", label: "Contacts", icon: UserCheck },
+  const tabs = [
+    { key: "data" as const, label: "Data Sources" },
+    { key: "research" as const, label: "Research" },
+    { key: "dossier" as const, label: "Dossiers" },
+    { key: "painpoints" as const, label: "Pain Points" },
+    { key: "contacts" as const, label: "Contacts" },
   ];
 
   return (
     <div className="space-y-3 pt-3">
-      {/* Tab bar */}
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1" role="tablist">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className="flex items-center gap-1 text-[10px] px-2.5 py-1.5 rounded-md transition-colors font-medium"
+            role="tab"
+            aria-selected={activeTab === t.key}
+            className="text-[10px] px-2.5 py-1 rounded-md transition-colors"
             style={
               activeTab === t.key
-                ? { background: "rgba(6,182,212,0.12)", color: "#22d3ee" }
+                ? { background: "rgba(99,102,241,0.15)", color: "#a5b4fc" }
                 : { color: "#475569" }
             }
           >
-            <t.icon className="w-3 h-3" />
             {t.label}
           </button>
         ))}
       </div>
 
-      {/* Data tab — existing ingestion row */}
       {activeTab === "data" && <IngestionRow />}
 
-      {/* Research tab — autonomous research engine */}
       {activeTab === "research" && <AutonomousResearch />}
 
-      {/* Dossier tab — saved company dossiers */}
       {activeTab === "dossier" && (
         <div className="space-y-3">
           {savedDossiers.length === 0 ? (
@@ -95,7 +58,6 @@ export default function ResearchRow() {
             </div>
           ) : (
             <>
-              {/* Dossier selector */}
               {savedDossiers.length > 1 && (
                 <div className="flex flex-wrap gap-1.5">
                   {savedDossiers.map((d) => (
@@ -120,10 +82,8 @@ export default function ResearchRow() {
         </div>
       )}
 
-      {/* Pain Points tab */}
       {activeTab === "painpoints" && <PainPointAnalyzer />}
 
-      {/* Contacts tab */}
       {activeTab === "contacts" && <DecisionMakerFinder />}
     </div>
   );
