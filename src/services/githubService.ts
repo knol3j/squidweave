@@ -1,203 +1,107 @@
-/* ─── Types ─── */
+const STORAGE_KEY = "sw_github_token";
+
 export interface GitHubRepo {
-  id: number;
   name: string;
-  full_name: string;
-  description: string | null;
-  language: string | null;
+  description: string;
   stars: number;
-  forks: number;
-  updated_at: string;
-  default_branch: string;
-  size: number;
-  private: boolean;
+  language: string;
+  updatedAt: string;
+  url: string;
+}
+
+export interface GitHubCommit {
+  sha: string;
+  message: string;
+  author: string;
+  date: string;
+  additions: number;
+  deletions: number;
 }
 
 export interface GitHubFile {
-  name: string;
   path: string;
-  type: "file" | "dir";
-  size: number;
-  sha: string;
-  download_url: string | null;
-}
-
-export interface RepoAnalysis {
-  languages: Record<string, number>;
-  totalFiles: number;
-  totalLines: number;
-  dependencies: string[];
-  fileTree: GitHubFile[];
-  readme: string;
-  topContributors: string[];
-}
-
-export interface ParsedFile {
-  name: string;
-  path: string;
-  language: string;
-  lines: number;
-  functions: number;
-  classes: number;
-  imports: number;
-  todos: number;
   content: string;
+  size: number;
+  type: "file" | "directory";
 }
 
-export interface CodeMetrics {
-  files: number;
-  lines: number;
-  functions: number;
-  classes: number;
-  imports: number;
-  complexity: number;
-}
-
-export interface TodoItem {
-  file: string;
-  line: number;
-  text: string;
-  type: "TODO" | "FIXME" | "HACK" | "XXX";
-}
-
-export interface GitHubUser {
-  login: string;
-  avatar_url: string;
-}
-
-/* ─── API base ─── */
-const GITHUB_API = "https://api.github.com";
-
-/* ─── PAT helpers ─── */
-function getPAT(): string | null {
+function getToken(): string | null {
   try {
-    return localStorage.getItem("github_pat");
+    return localStorage.getItem(STORAGE_KEY);
   } catch {
     return null;
   }
 }
 
-function getHeaders(): Record<string, string> {
-  const pat = getPAT();
-  return pat
-    ? {
-        Authorization: `token ${pat}`,
-        Accept: "application/vnd.github.v3+json",
-      }
-    : { Accept: "application/vnd.github.v3+json" };
+export function saveToken(token: string) {
+  try {
+    localStorage.setItem(STORAGE_KEY, token);
+  } catch { /* silent */ }
 }
 
-/* ─── Service ─── */
-export const githubService = {
-  setPAT(pat: string) {
-    localStorage.setItem("github_pat", pat);
-  },
+function apiCall(endpoint: string) {
+  const token = getToken();
+  if (!token) return Promise.reject(new Error("No GitHub token"));
 
-  clearPAT() {
-    localStorage.removeItem("github_pat");
-  },
-
-  hasPAT() {
-    return !!getPAT();
-  },
-
-  async verifyPat(): Promise<GitHubUser> {
-    const res = await fetch(`${GITHUB_API}/user`, { headers: getHeaders() });
-    if (!res.ok) throw new Error("Invalid PAT");
+  return fetch(`https://api.github.com${endpoint}`, {
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: "application/vnd.github.v3+json",
+    },
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
     return res.json();
-  },
+  });
+}
 
-  async listRepos(page = 1): Promise<GitHubRepo[]> {
-    const res = await fetch(
-      `${GITHUB_API}/user/repos?sort=updated&per_page=30&page=${page}`,
-      { headers: getHeaders() }
-    );
-    if (!res.ok) throw new Error("Failed to list repos");
-    const data = await res.json();
-    return data.map((r: any) => ({
-      id: r.id,
-      name: r.name,
-      full_name: r.full_name,
-      description: r.description,
-      language: r.language,
-      stars: r.stargazers_count,
-      forks: r.forks_count,
-      updated_at: r.updated_at,
-      default_branch: r.default_branch,
-      size: r.size,
-      private: r.private,
-    }));
-  },
+export async function searchRepos(query: string): Promise<GitHubRepo[]> {
+  const data = await apiCall(`/search/repositories?q=${encodeURIComponent(query)}&sort=stars&per_page=10`);
+  return (data.items || []).map((r: any) => ({
+    name: r.full_name,
+    description: r.description || "",
+    stars: r.stargazers_count,
+    language: r.language || "Unknown",
+    updatedAt: r.updated_at,
+    url: r.html_url,
+  }));
+}
 
-  async getRepoTree(
-    owner: string,
-    repo: string,
-    path = "",
-    branch = "master"
-  ): Promise<GitHubFile[]> {
-    const res = await fetch(
-      `${GITHUB_API}/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
-      { headers: getHeaders() }
-    );
-    if (!res.ok) throw new Error("Failed to get tree");
-    const data = await res.json();
-    return Array.isArray(data)
-      ? data.map((f: any) => ({
-          name: f.name,
-          path: f.path,
-          type: f.type === "dir" ? "dir" : "file",
-          size: f.size || 0,
-          sha: f.sha,
-          download_url: f.download_url,
-        }))
-      : [];
-  },
+export async function getRepoCommits(owner: string, repo: string): Promise<GitHubCommit[]> {
+  const data = await apiCall(`/repos/${owner}/${repo}/commits?per_page=20`);
+  return (data || []).map((c: any) => ({
+    sha: c.sha?.slice(0, 7) || "",
+    message: c.commit?.message || "",
+    author: c.commit?.author?.name || "",
+    date: c.commit?.author?.date || "",
+    additions: 0,
+    deletions: 0,
+  }));
+}
 
-  async getFileContent(
-    owner: string,
-    repo: string,
-    path: string,
-    branch = "master"
-  ): Promise<string> {
-    const res = await fetch(
-      `${GITHUB_API}/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
-      { headers: getHeaders() }
-    );
-    if (!res.ok) throw new Error("Failed to get file");
-    const data = await res.json();
-    return data.content ? atob(data.content.replace(/\n/g, "")) : "";
-  },
+export async function getRepoFiles(owner: string, repo: string, path = ""): Promise<GitHubFile[]> {
+  const data = await apiCall(`/repos/${owner}/${repo}/contents/${path}`);
+  return (Array.isArray(data) ? data : []).map((f: any) => ({
+    path: f.path,
+    content: f.type === "file" ? "" : "",
+    size: f.size || 0,
+    type: f.type === "dir" ? "directory" : "file",
+  }));
+}
 
-  async getLanguages(
-    owner: string,
-    repo: string
-  ): Promise<Record<string, number>> {
-    const res = await fetch(
-      `${GITHUB_API}/repos/${owner}/${repo}/languages`,
-      { headers: getHeaders() }
-    );
-    if (!res.ok) return {};
-    return res.json();
-  },
+export async function getFileContent(owner: string, repo: string, path: string): Promise<string> {
+  const data = await apiCall(`/repos/${owner}/${repo}/contents/${path}`);
+  if (data.content) {
+    return atob(data.content.replace(/\n/g, ""));
+  }
+  return "";
+}
 
-  async getReadme(owner: string, repo: string): Promise<string> {
-    const res = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/readme`, {
-      headers: getHeaders(),
-    });
-    if (!res.ok) return "";
-    const data = await res.json();
-    return data.content ? atob(data.content.replace(/\n/g, "")) : "";
-  },
+export function isGitHubConfigured(): boolean {
+  return !!getToken();
+}
 
-  async getContributors(owner: string, repo: string): Promise<string[]> {
-    const res = await fetch(
-      `${GITHUB_API}/repos/${owner}/${repo}/contributors?per_page=5`,
-      { headers: getHeaders() }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data)
-      ? data.map((c: any) => c.login).filter(Boolean)
-      : [];
-  },
-};
+export function clearToken() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch { /* silent */ }
+}
