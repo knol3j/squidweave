@@ -64,97 +64,25 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function loadMeetings(): Meeting[] {
   try { const s = localStorage.getItem(STORAGE_KEY); if (s) return JSON.parse(s) as Meeting[]; } catch { /* silent */ }
-  return makeDemoMeetings();
+  return [];
 }
 
 function saveMeetings(m: Meeting[]) { localStorage.setItem(STORAGE_KEY, JSON.stringify(m)); }
 
-// ─── Demo data ────────────────────────────────────────────────────────────────
-
-function makeDemoMeetings(): Meeting[] {
-  const now = new Date();
-  const d = (offset: number) => {
-    const dt = new Date(now);
-    dt.setDate(dt.getDate() + offset);
-    return dt.toISOString().split("T")[0];
-  };
-  const ts = Date.now();
-  return [
-    {
-      id: `mtg-${ts}-1`,
-      prospectName: "Sarah Chen",
-      prospectEmail: "sarah@acme.com",
-      type: "discovery",
-      date: d(1),
-      time: "10:00",
-      duration: 30,
-      notes: "Initial discovery call. Research their current tooling stack.",
-      status: "scheduled",
-      location: "Zoom",
-      createdAt: new Date(now.getTime() - 86400000).toISOString(),
-    },
-    {
-      id: `mtg-${ts}-2`,
-      prospectName: "Marcus Johnson",
-      prospectEmail: "marcus@techflow.io",
-      type: "demo",
-      date: d(2),
-      time: "14:30",
-      duration: 45,
-      notes: "Full product demo for the engineering team. Prepare sandbox.",
-      status: "scheduled",
-      location: "Google Meet",
-      createdAt: new Date(now.getTime() - 172800000).toISOString(),
-    },
-    {
-      id: `mtg-${ts}-3`,
-      prospectName: "Aisha Patel",
-      prospectEmail: "aisha@growthlabs.co",
-      type: "pitch",
-      date: d(-1),
-      time: "11:00",
-      duration: 60,
-      notes: "Enterprise pitch. Include pricing sheet and case studies.",
-      status: "completed",
-      location: "In Person",
-      createdAt: new Date(now.getTime() - 259200000).toISOString(),
-    },
-    {
-      id: `mtg-${ts}-4`,
-      prospectName: "Tom Richards",
-      prospectEmail: "tom@startup.xyz",
-      type: "followup",
-      date: d(-3),
-      time: "09:00",
-      duration: 15,
-      notes: "Quick follow-up after the demo. Address integration questions.",
-      status: "completed",
-      location: "Phone",
-      createdAt: new Date(now.getTime() - 432000000).toISOString(),
-    },
-    {
-      id: `mtg-${ts}-5`,
-      prospectName: "Elena Volkov",
-      prospectEmail: "elena@globaltech.com",
-      type: "discovery",
-      date: d(3),
-      time: "16:00",
-      duration: 30,
-      notes: "First contact via LinkedIn warm intro.",
-      status: "scheduled",
-      location: "Zoom",
-      createdAt: new Date(now.getTime() - 43200000).toISOString(),
-    },
-  ];
-}
-
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
-function generateTimeSlots(): TimeSlot[] {
+function generateTimeSlots(meetings: Meeting[], selectedDate: string): TimeSlot[] {
   const slots: TimeSlot[] = [];
+  const bookedTimes = new Set(
+    meetings
+      .filter(m => m.date === selectedDate && m.status === "scheduled")
+      .map(m => m.time)
+  );
   for (let h = 8; h <= 18; h++) {
-    slots.push({ time: `${h.toString().padStart(2, "0")}:00`, available: Math.random() > 0.3 });
-    slots.push({ time: `${h.toString().padStart(2, "0")}:30`, available: Math.random() > 0.3 });
+    const t1 = `${h.toString().padStart(2, "0")}:00`;
+    const t2 = `${h.toString().padStart(2, "0")}:30`;
+    slots.push({ time: t1, available: !bookedTimes.has(t1) });
+    slots.push({ time: t2, available: !bookedTimes.has(t2) });
   }
   return slots;
 }
@@ -163,10 +91,11 @@ function getWeekDays(offsetWeeks: number): Date[] {
   const now = new Date();
   const day = now.getDay(); // 0=Sun, 1=Mon
   const diff = now.getDate() - day + (day === 0 ? -6 : 1) + offsetWeeks * 7; // Monday start
-  const monday = new Date(now.setDate(diff));
+  const monday = new Date(now.getTime());
+  monday.setDate(diff);
   const days: Date[] = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
+    const d = new Date(monday.getTime());
     d.setDate(monday.getDate() + i);
     days.push(d);
   }
@@ -197,24 +126,14 @@ export default function MeetingScheduler() {
   const { state } = useApp();
   const { prospectPipeline } = state;
 
-  // Generate prospect list from pipeline + defaults
+  // Generate prospect list from pipeline data only
   const prospectOptions = useMemo(() => {
-    const defaults = [
-      { name: "Sarah Chen", email: "sarah@acme.com" },
-      { name: "Marcus Johnson", email: "marcus@techflow.io" },
-      { name: "Aisha Patel", email: "aisha@growthlabs.co" },
-      { name: "Tom Richards", email: "tom@startup.xyz" },
-      { name: "Elena Volkov", email: "elena@globaltech.com" },
-      { name: "James Liu", email: "james@nextgen.com" },
-      { name: "Priya Sharma", email: "priya@innovate.io" },
-    ];
     const pipelineProspects = (prospectPipeline?.prospects || []).map((p: any) => ({
       name: p.name || p.fullName || p.email,
       email: p.email || p.workEmail || "",
     })).filter((p: { email: string }) => p.email);
-    const combined = [...pipelineProspects, ...defaults];
     const seen = new Set<string>();
-    return combined.filter(p => { if (seen.has(p.email)) return false; seen.add(p.email); return true; });
+    return pipelineProspects.filter((p: { email: string }) => { if (seen.has(p.email)) return false; seen.add(p.email); return true; });
   }, [prospectPipeline]);
 
   const [meetings, setMeetings] = useState<Meeting[]>(loadMeetings);
@@ -231,7 +150,7 @@ export default function MeetingScheduler() {
   const [activeView, setActiveView] = useState<"calendar" | "list" | "history">("calendar");
 
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
-  const timeSlots = useMemo(() => generateTimeSlots(), [selectedDate]);
+  const timeSlots = useMemo(() => generateTimeSlots(meetings, selectedDate), [meetings, selectedDate]);
 
   useEffect(() => { saveMeetings(meetings); }, [meetings]);
 
@@ -375,7 +294,7 @@ export default function MeetingScheduler() {
           <div>
             <div className="text-[10px] text-slate-500 mb-1.5 uppercase tracking-wider">Select Prospect</div>
             <div className="flex flex-wrap gap-1 mb-2">
-              {prospectOptions.map(p => (
+              {prospectOptions.map((p: {email: string; name: string}) => (
                 <button
                   key={p.email}
                   onClick={() => selectProspect(p.name, p.email)}
@@ -609,8 +528,9 @@ export default function MeetingScheduler() {
       {activeView === "list" && (
         <div className="space-y-2">
           {upcomingMeetings.length === 0 && (
-            <div className="py-8 text-center text-xs text-slate-600">
-              No upcoming meetings. Book one to get started.
+            <div className="py-8 text-center">
+              <div className="text-xs text-slate-500 mb-1">No scheduled meetings</div>
+              <div className="text-[10px] text-slate-600">Connect your calendar (Google Calendar, Outlook) to sync meetings.</div>
             </div>
           )}
           {upcomingMeetings.map(meeting => (
@@ -657,8 +577,8 @@ export default function MeetingScheduler() {
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[10px] text-slate-400">
               {new Date(meeting.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-              {" · "}{meeting.time}
-              {" · "}{meeting.duration}min
+              {" \u00b7 "}{meeting.time}
+              {" \u00b7 "}{meeting.duration}min
             </span>
             <span className="text-[9px] text-slate-600">{meeting.location}</span>
           </div>
@@ -716,8 +636,8 @@ export default function MeetingScheduler() {
           </div>
           <div className="text-[10px] text-slate-500 mt-0.5">
             {new Date(meeting.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-            {" · "}{meeting.time}
-            {" · "}{mt.label}
+            {" \u00b7 "}{meeting.time}
+            {" \u00b7 "}{mt.label}
           </div>
         </div>
         <button
