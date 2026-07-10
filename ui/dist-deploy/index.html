@@ -3,11 +3,80 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>agent</title>
+    <title>SquidWeave - Autonomous Marketing Brain for B2B Growth</title>
     <script type="module" crossorigin src="./assets/index-fH3ufgYu.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-CdqTCIHx.css">
+    <style>
+      .sw-launch-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 8px 16px; font-size: 14px; font-weight: 500;
+        color: #fff; text-decoration: none; border-radius: 8px;
+        background: linear-gradient(135deg, #059669, #0d9488);
+        box-shadow: 0 4px 14px rgba(5,150,105,0.35);
+        transition: all 0.2s ease; white-space: nowrap;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      .sw-launch-btn:hover {
+        box-shadow: 0 6px 20px rgba(5,150,105,0.5);
+        transform: translateY(-1px);
+      }
+      .sw-launch-btn svg { width: 16px; height: 16px; }
+      .sw-launch-mobile { display: none; }
+      @media (max-width: 1023px) {
+        .sw-launch-desktop { display: none !important; }
+        .sw-launch-mobile { display: inline-flex !important; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function() {
+        function inject() {
+          // Desktop navbar - find the CTA div and insert before "Get Early Access"
+          var nav = document.querySelector('nav');
+          if (nav) {
+            var ctas = nav.querySelectorAll('a[href*="pricing"]');
+            var desktopCta = null;
+            for (var i = 0; i < ctas.length; i++) {
+              var parent = ctas[i].parentElement;
+              if (parent && getComputedStyle(parent).display !== 'none' && ctas[i].offsetParent !== null) {
+                desktopCta = ctas[i]; break;
+              }
+            }
+            if (desktopCta && desktopCta.parentElement) {
+              var btn = document.createElement('a');
+              btn.href = 'https://github.com/knol3j/squidweave/tree/frontend-v22';
+              btn.target = '_blank'; btn.rel = 'noopener noreferrer';
+              btn.className = 'sw-launch-btn sw-launch-desktop';
+              btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Launch Engine';
+              desktopCta.parentElement.insertBefore(btn, desktopCta);
+            }
+            // Fix GitHub link to point to actual repo
+            var ghLinks = nav.querySelectorAll('a[href="https://github.com"]');
+            ghLinks.forEach(function(l) { l.href = 'https://github.com/knol3j/squidweave'; });
+          }
+          // Hero section - add Launch Engine as first CTA
+          var hero = document.querySelector('section');
+          if (hero) {
+            var heroCtaDiv = hero.querySelector('.flex.flex-col.sm\\:flex-row');
+            if (heroCtaDiv && !heroCtaDiv.querySelector('.sw-launch-btn')) {
+              var heroBtn = document.createElement('a');
+              heroBtn.href = 'https://github.com/knol3j/squidweave/tree/frontend-v22';
+              heroBtn.target = '_blank'; heroBtn.rel = 'noopener noreferrer';
+              heroBtn.className = 'sw-launch-btn';
+              heroBtn.style.cssText = 'padding:16px 32px;font-size:16px;font-weight:600;border-radius:12px;box-shadow:0 8px 30px rgba(5,150,105,0.35);gap:8px;';
+              heroBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Launch Engine';
+              heroCtaDiv.insertBefore(heroBtn, heroCtaDiv.firstChild);
+            }
+            // Fix hero GitHub link
+            var heroGh = hero.querySelectorAll('a[href="https://github.com"]');
+            heroGh.forEach(function(l) { l.href = 'https://github.com/knol3j/squidweave'; });
+          }
+        }
+        if (document.readyState === 'complete') { setTimeout(inject, 500); }
+        else { window.addEventListener('load', function() { setTimeout(inject, 500); }); }
+      })();
+    </script>
   </body>
 </html>
