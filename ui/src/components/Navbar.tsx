@@ -69,12 +69,21 @@ export default function Navbar() {
           {/* CTA */}
           <div className="hidden lg:flex items-center gap-3">
             <a
-              href="https://github.com"
+              href="https://github.com/knol3j/squidweave"
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2 text-sm text-slate-300 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg transition-colors"
             >
               View on GitHub
+            </a>
+            <a
+              href="https://github.com/knol3j/squidweave/tree/frontend-v22"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-lg shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 flex items-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              Launch Engine
             </a>
             <a
               href="#pricing"
@@ -111,12 +120,20 @@ export default function Navbar() {
             ))}
             <div className="pt-3 flex flex-col gap-2">
               <a
-                href="https://github.com"
+                href="https://github.com/knol3j/squidweave"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block text-center px-4 py-2.5 text-sm text-slate-300 border border-slate-700 rounded-lg"
               >
                 View on GitHub
+              </a>
+              <a
+                href="https://github.com/knol3j/squidweave/tree/frontend-v22"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg"
+              >
+                Launch Engine
               </a>
               <a
                 href="#pricing"
