@@ -7,8 +7,7 @@
     <script type="module" crossorigin src="./assets/index-fH3ufgYu.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-CdqTCIHx.css">
     <style>
-      /* === Navbar Launch Button === */
-      .sw-nav-launch {
+      .sw-launch-btn {
         display: inline-flex; align-items: center; gap: 6px;
         padding: 8px 18px; font-size: 14px; font-weight: 600;
         color: #fff; text-decoration: none; border-radius: 8px;
@@ -16,15 +15,12 @@
         box-shadow: 0 4px 14px rgba(5,150,105,0.35);
         transition: all 0.2s ease; white-space: nowrap;
         font-family: system-ui, -apple-system, sans-serif;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.3px; cursor: pointer; border: none;
       }
-      .sw-nav-launch:hover {
+      .sw-launch-btn:hover {
         box-shadow: 0 6px 24px rgba(5,150,105,0.55);
         transform: translateY(-1px); filter: brightness(1.1);
       }
-      .sw-nav-launch svg { width: 15px; height: 15px; }
-
-      /* === Hero Launch Button === */
       .sw-hero-launch {
         display: inline-flex; align-items: center; justify-content: center; gap: 10px;
         padding: 18px 40px; font-size: 18px; font-weight: 700;
@@ -34,19 +30,16 @@
         transition: all 0.25s ease; white-space: nowrap;
         font-family: system-ui, -apple-system, sans-serif;
         letter-spacing: 0.5px; border: 2px solid rgba(255,255,255,0.1);
-        animation: sw-pulse 2.5s ease-in-out infinite;
+        animation: sw-pulse 2.5s ease-in-out infinite; cursor: pointer;
       }
       .sw-hero-launch:hover {
         box-shadow: 0 12px 40px rgba(5,150,105,0.6), 0 0 80px rgba(5,150,105,0.25);
         transform: translateY(-2px) scale(1.02); filter: brightness(1.15);
       }
-      .sw-hero-launch svg { width: 22px; height: 22px; }
       @keyframes sw-pulse {
         0%, 100% { box-shadow: 0 8px 32px rgba(5,150,105,0.4), 0 0 60px rgba(5,150,105,0.15); }
         50% { box-shadow: 0 8px 32px rgba(5,150,105,0.5), 0 0 80px rgba(5,150,105,0.3); }
       }
-
-      /* === Sticky Bottom Banner === */
       .sw-sticky-bar {
         position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
         background: linear-gradient(90deg, rgba(10,14,26,0.98), rgba(15,20,40,0.98));
@@ -58,15 +51,9 @@
         transform: translateY(100%);
         animation: sw-slide-up 0.6s ease 1.5s forwards;
       }
-      @keyframes sw-slide-up {
-        to { transform: translateY(0); }
-      }
-      .sw-sticky-bar-text {
-        color: #94a3b8; font-size: 14px; font-weight: 500;
-      }
-      .sw-sticky-bar-text strong {
-        color: #e2e8f0; font-weight: 600;
-      }
+      @keyframes sw-slide-up { to { transform: translateY(0); } }
+      .sw-sticky-bar-text { color: #94a3b8; font-size: 14px; font-weight: 500; }
+      .sw-sticky-bar-text strong { color: #e2e8f0; font-weight: 600; }
       .sw-sticky-btn {
         display: inline-flex; align-items: center; gap: 8px;
         padding: 10px 24px; font-size: 15px; font-weight: 700;
@@ -75,17 +62,16 @@
         box-shadow: 0 4px 20px rgba(5,150,105,0.4);
         transition: all 0.2s ease; white-space: nowrap;
         animation: sw-pulse 2.5s ease-in-out infinite;
+        cursor: pointer; border: none;
       }
       .sw-sticky-btn:hover {
         box-shadow: 0 6px 28px rgba(5,150,105,0.6);
         transform: translateY(-1px); filter: brightness(1.1);
       }
-      .sw-sticky-btn svg { width: 18px; height: 18px; }
       .sw-sticky-close {
         position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
         background: none; border: none; color: #64748b; font-size: 20px;
-        cursor: pointer; padding: 4px 8px; line-height: 1;
-        transition: color 0.2s;
+        cursor: pointer; padding: 4px 8px; line-height: 1; transition: color 0.2s;
       }
       .sw-sticky-close:hover { color: #fff; }
       @media (max-width: 640px) {
@@ -99,57 +85,57 @@
   <body>
     <div id="root"></div>
 
-    <!-- Sticky Bottom Banner -->
     <div class="sw-sticky-bar" id="swStickyBar">
       <span class="sw-sticky-bar-text"><strong>Ready to automate your pipeline?</strong> Launch the SquidWeave engine now</span>
-      <a href="https://kqzosuyjbxtro.kimi.page" class="sw-sticky-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      <button class="sw-sticky-btn" onclick="window.open('https://kqzosuyjbxtro.kimi.page','_blank')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         Launch Engine
-      </a>
+      </button>
       <button class="sw-sticky-close" onclick="document.getElementById('swStickyBar').style.display='none'">&times;</button>
     </div>
 
     <script>
       (function() {
         var ENGINE_URL = 'https://kqzosuyjbxtro.kimi.page';
-        var ZAP_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>';
+        var ZAP_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+
+        function openEngine() { window.open(ENGINE_URL, '_blank'); }
 
         function inject() {
-          // --- NAVBAR: add Launch Engine button ---
           var nav = document.querySelector('nav');
           if (nav) {
-            var ctas = nav.querySelectorAll('a[href*="pricing"]');
-            var desktopCta = null;
-            for (var i = 0; i < ctas.length; i++) {
-              if (ctas[i].offsetParent !== null) {
-                var parent = ctas[i].parentElement;
-                if (parent && parent.classList.contains('hidden') === false) {
-                  desktopCta = ctas[i]; break;
-                }
+            // Find the navbar CTA container (the div with "View on GitHub" and "Get Early Access")
+            var allLinks = nav.querySelectorAll('a');
+            var ctaContainer = null;
+            for (var i = 0; i < allLinks.length; i++) {
+              var text = allLinks[i].textContent || '';
+              if (text.indexOf('Get Early Access') !== -1 || text.indexOf('View on GitHub') !== -1) {
+                ctaContainer = allLinks[i].parentElement;
+                if (ctaContainer && ctaContainer.children.length >= 2) break;
               }
             }
-            if (desktopCta && desktopCta.parentElement && !desktopCta.parentElement.querySelector('.sw-nav-launch')) {
-              var btn = document.createElement('a');
-              btn.href = ENGINE_URL;
-              btn.className = 'sw-nav-launch';
-              btn.innerHTML = ZAP_SVG + ' Launch Engine';
-              desktopCta.parentElement.insertBefore(btn, desktopCta);
+            if (ctaContainer && !ctaContainer.querySelector('.sw-launch-btn')) {
+              var btn = document.createElement('button');
+              btn.className = 'sw-launch-btn';
+              btn.innerHTML = ZAP_ICON + 'Launch Engine';
+              btn.onclick = openEngine;
+              ctaContainer.insertBefore(btn, ctaContainer.firstChild);
             }
-            // Fix GitHub links
+            // Fix GitHub links in nav
             nav.querySelectorAll('a[href="https://github.com"]').forEach(function(l) {
               l.href = 'https://github.com/knol3j/squidweave';
             });
           }
 
-          // --- HERO: big pulsing Launch Engine button ---
+          // Hero section
           var hero = document.querySelector('section');
           if (hero) {
             var ctaDiv = hero.querySelector('.flex.flex-col.sm\\:flex-row') || hero.querySelector('.flex-col');
             if (ctaDiv && !ctaDiv.querySelector('.sw-hero-launch')) {
-              var heroBtn = document.createElement('a');
-              heroBtn.href = ENGINE_URL;
+              var heroBtn = document.createElement('button');
               heroBtn.className = 'sw-hero-launch';
-              heroBtn.innerHTML = ZAP_SVG + ' Launch SquidWeave Engine';
+              heroBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:6px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Launch SquidWeave Engine';
+              heroBtn.onclick = openEngine;
               ctaDiv.insertBefore(heroBtn, ctaDiv.firstChild);
             }
             hero.querySelectorAll('a[href="https://github.com"]').forEach(function(l) {
@@ -159,9 +145,9 @@
         }
 
         if (document.readyState === 'complete') {
-          setTimeout(inject, 300);
+          setTimeout(inject, 500);
         } else {
-          window.addEventListener('load', function() { setTimeout(inject, 300); });
+          window.addEventListener('load', function() { setTimeout(inject, 500); });
         }
       })();
     </script>
