@@ -102,7 +102,7 @@
     <!-- Sticky Bottom Banner -->
     <div class="sw-sticky-bar" id="swStickyBar">
       <span class="sw-sticky-bar-text"><strong>Ready to automate your pipeline?</strong> Launch the SquidWeave engine now</span>
-      <a href="https://github.com/knol3j/squidweave/tree/frontend-v22" target="_blank" rel="noopener noreferrer" class="sw-sticky-btn">
+      <a href="https://kqzosuyjbxtro.kimi.page" class="sw-sticky-btn">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
         Launch Engine
       </a>
@@ -111,6 +111,7 @@
 
     <script>
       (function() {
+        var ENGINE_URL = 'https://kqzosuyjbxtro.kimi.page';
         var ZAP_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>';
 
         function inject() {
@@ -129,8 +130,7 @@
             }
             if (desktopCta && desktopCta.parentElement && !desktopCta.parentElement.querySelector('.sw-nav-launch')) {
               var btn = document.createElement('a');
-              btn.href = 'https://github.com/knol3j/squidweave/tree/frontend-v22';
-              btn.target = '_blank'; btn.rel = 'noopener noreferrer';
+              btn.href = ENGINE_URL;
               btn.className = 'sw-nav-launch';
               btn.innerHTML = ZAP_SVG + ' Launch Engine';
               desktopCta.parentElement.insertBefore(btn, desktopCta);
@@ -147,8 +147,7 @@
             var ctaDiv = hero.querySelector('.flex.flex-col.sm\\:flex-row') || hero.querySelector('.flex-col');
             if (ctaDiv && !ctaDiv.querySelector('.sw-hero-launch')) {
               var heroBtn = document.createElement('a');
-              heroBtn.href = 'https://github.com/knol3j/squidweave/tree/frontend-v22';
-              heroBtn.target = '_blank'; heroBtn.rel = 'noopener noreferrer';
+              heroBtn.href = ENGINE_URL;
               heroBtn.className = 'sw-hero-launch';
               heroBtn.innerHTML = ZAP_SVG + ' Launch SquidWeave Engine';
               ctaDiv.insertBefore(heroBtn, ctaDiv.firstChild);
