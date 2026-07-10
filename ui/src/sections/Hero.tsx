@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ArrowRight, Github, Play } from 'lucide-react';
+import { ArrowRight, Github, Play, Zap } from 'lucide-react';
 
 export default function Hero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -166,6 +166,16 @@ export default function Hero() {
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
           <a
+            href="https://github.com/knol3j/squidweave/tree/frontend-v22"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all"
+          >
+            <Zap className="w-5 h-5" />
+            Launch Engine
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </a>
+          <a
             href="#pricing"
             className="group inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all glow-pulse"
           >
@@ -173,7 +183,7 @@ export default function Hero() {
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </a>
           <a
-            href="https://github.com"
+            href="https://github.com/knol3j/squidweave"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-slate-700 hover:border-slate-500 rounded-xl transition-all"
