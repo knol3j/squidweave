@@ -7,75 +7,163 @@
     <script type="module" crossorigin src="./assets/index-fH3ufgYu.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-CdqTCIHx.css">
     <style>
-      .sw-launch-btn {
+      /* === Navbar Launch Button === */
+      .sw-nav-launch {
         display: inline-flex; align-items: center; gap: 6px;
-        padding: 8px 16px; font-size: 14px; font-weight: 500;
+        padding: 8px 18px; font-size: 14px; font-weight: 600;
         color: #fff; text-decoration: none; border-radius: 8px;
         background: linear-gradient(135deg, #059669, #0d9488);
         box-shadow: 0 4px 14px rgba(5,150,105,0.35);
         transition: all 0.2s ease; white-space: nowrap;
         font-family: system-ui, -apple-system, sans-serif;
+        letter-spacing: 0.3px;
       }
-      .sw-launch-btn:hover {
-        box-shadow: 0 6px 20px rgba(5,150,105,0.5);
-        transform: translateY(-1px);
+      .sw-nav-launch:hover {
+        box-shadow: 0 6px 24px rgba(5,150,105,0.55);
+        transform: translateY(-1px); filter: brightness(1.1);
       }
-      .sw-launch-btn svg { width: 16px; height: 16px; }
-      .sw-launch-mobile { display: none; }
-      @media (max-width: 1023px) {
-        .sw-launch-desktop { display: none !important; }
-        .sw-launch-mobile { display: inline-flex !important; }
+      .sw-nav-launch svg { width: 15px; height: 15px; }
+
+      /* === Hero Launch Button === */
+      .sw-hero-launch {
+        display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 18px 40px; font-size: 18px; font-weight: 700;
+        color: #fff; text-decoration: none; border-radius: 14px;
+        background: linear-gradient(135deg, #059669, #0d9488);
+        box-shadow: 0 8px 32px rgba(5,150,105,0.4), 0 0 60px rgba(5,150,105,0.15);
+        transition: all 0.25s ease; white-space: nowrap;
+        font-family: system-ui, -apple-system, sans-serif;
+        letter-spacing: 0.5px; border: 2px solid rgba(255,255,255,0.1);
+        animation: sw-pulse 2.5s ease-in-out infinite;
+      }
+      .sw-hero-launch:hover {
+        box-shadow: 0 12px 40px rgba(5,150,105,0.6), 0 0 80px rgba(5,150,105,0.25);
+        transform: translateY(-2px) scale(1.02); filter: brightness(1.15);
+      }
+      .sw-hero-launch svg { width: 22px; height: 22px; }
+      @keyframes sw-pulse {
+        0%, 100% { box-shadow: 0 8px 32px rgba(5,150,105,0.4), 0 0 60px rgba(5,150,105,0.15); }
+        50% { box-shadow: 0 8px 32px rgba(5,150,105,0.5), 0 0 80px rgba(5,150,105,0.3); }
+      }
+
+      /* === Sticky Bottom Banner === */
+      .sw-sticky-bar {
+        position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+        background: linear-gradient(90deg, rgba(10,14,26,0.98), rgba(15,20,40,0.98));
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(99,102,241,0.2);
+        padding: 14px 20px;
+        display: flex; align-items: center; justify-content: center; gap: 16px;
+        font-family: system-ui, -apple-system, sans-serif;
+        transform: translateY(100%);
+        animation: sw-slide-up 0.6s ease 1.5s forwards;
+      }
+      @keyframes sw-slide-up {
+        to { transform: translateY(0); }
+      }
+      .sw-sticky-bar-text {
+        color: #94a3b8; font-size: 14px; font-weight: 500;
+      }
+      .sw-sticky-bar-text strong {
+        color: #e2e8f0; font-weight: 600;
+      }
+      .sw-sticky-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 10px 24px; font-size: 15px; font-weight: 700;
+        color: #fff; text-decoration: none; border-radius: 10px;
+        background: linear-gradient(135deg, #059669, #0d9488);
+        box-shadow: 0 4px 20px rgba(5,150,105,0.4);
+        transition: all 0.2s ease; white-space: nowrap;
+        animation: sw-pulse 2.5s ease-in-out infinite;
+      }
+      .sw-sticky-btn:hover {
+        box-shadow: 0 6px 28px rgba(5,150,105,0.6);
+        transform: translateY(-1px); filter: brightness(1.1);
+      }
+      .sw-sticky-btn svg { width: 18px; height: 18px; }
+      .sw-sticky-close {
+        position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+        background: none; border: none; color: #64748b; font-size: 20px;
+        cursor: pointer; padding: 4px 8px; line-height: 1;
+        transition: color 0.2s;
+      }
+      .sw-sticky-close:hover { color: #fff; }
+      @media (max-width: 640px) {
+        .sw-sticky-bar { flex-direction: column; gap: 10px; padding: 12px 16px; text-align: center; }
+        .sw-sticky-bar-text { font-size: 13px; }
+        .sw-sticky-btn { padding: 10px 20px; font-size: 14px; }
+        .sw-sticky-close { top: 8px; right: 8px; transform: none; }
       }
     </style>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Sticky Bottom Banner -->
+    <div class="sw-sticky-bar" id="swStickyBar">
+      <span class="sw-sticky-bar-text"><strong>Ready to automate your pipeline?</strong> Launch the SquidWeave engine now</span>
+      <a href="https://github.com/knol3j/squidweave/tree/frontend-v22" target="_blank" rel="noopener noreferrer" class="sw-sticky-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        Launch Engine
+      </a>
+      <button class="sw-sticky-close" onclick="document.getElementById('swStickyBar').style.display='none'">&times;</button>
+    </div>
+
     <script>
       (function() {
+        var ZAP_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>';
+
         function inject() {
-          // Desktop navbar - find the CTA div and insert before "Get Early Access"
+          // --- NAVBAR: add Launch Engine button ---
           var nav = document.querySelector('nav');
           if (nav) {
             var ctas = nav.querySelectorAll('a[href*="pricing"]');
             var desktopCta = null;
             for (var i = 0; i < ctas.length; i++) {
-              var parent = ctas[i].parentElement;
-              if (parent && getComputedStyle(parent).display !== 'none' && ctas[i].offsetParent !== null) {
-                desktopCta = ctas[i]; break;
+              if (ctas[i].offsetParent !== null) {
+                var parent = ctas[i].parentElement;
+                if (parent && parent.classList.contains('hidden') === false) {
+                  desktopCta = ctas[i]; break;
+                }
               }
             }
-            if (desktopCta && desktopCta.parentElement) {
+            if (desktopCta && desktopCta.parentElement && !desktopCta.parentElement.querySelector('.sw-nav-launch')) {
               var btn = document.createElement('a');
               btn.href = 'https://github.com/knol3j/squidweave/tree/frontend-v22';
               btn.target = '_blank'; btn.rel = 'noopener noreferrer';
-              btn.className = 'sw-launch-btn sw-launch-desktop';
-              btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Launch Engine';
+              btn.className = 'sw-nav-launch';
+              btn.innerHTML = ZAP_SVG + ' Launch Engine';
               desktopCta.parentElement.insertBefore(btn, desktopCta);
             }
-            // Fix GitHub link to point to actual repo
-            var ghLinks = nav.querySelectorAll('a[href="https://github.com"]');
-            ghLinks.forEach(function(l) { l.href = 'https://github.com/knol3j/squidweave'; });
+            // Fix GitHub links
+            nav.querySelectorAll('a[href="https://github.com"]').forEach(function(l) {
+              l.href = 'https://github.com/knol3j/squidweave';
+            });
           }
-          // Hero section - add Launch Engine as first CTA
+
+          // --- HERO: big pulsing Launch Engine button ---
           var hero = document.querySelector('section');
           if (hero) {
-            var heroCtaDiv = hero.querySelector('.flex.flex-col.sm\\:flex-row');
-            if (heroCtaDiv && !heroCtaDiv.querySelector('.sw-launch-btn')) {
+            var ctaDiv = hero.querySelector('.flex.flex-col.sm\\:flex-row') || hero.querySelector('.flex-col');
+            if (ctaDiv && !ctaDiv.querySelector('.sw-hero-launch')) {
               var heroBtn = document.createElement('a');
               heroBtn.href = 'https://github.com/knol3j/squidweave/tree/frontend-v22';
               heroBtn.target = '_blank'; heroBtn.rel = 'noopener noreferrer';
-              heroBtn.className = 'sw-launch-btn';
-              heroBtn.style.cssText = 'padding:16px 32px;font-size:16px;font-weight:600;border-radius:12px;box-shadow:0 8px 30px rgba(5,150,105,0.35);gap:8px;';
-              heroBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Launch Engine';
-              heroCtaDiv.insertBefore(heroBtn, heroCtaDiv.firstChild);
+              heroBtn.className = 'sw-hero-launch';
+              heroBtn.innerHTML = ZAP_SVG + ' Launch SquidWeave Engine';
+              ctaDiv.insertBefore(heroBtn, ctaDiv.firstChild);
             }
-            // Fix hero GitHub link
-            var heroGh = hero.querySelectorAll('a[href="https://github.com"]');
-            heroGh.forEach(function(l) { l.href = 'https://github.com/knol3j/squidweave'; });
+            hero.querySelectorAll('a[href="https://github.com"]').forEach(function(l) {
+              l.href = 'https://github.com/knol3j/squidweave';
+            });
           }
         }
-        if (document.readyState === 'complete') { setTimeout(inject, 500); }
-        else { window.addEventListener('load', function() { setTimeout(inject, 500); }); }
+
+        if (document.readyState === 'complete') {
+          setTimeout(inject, 300);
+        } else {
+          window.addEventListener('load', function() { setTimeout(inject, 300); });
+        }
       })();
     </script>
   </body>
