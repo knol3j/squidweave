@@ -554,21 +554,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const generatePitches = useCallback(async () => {
     const cid = getCampaignId();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setIsLoading(true);
     let newPitches: PitchOption[] = [];
 
     try {
       // Step 1: Try backend content generation via LM Studio
-      const result = await dataService.generateContent(cid);
+      // Wrap in race with 30s timeout so a hung backend doesn't freeze the UI
+      const generatePromise = dataService.generateContent(cid);
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error("Content generation timed out after 30s")), 30000)
+      );
+      const result = await Promise.race([generatePromise, timeoutPromise]).catch(() => null);
+
+      if (controller.signal.aborted) return;
 
       // Step 2: Poll for content pack
       const startTime = Date.now();
       let contentPack = null;
-      while (Date.now() - startTime < AUTO_TIMEOUT) {
+      while (Date.now() - startTime < AUTO_TIMEOUT && !controller.signal.aborted) {
         await new Promise(r => setTimeout(r, AUTO_POLL));
+        if (controller.signal.aborted) break;
         try { const camp = await dataService.getCampaign(cid); contentPack = camp?.latestContentPack; } catch { /* silent */ }
         if (contentPack) break;
       }
+
+      if (controller.signal.aborted) return;
       await fetchAll(true);
 
       // Step 3: Build pitches from backend response (real LM Studio output)
@@ -600,10 +612,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       // Backend failed (no campaign, LM Studio error, etc) — mark but don't stop
       setErrorGuarded(`Backend: ${err.message}. Using local fallback.`);
+    } finally {
+      // Always clear loading and reset abort controller — prevents stuck spinner
+      setPitches(prev => [...newPitches, ...prev].slice(0, 10));
+      setIsLoading(false);
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
     }
-
-    setPitches(prev => [...newPitches, ...prev].slice(0, 10));
-    setIsLoading(false);
   }, [getCampaignId, fetchAll, businessProfile]);
 
   // New backend data funnel methods
