@@ -4,16 +4,17 @@ import { useApp } from "@/context/AppContext";
 import { dataService } from "@/services/dataService";
 import ProspectIntelligence from "@/components/funnel/ProspectIntelligence";
 import CompetitiveIntel from "@/components/funnel/CompetitiveIntel";
+import ProspectForge from "@/components/funnel/ProspectForge";
 
 
 export default function DecisionRow() {
   const { state, approveTargetMarket, rejectTargetMarket, discoverMarkets, generateProspects, enrichProspects, sequenceProspects } = useApp();
   const { campaign, businessProfile, targetMarkets } = state;
   const campaignId = campaign?.id || "";
-  const [tab, setTabRaw] = useState<"markets" | "targets" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive">(() => {
+  const [tab, setTabRaw] = useState<"markets" | "targets" | "prospectforge" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive">(() => {
     try { const s = localStorage.getItem("sw_tab_decision"); return (s as any) || "markets"; } catch { return "markets"; }
   });
-  const setTab = (t: "markets" | "targets" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive") => {
+  const setTab = (t: "markets" | "targets" | "prospectforge" | "playbooks" | "funding" | "pipeline" | "prospects" | "competitive") => {
     setTabRaw(t);
     try { localStorage.setItem("sw_tab_decision", t); } catch { /* silent */ }
   };
@@ -59,6 +60,7 @@ export default function DecisionRow() {
   const tabs = [
     { key: "markets" as const, label: `Target Markets (${targetMarkets.filter(m => m.status === "approved").length}/${targetMarkets.length})`, icon: Users },
     { key: "targets" as const, label: `Ranked (${targets.length})`, icon: Target },
+    { key: "prospectforge" as const, label: `ProspectForge`, icon: Sparkles },
     { key: "playbooks" as const, label: `Playbooks (${playbooks.length})`, icon: BookOpen },
     { key: "funding" as const, label: `Funding (${investors.length})`, icon: DollarSign },
     { key: "pipeline" as const, label: `Pipeline`, icon: GitBranch },
@@ -286,6 +288,9 @@ export default function DecisionRow() {
           </div>
         </div>
       )}
+
+      {/* ProspectForge Tab */}
+      {tab === "prospectforge" && <ProspectForge />}
 
       {/* Prospect Intelligence Tab */}
       {tab === "prospects" && <ProspectIntelligence />}
