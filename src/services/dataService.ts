@@ -5,7 +5,7 @@
 
 // ─── 1. API INFRASTRUCTURE ───────────────────────────────────────────────────
 
-const RAILWAY_BASE = "https://squidweave-api-production.up.railway.app";
+const RAILWAY_BASE = "http://127.0.0.1:4010";
 let API_BASE = RAILWAY_BASE;
 
 // ─── Backend selection with localStorage persistence ───
@@ -75,8 +75,14 @@ export function getAuthEventName(): string {
   return "squidweave_auth_changed";
 }
 
+function utf8ToBase64(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  const binString = Array.from(bytes, (b) => String.fromCharCode(b)).join("");
+  return btoa(binString);
+}
+
 export function setAuthCredentials(user: string, pass: string): void {
-  sessionStorage.setItem(AUTH_KEY, btoa(`${user}:${pass}`));
+  sessionStorage.setItem(AUTH_KEY, utf8ToBase64(`${user}:${pass}`));
   window.dispatchEvent(new Event(getAuthEventName()));
 }
 
@@ -104,25 +110,37 @@ export class ApiError extends Error {
   }
 }
 
+const API_TIMEOUT_MS = 30000;
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(getApiUrl(path), {
-    ...init,
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": "squidweave-local-dev",
-      ...getAuthHeaders(),
-      ...(init?.headers || {}),
-    },
-  });
-  if (!response.ok) {
-    if (response.status === 401) {
-      sessionStorage.removeItem(AUTH_KEY);
-      window.dispatchEvent(new Event(getAuthEventName()));
-    }
-    const text = await response.text();
-    throw new ApiError(response.status, text);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  if (init?.signal) {
+    init.signal.addEventListener("abort", () => controller.abort());
   }
-  return response.json() as Promise<T>;
+  try {
+    const response = await fetch(getApiUrl(path), {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": "squidweave-local-dev",
+        ...getAuthHeaders(),
+        ...(init?.headers || {}),
+      },
+    });
+    if (!response.ok) {
+      if (response.status === 401) {
+        sessionStorage.removeItem(AUTH_KEY);
+        window.dispatchEvent(new Event(getAuthEventName()));
+      }
+      const text = await response.text();
+      throw new ApiError(response.status, text);
+    }
+    return response.json() as Promise<T>;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ─── 2. TYPE DEFINITIONS ─────────────────────────────────────────────────────
@@ -926,6 +944,45 @@ export const dataService = {
     return api<ActivationRun[]>(
       `/prospects/activation-runs?campaignId=${encodeURIComponent(campaignId)}`
     );
+  },
+
+  // ─── ProspectForge — Free Apollo/ZoomInfo Alternative ──────────────────────
+  async discoverProspects(
+    campaignId: string,
+    options?: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/prospect-forge/discover", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, ...options }),
+    });
+  },
+
+  async getProspectForgeResults(
+    campaignId: string
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>(
+      `/prospect-forge/results?campaignId=${encodeURIComponent(campaignId)}`
+    );
+  },
+
+  async enrichCompanyWithAI(
+    companyName: string,
+    website?: string
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/prospect-forge/enrich", {
+      method: "POST",
+      body: JSON.stringify({ companyName, website }),
+    });
+  },
+
+  async generateProspectOutreach(
+    campaignId: string,
+    prospect: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return api<Record<string, unknown>>("/prospect-forge/outreach", {
+      method: "POST",
+      body: JSON.stringify({ campaignId, prospect }),
+    });
   },
 
   // ─── Funding ───────────────────────────────────────────────────────────────
