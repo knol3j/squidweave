@@ -107,6 +107,7 @@ const server = http.createServer(async (req, res) => {
       req.on('data', chunk => data += chunk);
       req.on('end', () => resolve(data));
     });
+    req.body = body;
   }
 
   try {
