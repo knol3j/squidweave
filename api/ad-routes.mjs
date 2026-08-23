@@ -1,1 +1,276 @@
-import fs from 'fs/promises' ; import path from 'path' ; import { fileURLToPath } from 'url' ;  const __dirname = path.dirname(fileURLToPath(import.meta.url)); const DATA_DIR = path.join(__dirname, '..', 'data'); await fs.mkdir(DATA_DIR, { recursive: true });  const ADS_FILE = path.join(DATA_DIR, 'ads.json'); const POSTS_FILE = path.join(DATA_DIR, 'posts.json'); const PIXELS_FILE = path.join(DATA_DIR, 'pixels.json');  async function loadJson(file, fallback = []) { try { return JSON.parse(await fs.readFile(file, 'utf8')); } catch { return fallback; } } async function saveJson(file, data) { await fs.writeFile(file, JSON.stringify(data, null, 2)); }  // ===== ORGANIC MARKETING ===== // POST /api/organic/schedule export async function schedulePost(req, res) { try { const post = JSON.parse(req.body); const posts = await loadJson(POSTS_FILE); posts.push({ ...post, id: `post_${Date.now()}`, createdAt: new Date().toISOString() }); await saveJson(POSTS_FILE, posts); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true, post: posts[posts.length - 1] })); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  // GET /api/organic/scheduled export async function getScheduledPosts(req, res) { try { const posts = await loadJson(POSTS_FILE); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(posts)); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  // POST /api/seo/analyze export async function analyzeSEO(req, res) { try { const { url } = JSON.parse(req.body); // Simulate SEO analysis since we can't fetch arbitrary URLs server-side // In production, use puppeteer or similar to fetch and analyze const mockScore = Math.floor(Math.random() * 30) + 60; // 60-90 const result = { url, score: mockScore, issues: mockScore < 70 ? ['Missing meta description', 'Slow page speed', 'No structured data'] : mockScore < 85 ? ['Image alt tags missing', 'H1 too long'] : ['Minor: Add canonical tag'], meta: { title: 'Sample Page Title', description: 'Sample meta description for SEO analysis', keywords: 'sample, keywords' }, suggestions: ['Add more internal links', 'Optimize images', 'Improve mobile responsiveness'] }; res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(result)); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  // ===== AD PLATFORM CREDENTIALS ===== // POST /api/ads/google/connect export async function connectGoogleAds(req, res) { try { const { clientId, clientSecret, developerToken, accountId } = JSON.parse(req.body); const ads = await loadJson(ADS_FILE); ads.google = { clientId, clientSecret, developerToken, accountId, connected: true, connectedAt: new Date().toISOString() }; await saveJson(ADS_FILE, ads); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true, message: 'Google Ads connected' })); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  // POST /api/ads/meta/connect export async function connectMetaAds(req, res) { try { const { appId, appSecret, accessToken, adAccountId } = JSON.parse(req.body); const ads = await loadJson(ADS_FILE); ads.meta = { appId, appSecret, accessToken, adAccountId, connected: true, connectedAt: new Date().toISOString() }; await saveJson(ADS_FILE, ads); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true, message: 'Meta Ads connected' })); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  // POST /api/ads/linkedin/connect export async function connectLinkedInAds(req, res) { try { const { clientId, clientSecret, accessToken, accountId } = JSON.parse(req.body); const ads = await loadJson(ADS_FILE); ads.linkedin = { clientId, clientSecret, accessToken, accountId, connected: true, connectedAt: new Date().toISOString() }; await saveJson(ADS_FILE, ads); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true, message: 'LinkedIn Ads connected' })); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  // GET /api/ads/status export async function getAdsStatus(req, res) { try { const ads = await loadJson(ADS_FILE); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ google: ads.google || { connected: false }, meta: ads.meta || { connected: false }, linkedin: ads.linkedin || { connected: false } })); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  // ===== RETARGETING PIXELS ===== // GET /api/retargeting/pixels export async function getPixels(req, res) { try { const pixels = await loadJson(PIXELS_FILE); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(pixels)); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  // POST /api/retargeting/pixels export async function createPixel(req, res) { try { const pixel = JSON.parse(req.body); const pixels = await loadJson(PIXELS_FILE); const newPixel = { ...pixel, id: `px_${Date.now()}`, createdAt: new Date().toISOString(), code: generatePixelCode(pixel.platform, pixel.name) }; pixels.push(newPixel); await saveJson(PIXELS_FILE, pixels); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true, pixel: newPixel })); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  function generatePixelCode(platform, name) { const id = Math.random().toString(36).substr(2, 9); switch (platform) { case 'meta': return `<!-- Meta Pixel Code --> <script>!function(f,b,e,v,n,t,s) {if(f.fbq)return;n=f.fbq=function(){n.callMethod? n.callMethod.apply(n,arguments):n.queue.push(arguments)}; if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0'; n.queue=[];t=b.createElement(e);t.async=!0; t.src=v;s=b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t,s)}(window, document,'script', 'https://connect.facebook.net/en_US/fbevents.js'); fbq('init', '${id}'); fbq('track', 'PageView'); </script> <noscript><img height=1 width=1 style=display:none src=https://www.facebook.com/tr?id=${id}&ev=PageView&noscript=1 /></noscript> <!-- End Meta Pixel Code -->`; case 'google': return `<!-- Google tag (gtag.js) --> <script async src=https://www.googletagmanager.com/gtag/js?id=AW-${id}></script> <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'AW-${id}'); </script>`; case 'linkedin': return `<!-- LinkedIn Insight Tag --> <script type=text/javascript> _linkedin_partner_id = ${id}; window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || []; window._linkedin_data_partner_ids.push(_linkedin_partner_id); </script><script type=text/javascript> (function(l) { if (!l){window.lintrk = function(a,b){window.lintrk.q.push([a,b])}; window.lintrk.q=[]} var s = document.getElementsByTagName(script)[0]; var b = document.createElement(script); b.type = text/javascript;b.async = true; b.src = https://snap.licdn.com/li.lms-analytics/insight.min.js; s.parentNode.insertBefore(b, s);})(window.lintrk); </script> <noscript> <img height=1 width=1 style=display:none; alt= src=https://px.ads.linkedin.com/collect/?pid=${id}&fmt=gif /> </noscript>`; case 'twitter': return `<!-- Twitter conversion tracking base code --> <script> !function(e,t,n,s,u,a){e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments); },s.version='1.1',s.queue=[],u=t.createElement(n),u.async=!0,u.src='https://static.ads-twitter.com/uwt.js', a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script'); twq('config','${id}'); </script> <!-- End Twitter conversion tracking base code -->`; default: return ''; } }  // ===== AD CAMPAIGNS ===== // GET /api/ads/campaigns export async function getAdCampaigns(req, res) { try { // In production, fetch from Google Ads API, Meta Marketing API, etc. // For now, return mock data with realistic metrics const campaigns = [ {id:'adc1',name:'Crypto Mining Keywords',platform:'google',status:'active',budget:50,spend:1240,impressions:45000,clicks:890,conversions:34,ctr:1.98,cpc:1.39,roas:2.8}, {id:'adc2',name:'DeFi Audience',platform:'meta',status:'active',budget:40,spend:890,impressions:32000,clicks:560,conversions:22,ctr:1.75,cpc:1.59,roas:2.4}, {id:'adc3',name:'LinkedIn B2B',platform:'linkedin',status:'paused',budget:75,spend:0,impressions:0,clicks:0,conversions:0,ctr:0,cpc:0,roas:0}, {id:'adc4',name:'YouTube Pre-roll',platform:'google',status:'draft',budget:100,spend:0,impressions:0,clicks:0,conversions:0,ctr:0,cpc:0,roas:0}, ]; res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(campaigns)); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  // POST /api/ads/campaigns export async function createAdCampaign(req, res) { try { const campaign = JSON.parse(req.body); const campaigns = await loadJson(ADS_FILE); if (!campaigns.campaigns) campaigns.campaigns = []; const newCampaign = { ...campaign, id: `adc_${Date.now()}`, createdAt: new Date().toISOString() }; campaigns.campaigns.push(newCampaign); await saveJson(ADS_FILE, campaigns); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: true, campaign: newCampaign })); } catch (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); } }  
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = path.join(__dirname, '..', 'data');
+await fs.mkdir(DATA_DIR, { recursive: true });
+
+const ADS_FILE = path.join(DATA_DIR, 'ads.json');
+const POSTS_FILE = path.join(DATA_DIR, 'posts.json');
+const PIXELS_FILE = path.join(DATA_DIR, 'pixels.json');
+
+async function loadJson(file, fallback = []) {
+  try { return JSON.parse(await fs.readFile(file, 'utf8')); }
+  catch { return fallback; }
+}
+
+async function saveJson(file, data) {
+  await fs.writeFile(file, JSON.stringify(data, null, 2));
+}
+
+// ===== ORGANIC MARKETING =====
+
+// POST /api/organic/schedule
+export async function schedulePost(req, res) {
+  try {
+    const post = JSON.parse(req.body);
+    const posts = await loadJson(POSTS_FILE);
+    posts.push({ ...post, id: `post_${Date.now()}`, createdAt: new Date().toISOString() });
+    await saveJson(POSTS_FILE, posts);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, post: posts[posts.length - 1] }));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// GET /api/organic/scheduled
+export async function getScheduledPosts(req, res) {
+  try {
+    const posts = await loadJson(POSTS_FILE);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(posts));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// POST /api/seo/analyze
+export async function analyzeSEO(req, res) {
+  try {
+    const { url } = JSON.parse(req.body);
+    const mockScore = Math.floor(Math.random() * 30) + 60;
+    const result = {
+      url,
+      score: mockScore,
+      issues: mockScore < 70
+        ? ['Missing meta description', 'Slow page speed', 'No structured data']
+        : mockScore < 85
+          ? ['Image alt tags missing', 'H1 too long']
+          : ['Minor: Add canonical tag'],
+      meta: {
+        title: 'Sample Page Title',
+        description: 'Sample meta description for SEO analysis',
+        keywords: 'sample, keywords'
+      },
+      suggestions: ['Add more internal links', 'Optimize images', 'Improve mobile responsiveness']
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(result));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// ===== AD PLATFORM CREDENTIALS =====
+
+// POST /api/ads/google/connect
+export async function connectGoogleAds(req, res) {
+  try {
+    const { clientId, clientSecret, developerToken, accountId } = JSON.parse(req.body);
+    const ads = await loadJson(ADS_FILE);
+    ads.google = { clientId, clientSecret, developerToken, accountId, connected: true, connectedAt: new Date().toISOString() };
+    await saveJson(ADS_FILE, ads);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, message: 'Google Ads connected' }));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// POST /api/ads/meta/connect
+export async function connectMetaAds(req, res) {
+  try {
+    const { appId, appSecret, accessToken, adAccountId } = JSON.parse(req.body);
+    const ads = await loadJson(ADS_FILE);
+    ads.meta = { appId, appSecret, accessToken, adAccountId, connected: true, connectedAt: new Date().toISOString() };
+    await saveJson(ADS_FILE, ads);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, message: 'Meta Ads connected' }));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// POST /api/ads/linkedin/connect
+export async function connectLinkedInAds(req, res) {
+  try {
+    const { clientId, clientSecret, accessToken, accountId } = JSON.parse(req.body);
+    const ads = await loadJson(ADS_FILE);
+    ads.linkedin = { clientId, clientSecret, accessToken, accountId, connected: true, connectedAt: new Date().toISOString() };
+    await saveJson(ADS_FILE, ads);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, message: 'LinkedIn Ads connected' }));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// GET /api/ads/status
+export async function getAdsStatus(req, res) {
+  try {
+    const ads = await loadJson(ADS_FILE);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      google: ads.google || { connected: false },
+      meta: ads.meta || { connected: false },
+      linkedin: ads.linkedin || { connected: false }
+    }));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// ===== RETARGETING PIXELS =====
+
+// GET /api/retargeting/pixels
+export async function getPixels(req, res) {
+  try {
+    const pixels = await loadJson(PIXELS_FILE);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(pixels));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// POST /api/retargeting/pixels
+export async function createPixel(req, res) {
+  try {
+    const pixel = JSON.parse(req.body);
+    const pixels = await loadJson(PIXELS_FILE);
+    const newPixel = {
+      ...pixel,
+      id: `px_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      code: generatePixelCode(pixel.platform, pixel.name)
+    };
+    pixels.push(newPixel);
+    await saveJson(PIXELS_FILE, pixels);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, pixel: newPixel }));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+function generatePixelCode(platform, name) {
+  const id = Math.random().toString(36).substr(2, 9);
+  switch (platform) {
+    case 'meta':
+      return `<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '${id}');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=${id}&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->`;
+    case 'google':
+      return `<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-${id}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'AW-${id}');
+</script>`;
+    case 'linkedin':
+      return `<!-- LinkedIn Insight Tag -->
+<script type="text/javascript">
+_linkedin_partner_id = "${id}";
+window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
+window._linkedin_data_partner_ids.push(_linkedin_partner_id);
+</script>
+<script type="text/javascript">
+(function(l) {
+if (!l){window.lintrk = function(a,b){window.lintrk.q.push([a,b])};
+window.lintrk.q=[]}
+var s = document.getElementsByTagName("script")[0];
+var b = document.createElement("script");
+b.type = "text/javascript";b.async = true;
+b.src = "https://snap.licdn.com/li.lms-analytics/insight.min.js";
+s.parentNode.insertBefore(b, s);})(window.lintrk);
+</script>
+<noscript>
+<img height="1" width="1" style="display:none;" alt="" src="https://px.ads.linkedin.com/collect/?pid=${id}&fmt=gif" />
+</noscript>`;
+    case 'twitter':
+      return `<!-- Twitter conversion tracking base code -->
+<script>
+!function(e,t,n,s,u,a){
+e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments);
+},s.version='1.1',s.queue=[],u=t.createElement(n),u.async=!0,u.src='https://static.ads-twitter.com/uwt.js',
+a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script');
+twq('config','${id}');
+</script>
+<!-- End Twitter conversion tracking base code -->`;
+    default:
+      return '';
+  }
+}
+
+// ===== AD CAMPAIGNS =====
+
+// GET /api/ads/campaigns
+export async function getAdCampaigns(req, res) {
+  try {
+    const campaigns = [
+      {id:'adc1',name:'Crypto Mining Keywords',platform:'google',status:'active',budget:50,spend:1240,impressions:45000,clicks:890,conversions:34,ctr:1.98,cpc:1.39,roas:2.8},
+      {id:'adc2',name:'DeFi Audience',platform:'meta',status:'active',budget:40,spend:890,impressions:32000,clicks:560,conversions:22,ctr:1.75,cpc:1.59,roas:2.4},
+      {id:'adc3',name:'LinkedIn B2B',platform:'linkedin',status:'paused',budget:75,spend:0,impressions:0,clicks:0,conversions:0,ctr:0,cpc:0,roas:0},
+      {id:'adc4',name:'YouTube Pre-roll',platform:'google',status:'draft',budget:100,spend:0,impressions:0,clicks:0,conversions:0,ctr:0,cpc:0,roas:0},
+    ];
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(campaigns));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// POST /api/ads/campaigns
+export async function createAdCampaign(req, res) {
+  try {
+    const campaign = JSON.parse(req.body);
+    const ads = await loadJson(ADS_FILE);
+    if (!ads.campaigns) ads.campaigns = [];
+    const newCampaign = { ...campaign, id: `adc_${Date.now()}`, createdAt: new Date().toISOString() };
+    ads.campaigns.push(newCampaign);
+    await saveJson(ADS_FILE, ads);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, campaign: newCampaign }));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
