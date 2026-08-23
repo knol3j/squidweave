@@ -1,27 +1,29 @@
-import Navbar from './components/Navbar';
-import Hero from './sections/Hero';
-import Problem from './sections/Problem';
-import Solution from './sections/Solution';
-import Capabilities from './sections/Capabilities';
-import Competitive from './sections/Competitive';
-import Traction from './sections/Traction';
-import Pricing from './sections/Pricing';
-import Footer from './sections/Footer';
+import { Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import CRM from './pages/CRM';
+import Campaigns from './pages/Campaigns';
+import Funnels from './pages/Funnels';
+import Appointments from './pages/Appointments';
+import Analytics from './pages/Analytics';
+import Prospecting from './pages/Prospecting';
+import Advertising from './pages/Advertising';
+import Settings from './pages/Settings';
 
-function App() {
+export default function App() {
   return (
-    <div className="min-h-screen bg-[#0a0e1a]">
-      <Navbar />
-      <Hero />
-      <Problem />
-      <Solution />
-      <Capabilities />
-      <Competitive />
-      <Traction />
-      <Pricing />
-      <Footer />
-    </div>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/crm" element={<CRM />} />
+        <Route path="/campaigns" element={<Campaigns />} />
+        <Route path="/funnels" element={<Funnels />} />
+        <Route path="/appointments" element={<Appointments />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/prospecting" element={<Prospecting />} />
+        <Route path="/advertising" element={<Advertising />} />
+        <Route path="/settings" element={<Settings />} />
+      </Route>
+    </Routes>
   );
 }
-
-export default App;
