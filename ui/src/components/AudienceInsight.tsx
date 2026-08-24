@@ -93,7 +93,7 @@ export default function AudienceInsight() {
                       <div>
                         <h3 className="text-lg font-bold text-white tracking-tight">{persona.name}</h3>
                         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500 mt-0.5">
-                          <MapPin className="w-3 h-3" /> {persona.demographics}
+                          <MapPin className="w-3 h-3" /> {persona.segment || 'General'}
                         </div>
                       </div>
                     </div>
@@ -104,7 +104,7 @@ export default function AudienceInsight() {
                           <Zap className="w-3 h-3 text-amber-400" /> Pain Points
                         </div>
                         <ul className="space-y-1.5">
-                          {(persona.pains as string[]).map((pain: string, idx: number) => (
+                          {(persona.painPoints || []).slice(0, 3).map((pain: string, idx: number) => (
                             <li key={idx} className="text-[10px] text-slate-300 flex items-start gap-1.5 leading-tight">
                               <span className="w-1 h-1 rounded-full bg-slate-600 mt-1.5 shrink-0" />
                               {pain}
@@ -114,13 +114,13 @@ export default function AudienceInsight() {
                       </div>
                       <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
                         <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest mb-2 flex items-center gap-1.5">
-                          <TrendingUp className="w-3 h-3 text-emerald-400" /> Key Value
+                          <TrendingUp className="w-3 h-3 text-emerald-400" /> Channels
                         </div>
                         <ul className="space-y-1.5">
-                          {(persona.gains as string[]).map((gain: string, idx: number) => (
+                          {(persona.channels || []).slice(0, 3).map((channel: string, idx: number) => (
                             <li key={idx} className="text-[10px] text-slate-300 flex items-start gap-1.5 leading-tight">
                               <span className="w-1 h-1 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
-                              {gain}
+                              {channel}
                             </li>
                           ))}
                         </ul>
@@ -129,13 +129,13 @@ export default function AudienceInsight() {
 
                     <div className="pt-4 border-t border-white/5 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Inference Confidence</span>
-                        <span className="text-[10px] text-indigo-400 font-mono font-bold">{(persona.engagementScore * 100).toFixed(1)}%</span>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Fit Score</span>
+                        <span className="text-[10px] text-indigo-400 font-mono font-bold">{persona.fitScore}%</span>
                       </div>
                       <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                         <motion.div 
                           initial={{ width: 0 }}
-                          animate={{ width: `${persona.engagementScore * 100}%` }}
+                          animate={{ width: `${persona.fitScore}%` }}
                           className="h-full bg-gradient-to-r from-indigo-500 to-fuchsia-500"
                         />
                       </div>
