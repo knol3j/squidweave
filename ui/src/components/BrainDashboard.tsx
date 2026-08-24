@@ -130,30 +130,30 @@ export default function BrainDashboard() {
       dataService.getOpenClawDiagnostics(),
     ]);
 
-    const [stateResult, recallResult, reengagementResult, researchResult, decisionResult, connectorsResult, analyticsResult, outreachResult, requirementsResult, diagnosticsResult] = results;
+    const [stateResult, recallResult, reengagementResult, researchResult, decisionResult, connectorsResult, analyticsResult, outreachResult, requirementsResult, diagnosticsResult] = results as any[];
 
-    if (stateResult.status === 'fulfilled') { setState(stateResult.value); }
+    if (stateResult.status === 'fulfilled') { setState(stateResult.value as BrainState); }
     else { console.error(stateResult.reason); hardFailure = formatLoadError(stateResult.reason, 'Core brain state is unavailable.'); }
 
-    if (recallResult.status === 'fulfilled') { setRecall(recallResult.value); }
+    if (recallResult.status === 'fulfilled') { setRecall(recallResult.value as MemoryRecall); }
     else { console.error(recallResult.reason); warnings.push(formatLoadError(recallResult.reason, 'Memory recall is not available yet.')); }
 
     if (reengagementResult.status === 'fulfilled') {
-      const re = reengagementResult.value as { updatedAt: string; queue: any[] };
-      setReengagement(re);
+      setReengagement((reengagementResult.value as any) as { updatedAt: string; queue: any[] } | null);
     } else { console.error(reengagementResult.reason); warnings.push(formatLoadError(reengagementResult.reason, 'Reengagement data is not available yet.')); }
 
-    if (researchResult.status === 'fulfilled') { setResearchRecords(researchResult.value); }
+    if (researchResult.status === 'fulfilled') { setResearchRecords(researchResult.value as ResearchRecord[]); }
     else { console.error(researchResult.reason); warnings.push(formatLoadError(researchResult.reason, 'Research feed is not available yet.')); }
 
     if (decisionResult.status === 'fulfilled') { setTargetDecision(decisionResult.value); }
     else { console.error(decisionResult.reason); warnings.push(formatLoadError(decisionResult.reason, 'Target decisioning is not available yet.')); }
 
     if (connectorsResult.status === 'fulfilled') {
-      setConnectorStatuses(connectorsResult.value);
+      const connectorData = connectorsResult.value as ConnectorStatus[];
+      setConnectorStatuses(connectorData);
       setConnectorDrafts(current => {
         const next = { ...current };
-        for (const status of connectorsResult.value) {
+        for (const status of connectorData) {
           if (!next[status.connector]) { next[status.connector] = { baseUrl: status.baseUrl || '', token: '' }; }
           else if (!next[status.connector].baseUrl && status.baseUrl) { next[status.connector] = { ...next[status.connector], baseUrl: status.baseUrl }; }
         }
@@ -161,16 +161,16 @@ export default function BrainDashboard() {
       });
     } else { console.error(connectorsResult.reason); warnings.push(formatLoadError(connectorsResult.reason, 'Connector status is not available yet.')); }
 
-    if (analyticsResult.status === 'fulfilled') { setAnalyticsEvents(analyticsResult.value); }
+    if (analyticsResult.status === 'fulfilled') { setAnalyticsEvents(analyticsResult.value as any[]); }
     else { console.error(analyticsResult.reason); warnings.push(formatLoadError(analyticsResult.reason, 'Analytics events are not available yet.')); }
 
-    if (outreachResult.status === 'fulfilled') { setOutreachEvents(outreachResult.value); }
+    if (outreachResult.status === 'fulfilled') { setOutreachEvents(outreachResult.value as any[]); }
     else { console.error(outreachResult.reason); warnings.push(formatLoadError(outreachResult.reason, 'Outreach events are not available yet.')); }
 
-    if (requirementsResult.status === 'fulfilled') { setSetupRequirements(requirementsResult.value); }
+    if (requirementsResult.status === 'fulfilled') { setSetupRequirements(requirementsResult.value as SetupRequirements); }
     else { console.error(requirementsResult.reason); warnings.push(formatLoadError(requirementsResult.reason, 'Setup requirements are not available yet.')); }
 
-    if (diagnosticsResult.status === 'fulfilled') { setOpenClawDiagnostics(diagnosticsResult.value.diagnostics || []); }
+    if (diagnosticsResult.status === 'fulfilled') { setOpenClawDiagnostics(((diagnosticsResult.value as any).diagnostics || []) as OpenClawDiagnostic[]); }
     else { console.error(diagnosticsResult.reason); warnings.push(formatLoadError(diagnosticsResult.reason, 'Connector diagnostics are not available yet.')); }
 
     setLoadWarnings([...new Set(warnings)]);
@@ -216,7 +216,7 @@ export default function BrainDashboard() {
   const latestDecision = state.decisions?.at(-1);
   const playbooks = recall?.proceduralMemories || [];
   const targetProfiles = recall?.semanticMemories?.targetProfiles || [];
-  const episodicEvents = recall?.episodicMemories?.outreachEvents || [];
+  const episodicEvents = (recall?.episodicMemories as any)?.outreachEvents || [];
   const rankedTargets = targetDecision?.topTargets || [];
 
   if (initialLoading) {
@@ -266,7 +266,7 @@ export default function BrainDashboard() {
     setConnectorSaving(connector); setConnectorMessage(null);
     try {
       const result = await dataService.updateConnectorConfig(connector, { baseUrl: draft.baseUrl, token: draft.token, probe: true });
-      setConnectorStatuses(current => current.map(status => status.connector === connector ? result.status : status));
+      setConnectorStatuses(current => current.map(status => status.connector === connector ? (result.status as ConnectorStatus) : status));
       setConnectorDrafts(current => ({ ...current, [connector]: { baseUrl: result.config.baseUrl || draft.baseUrl, token: '' } }));
       setConnectorMessage(result.status.mode === 'live' ? `${connector} token updated and verified.` : `${connector} credentials saved, but probe returned ${result.status.mode}.`);
     } catch (error) { setConnectorMessage(error instanceof Error ? error.message : `Failed to update ${connector}.`); }
