@@ -1,46 +1,62 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   Columns, ArrowRight, Zap, TrendingUp,
   BarChart3, Rocket, Users, Smartphone, Activity,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { dataService, type Variation } from '../services/dataService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-const ABTestingPanel: React.FC = () => {
-  const [variations, setVariations] = useState<Variation[]>([]);
+interface Variation {
+  id: string;
+  name: string;
+  conversionRate: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  lift: number;
+  isControl: boolean;
+  isWinner: boolean;
+}
+
+const defaultVariations: Variation[] = [
+  { id: '1', name: 'Control (A)', conversionRate: 0.032, impressions: 15000, clicks: 480, conversions: 48, lift: 0, isControl: true, isWinner: false },
+  { id: '2', name: 'Variant B', conversionRate: 0.041, impressions: 15200, clicks: 624, conversions: 62, lift: 28.1, isControl: false, isWinner: true },
+];
+
+export default function ABTestingPanel() {
+  const [variations, setVariations] = useState<Variation[]>(defaultVariations);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
-  const [confidence, setConfidence] = useState<number>(95);
+  const [confidence] = useState<number>(95);
 
   useEffect(() => {
-    setVariations(dataService.getVariations());
+    setVariations(defaultVariations);
   }, []);
 
   const runSimulation = () => {
     setIsSimulating(true);
     setTimeout(() => {
-      const updatedVariations = dataService.simulateABTest(selectedCampaign || undefined);
-      setVariations(updatedVariations);
+      const updated = defaultVariations.map(v => ({
+        ...v,
+        conversionRate: Math.max(0.01, v.conversionRate + (Math.random() * 0.01 - 0.005)),
+        impressions: v.impressions + Math.floor(Math.random() * 500),
+        clicks: v.clicks + Math.floor(Math.random() * 50),
+        conversions: v.conversions + Math.floor(Math.random() * 10),
+      }));
+      setVariations(updated);
       setIsSimulating(false);
     }, 1500);
   };
 
-  const getWinner = () => {
-    if (variations.length === 0) return null;
-    return variations.reduce((prev, current) => (prev.conversionRate > current.conversionRate) ? prev : current);
-  };
-
-  const winner = getWinner();
+  const winner = variations.reduce((prev, current) =>
+    prev.conversionRate > current.conversionRate ? prev : current
+  );
 
   const chartData = variations.map(v => ({
     name: v.name,
     conversionRate: v.conversionRate,
-    impressions: v.impressions,
-    clicks: v.clicks,
     fill: v.isWinner ? '#10B981' : v.isControl ? '#3B82F6' : '#8B5CF6'
   }));
 
@@ -79,7 +95,7 @@ const ABTestingPanel: React.FC = () => {
         </div>
       </div>
 
-      {variations.length > 0 && winner && (
+      {winner && (
         <Card className="bg-gradient-to-r from-emerald-900/30 to-slate-900 border-emerald-500/30">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -117,7 +133,7 @@ const ABTestingPanel: React.FC = () => {
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="name" stroke="#94A3B8" />
-                <YAxis stroke="#94A3B8" tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
+                <YAxis stroke="#94A3B8" tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#1E293B', borderColor: '#334155', borderRadius: '8px' }}
                   formatter={(value: number) => `${(value * 100).toFixed(2)}%`}
@@ -197,6 +213,4 @@ const ABTestingPanel: React.FC = () => {
       </div>
     </div>
   );
-};
-
-export default ABTestingPanel;
+}
