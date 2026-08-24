@@ -203,21 +203,23 @@ export default function BrainDashboard() {
   }, [state]);
 
   const cards = useMemo(() => {
+    const c = campaignState as Record<string, any>;
     return [
-      { label: 'Agent Mesh', value: `${campaignState.enabledModules?.length || 0}/${AGENT_SYSTEM.length} online`, detail: campaignState.clientNeed || campaignState.activePrompt || 'No mission brief captured', icon: BrainCircuit },
-      { label: 'Memory Layer', value: `${state.memory?.playbooks?.length || 0} playbooks`, detail: `${state.memory?.targetProfiles?.length || 0} target profiles`, icon: MemoryStick },
-      { label: 'Translation Layer', value: `${campaignState.locales?.length || 0} locales`, detail: campaignState.audience || 'No audience configured', icon: Workflow },
-      { label: 'Reengagement', value: `${reengagement?.queue?.length || 0} queued`, detail: reengagement?.updatedAt ? `Updated ${formatShortDate(reengagement.updatedAt)}` : 'No queue built', icon: Target },
+      { label: 'Agent Mesh', value: `${(c.enabledModules as string[])?.length || 0}/${AGENT_SYSTEM.length} online`, detail: (c.clientNeed as string) || (c.activePrompt as string) || 'No mission brief captured', icon: BrainCircuit },
+      { label: 'Memory Layer', value: `${(state.memory?.playbooks as MemoryPlaybook[])?.length || 0} playbooks`, detail: `${(state.memory?.targetProfiles as TargetProfile[])?.length || 0} target profiles`, icon: MemoryStick },
+      { label: 'Translation Layer', value: `${(c.locales as string[])?.length || 0} locales`, detail: (c.audience as string) || 'No audience configured', icon: Workflow },
+      { label: 'Reengagement', value: `${(reengagement?.queue as any[])?.length || 0} queued`, detail: reengagement?.updatedAt ? `Updated ${formatShortDate(reengagement.updatedAt)}` : 'No queue built', icon: Target },
     ];
   }, [campaignState, state, reengagement]);
 
-  const { nodes, edges } = useMemo(() => buildGraphNodes(state, campaignState), [state, campaignState]);
-  const latestPack = state.contentPacks?.at(-1);
-  const latestDecision = state.decisions?.at(-1);
-  const playbooks = recall?.proceduralMemories || [];
-  const targetProfiles = recall?.semanticMemories?.targetProfiles || [];
-  const episodicEvents = (recall?.episodicMemories as any)?.outreachEvents || [];
-  const rankedTargets = targetDecision?.topTargets || [];
+  const { nodes, edges } = useMemo(() => buildGraphNodes(state, campaignState as any), [state, campaignState]);
+  const latestPack = (state.contentPacks as any[])?.at(-1);
+  const latestDecision = (state.decisions as any[])?.at(-1);
+  const recallAny = recall as any;
+  const playbooks = (recallAny?.proceduralMemories || []) as MemoryPlaybook[];
+  const targetProfiles = (recallAny?.semanticMemories?.targetProfiles || []) as TargetProfile[];
+  const episodicEvents = (recallAny?.episodicMemories?.outreachEvents || []) as any[];
+  const rankedTargets = (targetDecision?.topTargets || []) as any[];
 
   if (initialLoading) {
     return (
@@ -258,7 +260,7 @@ export default function BrainDashboard() {
     );
   }
 
-  const hasBrainData = (state.decisions?.length || 0) > 0 || (state.memory?.playbooks?.length || 0) > 0 || researchRecords.length > 0 || (state.contentPacks?.length || 0) > 0;
+  const hasBrainData = ((state.decisions as any[])?.length || 0) > 0 || ((state.memory?.playbooks as MemoryPlaybook[])?.length || 0) > 0 || researchRecords.length > 0 || ((state.contentPacks as any[])?.length || 0) > 0;
 
   const saveConnector = async (connector: string) => {
     const draft = connectorDrafts[connector];
@@ -291,7 +293,7 @@ export default function BrainDashboard() {
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Brain</div>
             <h2 className="mt-1 text-3xl font-semibold tracking-tight text-white">Agent Platform</h2>
-            <p className="mt-1 text-sm text-slate-400">{campaignState.markets?.join(' • ') || campaignState.locales?.join(' • ') || 'No markets configured'} · {campaignState.channel || 'No channel configured'} · persistent memory recall with live reengagement timing</p>
+            <p className="mt-1 text-sm text-slate-400">{((campaignState as any).markets as string[])?.join(' • ') || ((campaignState as any).locales as string[])?.join(' • ') || 'No markets configured'} · {(campaignState as any).channel || 'No channel configured'} · persistent memory recall with live reengagement timing</p>
           </div>
           <button onClick={() => void triggerBrain()} disabled={runningAutomation} className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60"><Play className="h-4 w-4" />{runningAutomation ? 'Running Brain...' : 'Trigger Brain'}</button>
         </div>
@@ -393,11 +395,11 @@ export default function BrainDashboard() {
                   </div>
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Memory Status</div>
-                    <div className="mt-1">{state.memory?.memoryConsolidations?.length ? `Consolidated ${state.memory.memoryConsolidations.length} times` : 'No consolidation history yet'}</div>
+                    <div className="mt-1">{((state.memory as any)?.memoryConsolidations as any[])?.length ? `Consolidated ${(state.memory as any).memoryConsolidations.length} times` : 'No consolidation history yet'}</div>
                   </div>
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Where Data Lives</div>
-                    <div className="mt-1">{campaignState.channel || 'No channel configured'} · {analyticsEvents.length} analytics · {outreachEvents.length} outreach</div>
+                    <div className="mt-1">{(campaignState as any).channel || 'No channel configured'} · {analyticsEvents.length} analytics · {outreachEvents.length} outreach</div>
                   </div>
                 </div>
               </div>
