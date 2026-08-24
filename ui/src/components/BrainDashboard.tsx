@@ -170,7 +170,7 @@ export default function BrainDashboard() {
     if (requirementsResult.status === 'fulfilled') { setSetupRequirements(requirementsResult.value as SetupRequirements); }
     else { console.error(requirementsResult.reason); warnings.push(formatLoadError(requirementsResult.reason, 'Setup requirements are not available yet.')); }
 
-    if (diagnosticsResult.status === 'fulfilled') { setOpenClawDiagnostics(((diagnosticsResult.value as any).diagnostics || []) as OpenClawDiagnostic[]); }
+    if (diagnosticsResult.status === 'fulfilled') { setOpenClawDiagnostics(((diagnosticsResult.value as any).checks || []) as OpenClawDiagnostic[]); }
     else { console.error(diagnosticsResult.reason); warnings.push(formatLoadError(diagnosticsResult.reason, 'Connector diagnostics are not available yet.')); }
 
     setLoadWarnings([...new Set(warnings)]);
@@ -265,10 +265,11 @@ export default function BrainDashboard() {
     if (!draft?.baseUrl || !draft?.token) { setConnectorMessage(`Enter both base URL and token for ${connector}.`); return; }
     setConnectorSaving(connector); setConnectorMessage(null);
     try {
-      const result = await dataService.updateConnectorConfig(connector, { baseUrl: draft.baseUrl, token: draft.token, probe: true });
-      setConnectorStatuses(current => current.map(status => status.connector === connector ? (result.status as ConnectorStatus) : status));
-      setConnectorDrafts(current => ({ ...current, [connector]: { baseUrl: result.config.baseUrl || draft.baseUrl, token: '' } }));
-      setConnectorMessage(result.status.mode === 'live' ? `${connector} token updated and verified.` : `${connector} credentials saved, but probe returned ${result.status.mode}.`);
+      await dataService.updateConnectorConfig(connector, { baseUrl: draft.baseUrl, token: draft.token, probe: true });
+      const refreshed = await dataService.getConnectorStatuses(false);
+      setConnectorStatuses(refreshed);
+      setConnectorDrafts(current => ({ ...current, [connector]: { baseUrl: draft.baseUrl, token: '' } }));
+      setConnectorMessage(`${connector} credentials saved.`);
     } catch (error) { setConnectorMessage(error instanceof Error ? error.message : `Failed to update ${connector}.`); }
     finally { setConnectorSaving(null); }
   };
@@ -373,7 +374,7 @@ export default function BrainDashboard() {
                           <div className="text-sm font-medium text-white">{target.company || target.targetId}</div>
                           <div className="text-xs text-slate-400">{target.recommendedChannel || 'No channel'}</div>
                         </div>
-                        <div className="mt-2 text-xs text-slate-400">next touch {formatShortDate(target.nextEligibleAt)} · score {formatPercent(target.score)}</div>
+                        <div className="mt-2 text-xs text-slate-400">next touch {target.nextEligibleAt ? formatShortDate(target.nextEligibleAt) : 'Unknown'} · score {formatPercent(target.score)}</div>
                         <div className="mt-2 text-sm text-slate-400">{(target.reasons || []).join(' · ') || 'No memory-backed reason recorded.'}</div>
                       </div>
                     ))
@@ -418,15 +419,15 @@ export default function BrainDashboard() {
                 <div className="flex items-center gap-2 text-sm font-medium text-slate-200"><ClipboardList className="h-4 w-4 text-violet-500" />Setup Requirements</div>
                 <div className="mt-4 space-y-3">
                   <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Live Connector Env</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Missing</div>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {(setupRequirements?.environment.requiredForLiveConnectors || []).map((item: string) => (<span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-400">{item}</span>))}
+                      {(setupRequirements?.missing || []).map((item: string) => (<span key={item} className="rounded-full bg-red-500/10 px-2.5 py-1 text-[11px] text-red-300">{item}</span>))}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Accepted Outreach Events</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Optional</div>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {(setupRequirements?.outreachEventTypes || []).map((item: string) => (<span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-400">{item}</span>))}
+                      {(setupRequirements?.optional || []).map((item: string) => (<span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-400">{item}</span>))}
                     </div>
                   </div>
                 </div>
@@ -450,7 +451,7 @@ export default function BrainDashboard() {
                 <div className="mt-4 space-y-2 text-sm text-slate-400">
                   <div className="flex justify-between"><span>Status</span><span className={state.scheduler?.running ? 'text-emerald-400' : 'text-slate-500'}>{state.scheduler?.running ? 'Running' : 'Stopped'}</span></div>
                   <div className="flex justify-between"><span>Interval</span><span>{state.scheduler?.intervalSeconds ? `${state.scheduler.intervalSeconds}s` : 'N/A'}</span></div>
-                  <div className="flex justify-between"><span>Last Tick</span><span>{formatShortDate(state.scheduler?.lastTickAt || undefined)}</span></div>
+                  <div className="flex justify-between"><span>Last Tick</span><span>{state.scheduler?.lastTickAt ? formatShortDate(state.scheduler.lastTickAt) : 'Never'}</span></div>
                 </div>
               </div>
 
