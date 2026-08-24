@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Filter, Plus, ArrowRight, Users, MousePointer, ShoppingCart, CheckCircle } from "lucide-react";
+import { Plus, ArrowRight, Users, MousePointer, ShoppingCart, CheckCircle } from "lucide-react";
 
 export default function Funnels() {
   const stages = [
@@ -8,6 +8,12 @@ export default function Funnels() {
     { name: "Interest", count: 6200, color: "from-purple-500 to-pink-500", icon: <MousePointer className="w-5 h-5" /> },
     { name: "Consideration", count: 3100, color: "from-orange-500 to-amber-500", icon: <ShoppingCart className="w-5 h-5" /> },
     { name: "Conversion", count: 1240, color: "from-emerald-500 to-teal-500", icon: <CheckCircle className="w-5 h-5" /> },
+  ];
+
+  const performances = [
+    { name: "Landing Page → Sign Up", rate: "24.5%" },
+    { name: "Email Open → Click", rate: "18.2%" },
+    { name: "Ad Click → Purchase", rate: "3.8%" },
   ];
 
   return (
@@ -38,10 +44,10 @@ export default function Funnels() {
           <CardHeader><CardTitle>Funnel Performance</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {["Landing Page → Sign Up: 24.5%", "Email Open → Click: 18.2%", "Ad Click → Purchase: 3.8%"].map((f, i) => (
+              {performances.map((item, i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30">
-                  <span>{f.split(":")[0]}</span>
-                  <span className="font-bold text-emerald-400">{f.split(":")[1]}</span>
+                  <span>{item.name}</span>
+                  <span className="font-bold text-emerald-400">{item.rate}</span>
                 </div>
               ))}
             </div>
