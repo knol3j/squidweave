@@ -1,10 +1,10 @@
 import React from 'react';
 import { Landmark } from 'lucide-react';
 import {
-  FundingInvestor,
-  FundingPipeline,
-  FundingRun,
-  FundingOutreachEvent,
+  type FundingInvestor,
+  type FundingPipeline,
+  type FundingRun,
+  type FundingOutreachEvent,
 } from '../../services/dataService';
 import { formatPercent, formatDate } from '../../lib/format';
 
