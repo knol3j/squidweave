@@ -1,27 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+  Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import {
-  AlertTriangle,
-  Bot,
-  BrainCircuit,
-  ClipboardList,
-  Inbox,
-  MemoryStick,
-  Play,
-  Sparkles,
-  Target,
-  Workflow,
+  AlertTriangle, Bot, BrainCircuit, ClipboardList, Inbox, MemoryStick, Play, Sparkles, Target, Workflow,
 } from 'lucide-react';
 import { useCollaboration } from './CollaborationProvider';
-import { ApiError, type ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, OpenClawDiagnostic, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
+import { ApiError, type ConnectorStatus, dataService, type MemoryPlaybook, type MemoryRecall, type OpenClawDiagnostic, type ResearchRecord, type SetupRequirements, type TargetProfile } from '../services/dataService';
 import { AGENT_SYSTEM } from '../lib/agentSystem';
 import { formatPercent, formatShortDate } from '../lib/format';
 import KnowledgeGraph from './brain/KnowledgeGraph';
@@ -52,12 +37,8 @@ const TABS = ['Knowledge Graph', 'Research Feed', 'Memory Recall', 'Reengagement
 
 function formatLoadError(error: unknown, fallback: string) {
   if (error instanceof ApiError) {
-    if (error.status === 401) {
-      return 'Authentication expired. Sign in again to continue.';
-    }
-    if (error.status === 404) {
-      return fallback;
-    }
+    if (error.status === 401) return 'Authentication expired. Sign in again to continue.';
+    if (error.status === 404) return fallback;
   }
   return error instanceof Error ? error.message : fallback;
 }
@@ -78,66 +59,31 @@ function buildGraphNodes(state: BrainState, campaign: any) {
   ];
 
   if (latestDecision?.plan?.recommendedAction?.type) {
-    nodes.push({
-      id: 'decision',
-      label: latestDecision.plan.recommendedAction.type,
-      x: 36,
-      y: 70,
-      size: 12,
-      tone: 'bg-sky-500',
-    });
+    nodes.push({ id: 'decision', label: latestDecision.plan.recommendedAction.type, x: 36, y: 70, size: 12, tone: 'bg-sky-500' });
   }
 
   locales.forEach((locale: string, index: number) => {
-    nodes.push({
-      id: `locale-${locale}`,
-      label: locale,
-      x: 66 + index * 9,
-      y: 26 + (index % 2) * 17,
-      size: 11,
-      tone: 'bg-amber-400',
-    });
+    nodes.push({ id: `locale-${locale}`, label: locale, x: 66 + index * 9, y: 26 + (index % 2) * 17, size: 11, tone: 'bg-amber-400' });
   });
 
   modules.forEach((module: string, index: number) => {
-    nodes.push({
-      id: `module-${module}`,
-      label: module,
-      x: 18 + (index * 10),
-      y: 82,
-      size: 10,
-      tone: 'bg-emerald-500',
-    });
+    nodes.push({ id: `module-${module}`, label: module, x: 18 + (index * 10), y: 82, size: 10, tone: 'bg-emerald-500' });
   });
 
   playbooks.forEach((playbook, index) => {
-    nodes.push({
-      id: `playbook-${playbook.id}`,
-      label: `${playbook.segment}/${playbook.recommendedChannel}`,
-      x: 74 + (index * 10),
-      y: 56,
-      size: 10,
-      tone: 'bg-rose-400',
-    });
+    nodes.push({ id: `playbook-${playbook.id}`, label: `${playbook.segment}/${playbook.recommendedChannel}`, x: 74 + (index * 10), y: 56, size: 10, tone: 'bg-rose-400' });
   });
 
   (latestPack?.variants || []).slice(0, 2).forEach((variant: any, index: number) => {
-    nodes.push({
-      id: `variant-${variant.locale}`,
-      label: variant.locale,
-      x: 80 + index * 8,
-      y: 72,
-      size: 10,
-      tone: 'bg-fuchsia-400',
-    });
+    nodes.push({ id: `variant-${variant.locale}`, label: variant.locale, x: 80 + index * 8, y: 72, size: 10, tone: 'bg-fuchsia-400' });
   });
 
-  const edges = [
+  const edges: [string, string][] = [
     ['brain', 'campaign'],
-    ...locales.map((locale: string) => ['brain', `locale-${locale}`]),
-    ...modules.map((module: string) => ['campaign', `module-${module}`]),
-    ...playbooks.map((playbook) => ['brain', `playbook-${playbook.id}`]),
-    ...(latestPack?.variants || []).slice(0, 2).map((variant: any) => ['brain', `variant-${variant.locale}`]),
+    ...locales.map((locale: string): [string, string] => ['brain', `locale-${locale}`]),
+    ...modules.map((module: string): [string, string] => ['campaign', `module-${module}`]),
+    ...playbooks.map((playbook): [string, string] => ['brain', `playbook-${playbook.id}`]),
+    ...(latestPack?.variants || []).slice(0, 2).map((variant: any): [string, string] => ['brain', `variant-${variant.locale}`]),
   ];
 
   if (latestDecision?.plan?.recommendedAction?.type) {
@@ -186,86 +132,46 @@ export default function BrainDashboard() {
 
     const [stateResult, recallResult, reengagementResult, researchResult, decisionResult, connectorsResult, analyticsResult, outreachResult, requirementsResult, diagnosticsResult] = results;
 
-    if (stateResult.status === 'fulfilled') {
-      setState(stateResult.value);
-    } else {
-      console.error(stateResult.reason);
-      hardFailure = formatLoadError(stateResult.reason, 'Core brain state is unavailable.');
-    }
+    if (stateResult.status === 'fulfilled') { setState(stateResult.value); }
+    else { console.error(stateResult.reason); hardFailure = formatLoadError(stateResult.reason, 'Core brain state is unavailable.'); }
 
-    if (recallResult.status === 'fulfilled') {
-      setRecall(recallResult.value);
-    } else {
-      console.error(recallResult.reason);
-      warnings.push(formatLoadError(recallResult.reason, 'Memory recall is not available yet.'));
-    }
+    if (recallResult.status === 'fulfilled') { setRecall(recallResult.value); }
+    else { console.error(recallResult.reason); warnings.push(formatLoadError(recallResult.reason, 'Memory recall is not available yet.')); }
 
     if (reengagementResult.status === 'fulfilled') {
-      setReengagement(reengagementResult.value);
-    } else {
-      console.error(reengagementResult.reason);
-      warnings.push(formatLoadError(reengagementResult.reason, 'Reengagement data is not available yet.'));
-    }
+      const re = reengagementResult.value as { updatedAt: string; queue: any[] };
+      setReengagement(re);
+    } else { console.error(reengagementResult.reason); warnings.push(formatLoadError(reengagementResult.reason, 'Reengagement data is not available yet.')); }
 
-    if (researchResult.status === 'fulfilled') {
-      setResearchRecords(researchResult.value);
-    } else {
-      console.error(researchResult.reason);
-      warnings.push(formatLoadError(researchResult.reason, 'Research feed is not available yet.'));
-    }
+    if (researchResult.status === 'fulfilled') { setResearchRecords(researchResult.value); }
+    else { console.error(researchResult.reason); warnings.push(formatLoadError(researchResult.reason, 'Research feed is not available yet.')); }
 
-    if (decisionResult.status === 'fulfilled') {
-      setTargetDecision(decisionResult.value);
-    } else {
-      console.error(decisionResult.reason);
-      warnings.push(formatLoadError(decisionResult.reason, 'Target decisioning is not available yet.'));
-    }
+    if (decisionResult.status === 'fulfilled') { setTargetDecision(decisionResult.value); }
+    else { console.error(decisionResult.reason); warnings.push(formatLoadError(decisionResult.reason, 'Target decisioning is not available yet.')); }
 
     if (connectorsResult.status === 'fulfilled') {
       setConnectorStatuses(connectorsResult.value);
       setConnectorDrafts(current => {
         const next = { ...current };
         for (const status of connectorsResult.value) {
-          if (!next[status.connector]) {
-            next[status.connector] = { baseUrl: status.baseUrl || '', token: '' };
-          } else if (!next[status.connector].baseUrl && status.baseUrl) {
-            next[status.connector] = { ...next[status.connector], baseUrl: status.baseUrl };
-          }
+          if (!next[status.connector]) { next[status.connector] = { baseUrl: status.baseUrl || '', token: '' }; }
+          else if (!next[status.connector].baseUrl && status.baseUrl) { next[status.connector] = { ...next[status.connector], baseUrl: status.baseUrl }; }
         }
         return next;
       });
-    } else {
-      console.error(connectorsResult.reason);
-      warnings.push(formatLoadError(connectorsResult.reason, 'Connector status is not available yet.'));
-    }
+    } else { console.error(connectorsResult.reason); warnings.push(formatLoadError(connectorsResult.reason, 'Connector status is not available yet.')); }
 
-    if (analyticsResult.status === 'fulfilled') {
-      setAnalyticsEvents(analyticsResult.value);
-    } else {
-      console.error(analyticsResult.reason);
-      warnings.push(formatLoadError(analyticsResult.reason, 'Analytics events are not available yet.'));
-    }
+    if (analyticsResult.status === 'fulfilled') { setAnalyticsEvents(analyticsResult.value); }
+    else { console.error(analyticsResult.reason); warnings.push(formatLoadError(analyticsResult.reason, 'Analytics events are not available yet.')); }
 
-    if (outreachResult.status === 'fulfilled') {
-      setOutreachEvents(outreachResult.value);
-    } else {
-      console.error(outreachResult.reason);
-      warnings.push(formatLoadError(outreachResult.reason, 'Outreach events are not available yet.'));
-    }
+    if (outreachResult.status === 'fulfilled') { setOutreachEvents(outreachResult.value); }
+    else { console.error(outreachResult.reason); warnings.push(formatLoadError(outreachResult.reason, 'Outreach events are not available yet.')); }
 
-    if (requirementsResult.status === 'fulfilled') {
-      setSetupRequirements(requirementsResult.value);
-    } else {
-      console.error(requirementsResult.reason);
-      warnings.push(formatLoadError(requirementsResult.reason, 'Setup requirements are not available yet.'));
-    }
+    if (requirementsResult.status === 'fulfilled') { setSetupRequirements(requirementsResult.value); }
+    else { console.error(requirementsResult.reason); warnings.push(formatLoadError(requirementsResult.reason, 'Setup requirements are not available yet.')); }
 
-    if (diagnosticsResult.status === 'fulfilled') {
-      setOpenClawDiagnostics(diagnosticsResult.value.diagnostics || []);
-    } else {
-      console.error(diagnosticsResult.reason);
-      warnings.push(formatLoadError(diagnosticsResult.reason, 'Connector diagnostics are not available yet.'));
-    }
+    if (diagnosticsResult.status === 'fulfilled') { setOpenClawDiagnostics(diagnosticsResult.value.diagnostics || []); }
+    else { console.error(diagnosticsResult.reason); warnings.push(formatLoadError(diagnosticsResult.reason, 'Connector diagnostics are not available yet.')); }
 
     setLoadWarnings([...new Set(warnings)]);
     setLoadError(hardFailure);
@@ -276,44 +182,15 @@ export default function BrainDashboard() {
     let active = true;
     let timer: ReturnType<typeof window.setInterval> | null = null;
 
-    const run = async () => {
-      if (!active) return;
-      await refreshDashboard();
-    };
-
-    const startTimer = () => {
-      timer = window.setInterval(() => {
-        if (!document.hidden) {
-          void run();
-        }
-      }, 15000);
-    };
-
-    const stopTimer = () => {
-      if (timer !== null) {
-        window.clearInterval(timer);
-        timer = null;
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopTimer();
-      } else {
-        void run();
-        startTimer();
-      }
-    };
+    const run = async () => { if (!active) return; await refreshDashboard(); };
+    const startTimer = () => { timer = window.setInterval(() => { if (!document.hidden) { void run(); } }, 15000); };
+    const stopTimer = () => { if (timer !== null) { window.clearInterval(timer); timer = null; } };
+    const handleVisibilityChange = () => { if (document.hidden) { stopTimer(); } else { void run(); startTimer(); } };
 
     void run();
     startTimer();
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      active = false;
-      stopTimer();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => { active = false; stopTimer(); document.removeEventListener('visibilitychange', handleVisibilityChange); };
   }, [refreshDashboard]);
 
   const decisionSeries = useMemo(() => {
@@ -327,30 +204,10 @@ export default function BrainDashboard() {
 
   const cards = useMemo(() => {
     return [
-      {
-        label: 'Agent Mesh',
-        value: `${campaignState.enabledModules?.length || 0}/${AGENT_SYSTEM.length} online`,
-        detail: campaignState.clientNeed || campaignState.activePrompt || 'No mission brief captured',
-        icon: BrainCircuit,
-      },
-      {
-        label: 'Memory Layer',
-        value: `${state.memory?.playbooks?.length || 0} playbooks`,
-        detail: `${state.memory?.targetProfiles?.length || 0} target profiles`,
-        icon: MemoryStick,
-      },
-      {
-        label: 'Translation Layer',
-        value: `${campaignState.locales?.length || 0} locales`,
-        detail: campaignState.audience || 'No audience configured',
-        icon: Workflow,
-      },
-      {
-        label: 'Reengagement',
-        value: `${reengagement?.queue?.length || 0} queued`,
-        detail: reengagement?.updatedAt ? `Updated ${formatShortDate(reengagement.updatedAt)}` : 'No queue built',
-        icon: Target,
-      },
+      { label: 'Agent Mesh', value: `${campaignState.enabledModules?.length || 0}/${AGENT_SYSTEM.length} online`, detail: campaignState.clientNeed || campaignState.activePrompt || 'No mission brief captured', icon: BrainCircuit },
+      { label: 'Memory Layer', value: `${state.memory?.playbooks?.length || 0} playbooks`, detail: `${state.memory?.targetProfiles?.length || 0} target profiles`, icon: MemoryStick },
+      { label: 'Translation Layer', value: `${campaignState.locales?.length || 0} locales`, detail: campaignState.audience || 'No audience configured', icon: Workflow },
+      { label: 'Reengagement', value: `${reengagement?.queue?.length || 0} queued`, detail: reengagement?.updatedAt ? `Updated ${formatShortDate(reengagement.updatedAt)}` : 'No queue built', icon: Target },
     ];
   }, [campaignState, state, reengagement]);
 
@@ -395,9 +252,7 @@ export default function BrainDashboard() {
           <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
           <p className="text-red-400 text-sm font-medium">Failed to load brain data</p>
           <p className="text-slate-500 text-xs">{loadError}</p>
-          <button onClick={() => void refreshDashboard()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">
-            Retry
-          </button>
+          <button onClick={() => void refreshDashboard()} className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/15">Retry</button>
         </div>
       </div>
     );
@@ -407,51 +262,25 @@ export default function BrainDashboard() {
 
   const saveConnector = async (connector: string) => {
     const draft = connectorDrafts[connector];
-    if (!draft?.baseUrl || !draft?.token) {
-      setConnectorMessage(`Enter both base URL and token for ${connector}.`);
-      return;
-    }
-
-    setConnectorSaving(connector);
-    setConnectorMessage(null);
+    if (!draft?.baseUrl || !draft?.token) { setConnectorMessage(`Enter both base URL and token for ${connector}.`); return; }
+    setConnectorSaving(connector); setConnectorMessage(null);
     try {
-      const result = await dataService.updateConnectorConfig(connector, {
-        baseUrl: draft.baseUrl,
-        token: draft.token,
-        probe: true,
-      });
+      const result = await dataService.updateConnectorConfig(connector, { baseUrl: draft.baseUrl, token: draft.token, probe: true });
       setConnectorStatuses(current => current.map(status => status.connector === connector ? result.status : status));
-      setConnectorDrafts(current => ({
-        ...current,
-        [connector]: {
-          baseUrl: result.config.baseUrl || draft.baseUrl,
-          token: '',
-        },
-      }));
-      setConnectorMessage(
-        result.status.mode === 'live'
-          ? `${connector} token updated and verified.`
-          : `${connector} credentials saved, but probe returned ${result.status.mode}.`,
-      );
-    } catch (error) {
-      setConnectorMessage(error instanceof Error ? error.message : `Failed to update ${connector}.`);
-    } finally {
-      setConnectorSaving(null);
-    }
+      setConnectorDrafts(current => ({ ...current, [connector]: { baseUrl: result.config.baseUrl || draft.baseUrl, token: '' } }));
+      setConnectorMessage(result.status.mode === 'live' ? `${connector} token updated and verified.` : `${connector} credentials saved, but probe returned ${result.status.mode}.`);
+    } catch (error) { setConnectorMessage(error instanceof Error ? error.message : `Failed to update ${connector}.`); }
+    finally { setConnectorSaving(null); }
   };
 
   const triggerBrain = async () => {
-    setRunningAutomation(true);
-    setConnectorMessage(null);
+    setRunningAutomation(true); setConnectorMessage(null);
     try {
       await dataService.runAutomation(campaignState.id || 'main-campaign', 'brain-dashboard');
       await refreshDashboard();
       setConnectorMessage('Automation triggered and the dashboard has been refreshed.');
-    } catch (error) {
-      setConnectorMessage(formatLoadError(error, 'Failed to trigger automation.'));
-    } finally {
-      setRunningAutomation(false);
-    }
+    } catch (error) { setConnectorMessage(formatLoadError(error, 'Failed to trigger automation.')); }
+    finally { setRunningAutomation(false); }
   };
 
   return (
@@ -461,43 +290,22 @@ export default function BrainDashboard() {
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Brain</div>
             <h2 className="mt-1 text-3xl font-semibold tracking-tight text-white">Agent Platform</h2>
-            <p className="mt-1 text-sm text-slate-400">
-              {campaignState.markets?.join(' • ') || campaignState.locales?.join(' • ') || 'No markets configured'} · {campaignState.channel || 'No channel configured'} · persistent memory recall with live reengagement timing
-            </p>
+            <p className="mt-1 text-sm text-slate-400">{campaignState.markets?.join(' • ') || campaignState.locales?.join(' • ') || 'No markets configured'} · {campaignState.channel || 'No channel configured'} · persistent memory recall with live reengagement timing</p>
           </div>
-          <button
-            onClick={() => void triggerBrain()}
-            disabled={runningAutomation}
-            className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Play className="h-4 w-4" />
-            {runningAutomation ? 'Running Brain...' : 'Trigger Brain'}
-          </button>
+          <button onClick={() => void triggerBrain()} disabled={runningAutomation} className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60"><Play className="h-4 w-4" />{runningAutomation ? 'Running Brain...' : 'Trigger Brain'}</button>
         </div>
 
         {!!loadWarnings.length && (
           <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>Some live brain feeds are still empty or unavailable.</span>
-            </div>
-            <div className="mt-2 space-y-1 text-xs text-amber-200/90">
-              {loadWarnings.map(warning => (
-                <div key={warning}>{warning}</div>
-              ))}
-            </div>
+            <div className="flex items-center gap-3"><AlertTriangle className="h-4 w-4 shrink-0" /><span>Some live brain feeds are still empty or unavailable.</span></div>
+            <div className="mt-2 space-y-1 text-xs text-amber-200/90">{loadWarnings.map(warning => (<div key={warning}>{warning}</div>))}</div>
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {cards.map(card => (
             <div key={card.label} className="rounded-xl border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
-              <div className="flex items-center gap-2 text-indigo-400">
-                <div className="rounded-full bg-indigo-500/10 p-1.5">
-                  <card.icon className="h-4 w-4" />
-                </div>
-                <span className="text-xs font-semibold text-slate-400">{card.label}</span>
-              </div>
+              <div className="flex items-center gap-2 text-indigo-400"><div className="rounded-full bg-indigo-500/10 p-1.5"><card.icon className="h-4 w-4" /></div><span className="text-xs font-semibold text-slate-400">{card.label}</span></div>
               <div className="mt-4 text-xl font-semibold text-white">{card.value}</div>
               <div className="mt-1 text-xs text-slate-500">{card.detail}</div>
             </div>
@@ -508,45 +316,25 @@ export default function BrainDashboard() {
           <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] py-20 px-6 text-center">
             <Inbox className="h-12 w-12 text-slate-500 mb-4" />
             <h3 className="text-lg font-semibold text-white">No brain activity yet</h3>
-            <p className="mt-2 max-w-sm text-sm text-slate-400">
-              Run the brain or trigger an automation cycle to populate the knowledge graph, memory recall, and decision history.
-            </p>
-            <button
-              onClick={() => void triggerBrain()}
-              disabled={runningAutomation}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm transition hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Play className="h-4 w-4" />
-              {runningAutomation ? 'Running Brain...' : 'Trigger Brain'}
-            </button>
+            <p className="mt-2 max-w-sm text-sm text-slate-400">Run the brain or trigger an automation cycle to populate the knowledge graph, memory recall, and decision history.</p>
+            <button onClick={() => void triggerBrain()} disabled={runningAutomation} className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-200 shadow-sm transition hover:bg-indigo-500/15 disabled:cursor-not-allowed disabled:opacity-60"><Play className="h-4 w-4" />{runningAutomation ? 'Running Brain...' : 'Trigger Brain'}</button>
           </div>
         )}
 
         <div className="rounded-[28px] border border-white/10 bg-white/[0.04] px-5 py-4 shadow-[0_12px_36px_rgba(2,6,23,0.28)]">
           <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-              <Sparkles className="h-4 w-4 text-indigo-400" />
-              Weekly Activity
-            </div>
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-200"><Sparkles className="h-4 w-4 text-indigo-400" />Weekly Activity</div>
             <div className="text-xs text-slate-500">{state.decisions?.length || 0} decisions</div>
           </div>
           <div className="h-28">
             {decisionSeries.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-xs text-slate-500">
-                No live decision history yet.
-              </div>
+              <div className="flex h-full items-center justify-center text-xs text-slate-500">No live decision history yet.</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={decisionSeries}>
                   <defs>
-                    <linearGradient id="brain-activity" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.45} />
-                      <stop offset="95%" stopColor="#a78bfa" stopOpacity={0.02} />
-                    </linearGradient>
-                    <linearGradient id="brain-variants" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#c4b5fd" stopOpacity={0.28} />
-                      <stop offset="95%" stopColor="#c4b5fd" stopOpacity={0.02} />
-                    </linearGradient>
+                    <linearGradient id="brain-activity" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#a78bfa" stopOpacity={0.45} /><stop offset="95%" stopColor="#a78bfa" stopOpacity={0.02} /></linearGradient>
+                    <linearGradient id="brain-variants" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#c4b5fd" stopOpacity={0.28} /><stop offset="95%" stopColor="#c4b5fd" stopOpacity={0.02} /></linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" />
                   <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
@@ -564,43 +352,20 @@ export default function BrainDashboard() {
           <div className="border-b border-white/10 px-5 pt-4">
             <div className="flex gap-6 text-sm">
               {TABS.map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`border-b-2 pb-3 transition-colors ${
-                    activeTab === tab ? 'border-violet-500 text-violet-400' : 'border-transparent text-slate-400 hover:text-slate-300'
-                  }`}
-                >
-                  {tab}
-                </button>
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`border-b-2 pb-3 transition-colors ${activeTab === tab ? 'border-violet-500 text-violet-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}>{tab}</button>
               ))}
             </div>
           </div>
 
           <div className="grid gap-0 xl:grid-cols-[1.8fr_0.9fr]">
             <div className="min-h-[470px] border-r border-white/10 p-5">
-              {activeTab === 'Knowledge Graph' && (
-                <KnowledgeGraph nodes={nodes} edges={edges as [string, string][]} />
-              )}
-
-              {activeTab === 'Memory Recall' && (
-                <MemoryRecallPanel
-                  playbooks={playbooks}
-                  targetProfiles={targetProfiles}
-                  episodicEventsCount={episodicEvents.length}
-                />
-              )}
-
-              {activeTab === 'Research Feed' && (
-                <ResearchFeedPanel researchRecords={researchRecords} />
-              )}
-
+              {activeTab === 'Knowledge Graph' && (<KnowledgeGraph nodes={nodes} edges={edges as [string, string][]} />)}
+              {activeTab === 'Memory Recall' && (<MemoryRecallPanel playbooks={playbooks} targetProfiles={targetProfiles} episodicEventsCount={episodicEvents.length} />)}
+              {activeTab === 'Research Feed' && (<ResearchFeedPanel researchRecords={researchRecords} />)}
               {activeTab === 'Reengagement' && (
                 <div className="space-y-3">
                   {(reengagement?.queue || []).length === 0 ? (
-                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-white/[0.04] text-sm text-slate-400">
-                      No reengagement queue is ready yet.
-                    </div>
+                    <div className="flex min-h-[430px] items-center justify-center rounded-[24px] bg-white/[0.04] text-sm text-slate-400">No reengagement queue is ready yet.</div>
                   ) : (
                     reengagement?.queue.map((target: any) => (
                       <div key={target.targetId} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4">
@@ -608,9 +373,7 @@ export default function BrainDashboard() {
                           <div className="text-sm font-medium text-white">{target.company || target.targetId}</div>
                           <div className="text-xs text-slate-400">{target.recommendedChannel || 'No channel'}</div>
                         </div>
-                        <div className="mt-2 text-xs text-slate-400">
-                          next touch {formatShortDate(target.nextEligibleAt)} · score {formatPercent(target.score)}
-                        </div>
+                        <div className="mt-2 text-xs text-slate-400">next touch {formatShortDate(target.nextEligibleAt)} · score {formatPercent(target.score)}</div>
                         <div className="mt-2 text-sm text-slate-400">{(target.reasons || []).join(' · ') || 'No memory-backed reason recorded.'}</div>
                       </div>
                     ))
@@ -621,10 +384,7 @@ export default function BrainDashboard() {
 
             <div className="space-y-4 p-5">
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                  <BrainCircuit className="h-4 w-4 text-violet-500" />
-                  Brain Summary
-                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200"><BrainCircuit className="h-4 w-4 text-violet-500" />Brain Summary</div>
                 <div className="mt-4 space-y-3 text-sm text-slate-400">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Latest Action</div>
@@ -641,114 +401,56 @@ export default function BrainDashboard() {
                 </div>
               </div>
 
-              <MemoryRecallSidebar
-                playbooks={playbooks}
-                targetProfiles={targetProfiles}
-                episodicEventsCount={episodicEvents.length}
-              />
+              <MemoryRecallSidebar playbooks={playbooks} targetProfiles={targetProfiles} episodicEventsCount={episodicEvents.length} />
 
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                  <Inbox className="h-4 w-4 text-violet-500" />
-                  Signal Intake
-                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200"><Inbox className="h-4 w-4 text-violet-500" />Signal Intake</div>
                 <div className="mt-4 space-y-2 text-sm text-slate-400">
-                  <div className="flex justify-between">
-                    <span>Research Records</span>
-                    <span>{researchRecords.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Outreach Events</span>
-                    <span>{outreachEvents.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Analytics Events</span>
-                    <span>{analyticsEvents.length}</span>
-                  </div>
+                  <div className="flex justify-between"><span>Research Records</span><span>{researchRecords.length}</span></div>
+                  <div className="flex justify-between"><span>Outreach Events</span><span>{outreachEvents.length}</span></div>
+                  <div className="flex justify-between"><span>Analytics Events</span><span>{analyticsEvents.length}</span></div>
                 </div>
               </div>
 
-              <ConnectorConfigForm
-                connectorStatuses={connectorStatuses}
-                connectorDrafts={connectorDrafts}
-                connectorSaving={connectorSaving}
-                connectorMessage={connectorMessage}
-                openClawDiagnostics={openClawDiagnostics}
-                onDraftChange={(connector, field, value) => setConnectorDrafts(current => ({
-                  ...current,
-                  [connector]: {
-                    ...current[connector],
-                    [field]: value,
-                  },
-                }))}
-                onSave={saveConnector}
-              />
+              <ConnectorConfigForm connectorStatuses={connectorStatuses} connectorDrafts={connectorDrafts} connectorSaving={connectorSaving} connectorMessage={connectorMessage} openClawDiagnostics={openClawDiagnostics} onDraftChange={(connector, field, value) => setConnectorDrafts(current => ({ ...current, [connector]: { ...current[connector], [field]: value } }))} onSave={saveConnector} />
 
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                  <ClipboardList className="h-4 w-4 text-violet-500" />
-                  Setup Requirements
-                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200"><ClipboardList className="h-4 w-4 text-violet-500" />Setup Requirements</div>
                 <div className="mt-4 space-y-3">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Live Connector Env</div>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {(setupRequirements?.environment.requiredForLiveConnectors || []).map(item => (
-                        <span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-400">{item}</span>
-                      ))}
+                      {(setupRequirements?.environment.requiredForLiveConnectors || []).map((item: string) => (<span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-400">{item}</span>))}
                     </div>
                   </div>
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">Accepted Outreach Events</div>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {(setupRequirements?.outreachEventTypes || []).map(item => (
-                        <span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-400">{item}</span>
-                      ))}
+                      {(setupRequirements?.outreachEventTypes || []).map((item: string) => (<span key={item} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] text-slate-400">{item}</span>))}
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                  <Target className="h-4 w-4 text-violet-500" />
-                  Top Targets
-                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200"><Target className="h-4 w-4 text-violet-500" />Top Targets</div>
                 <div className="mt-4 space-y-2">
                   {rankedTargets.slice(0, 3).map((profile: any) => (
                     <div key={profile.id} className="rounded-xl bg-white/[0.06] px-3 py-2">
                       <div className="text-xs font-semibold text-slate-200">{profile.company || profile.targetId}</div>
-                      <div className="mt-1 text-xs text-slate-400">
-                        {profile.segment || 'No segment'} · {profile.recommendedChannel || 'No channel'} · {profile.recommendation || 'no recommendation'}
-                      </div>
+                      <div className="mt-1 text-xs text-slate-400">{profile.segment || 'No segment'} · {profile.recommendedChannel || 'No channel'} · {profile.recommendation || 'no recommendation'}</div>
                     </div>
                   ))}
-                  {rankedTargets.length === 0 && (
-                    <div className="text-xs text-slate-400">No memory-backed targets available yet.</div>
-                  )}
+                  {rankedTargets.length === 0 && (<div className="text-xs text-slate-400">No memory-backed targets available yet.</div>)}
                 </div>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                  <Bot className="h-4 w-4 text-violet-500" />
-                  Scheduler
-                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-200"><Bot className="h-4 w-4 text-violet-500" />Scheduler</div>
                 <div className="mt-4 space-y-2 text-sm text-slate-400">
-                  <div className="flex justify-between">
-                    <span>Status</span>
-                    <span className={state.scheduler?.running ? 'text-emerald-400' : 'text-slate-500'}>
-                      {state.scheduler?.running ? 'Running' : 'Stopped'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Interval</span>
-                    <span>{state.scheduler?.intervalSeconds ? `${state.scheduler.intervalSeconds}s` : 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Last Tick</span>
-                    <span>{formatShortDate(state.scheduler?.lastTickAt || undefined)}</span>
-                  </div>
+                  <div className="flex justify-between"><span>Status</span><span className={state.scheduler?.running ? 'text-emerald-400' : 'text-slate-500'}>{state.scheduler?.running ? 'Running' : 'Stopped'}</span></div>
+                  <div className="flex justify-between"><span>Interval</span><span>{state.scheduler?.intervalSeconds ? `${state.scheduler.intervalSeconds}s` : 'N/A'}</span></div>
+                  <div className="flex justify-between"><span>Last Tick</span><span>{formatShortDate(state.scheduler?.lastTickAt || undefined)}</span></div>
                 </div>
               </div>
 
