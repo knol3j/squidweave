@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, Target, Zap, Brain, TrendingUp,
   MapPin, Plus, Sparkles
 } from 'lucide-react';
-import { dataService, Persona } from '../services/dataService';
+import { dataService, type Persona } from '../services/dataService';
 import { useCollaboration } from './CollaborationProvider';
 
 export default function AudienceInsight() {
@@ -16,7 +16,7 @@ export default function AudienceInsight() {
   useEffect(() => {
     if (!campaignState.id) return;
     
-    const unsubscribe = dataService.subscribeToPersonas(campaignState.id, (data) => {
+    const unsubscribe = dataService.subscribeToPersonas(campaignState.id, (data: Persona[]) => {
       setPersonas(data);
       setLoading(false);
     });
@@ -104,7 +104,7 @@ export default function AudienceInsight() {
                           <Zap className="w-3 h-3 text-amber-400" /> Pain Points
                         </div>
                         <ul className="space-y-1.5">
-                          {persona.pains.map((pain, idx) => (
+                          {(persona.pains as string[]).map((pain: string, idx: number) => (
                             <li key={idx} className="text-[10px] text-slate-300 flex items-start gap-1.5 leading-tight">
                               <span className="w-1 h-1 rounded-full bg-slate-600 mt-1.5 shrink-0" />
                               {pain}
@@ -117,7 +117,7 @@ export default function AudienceInsight() {
                           <TrendingUp className="w-3 h-3 text-emerald-400" /> Key Value
                         </div>
                         <ul className="space-y-1.5">
-                          {persona.gains.map((gain, idx) => (
+                          {(persona.gains as string[]).map((gain: string, idx: number) => (
                             <li key={idx} className="text-[10px] text-slate-300 flex items-start gap-1.5 leading-tight">
                               <span className="w-1 h-1 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
                               {gain}
