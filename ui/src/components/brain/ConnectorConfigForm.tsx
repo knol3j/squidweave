@@ -1,6 +1,5 @@
-import React from 'react';
 import { Cable } from 'lucide-react';
-import { ConnectorStatus, OpenClawDiagnostic } from '../../services/dataService';
+import { type ConnectorStatus, type OpenClawDiagnostic } from '../../services/dataService';
 
 interface ConnectorConfigFormProps {
   connectorStatuses: ConnectorStatus[];
