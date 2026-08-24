@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -9,23 +9,19 @@ import {
   YAxis,
 } from 'recharts';
 import {
-  Activity,
   AlertTriangle,
   Bot,
   BrainCircuit,
   ClipboardList,
-  FolderKanban,
-  Globe2,
   Inbox,
   MemoryStick,
-  Network,
   Play,
   Sparkles,
   Target,
   Workflow,
 } from 'lucide-react';
 import { useCollaboration } from './CollaborationProvider';
-import { ApiError, ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, OpenClawDiagnostic, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
+import { ApiError, type ConnectorStatus, dataService, MemoryPlaybook, MemoryRecall, OpenClawDiagnostic, ResearchRecord, SetupRequirements, TargetProfile } from '../services/dataService';
 import { AGENT_SYSTEM } from '../lib/agentSystem';
 import { formatPercent, formatShortDate } from '../lib/format';
 import KnowledgeGraph from './brain/KnowledgeGraph';
@@ -172,7 +168,7 @@ export default function BrainDashboard() {
   const [loadWarnings, setLoadWarnings] = useState<string[]>([]);
   const [runningAutomation, setRunningAutomation] = useState(false);
 
-  const refreshDashboard = React.useCallback(async () => {
+  const refreshDashboard = useCallback(async () => {
     const warnings: string[] = [];
     let hardFailure: string | null = null;
     const results = await Promise.allSettled([
