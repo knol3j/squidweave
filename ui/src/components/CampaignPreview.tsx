@@ -88,20 +88,21 @@ function splitList(value: string) {
 }
 
 function buildIntakeDraft(campaignState: ReturnType<typeof useCollaboration>['campaignState']): IntakeDraft {
+  const cs = campaignState as Record<string, any>;
   return {
-    clientName: campaignState.clientName || '',
-    brandName: campaignState.name || '',
-    clientNeed: campaignState.clientNeed || campaignState.activePrompt || campaignState.objective || '',
-    audience: campaignState.audience || '',
-    offer: campaignState.offer || '',
-    markets: ((campaignState.markets || campaignState.locales || []) as string[]).join(', '),
-    channel: (campaignState.channel || '') as string,
-    brandVoice: (campaignState.brandVoice || '') as string,
-    differentiators: (campaignState.differentiators || '') as string,
-    constraints: (campaignState.constraints || '') as string,
-    successDefinition: (campaignState.successDefinition || '') as string,
-    successMetrics: ((campaignState.successMetrics || []) as string[]).join('\n'),
-    researchObjectives: ((campaignState.researchObjectives || []) as string[]).join('\n'),
+    clientName: (cs.clientName || '') as string,
+    brandName: (cs.name || '') as string,
+    clientNeed: (cs.clientNeed || cs.activePrompt || cs.objective || '') as string,
+    audience: (cs.audience || '') as string,
+    offer: (cs.offer || '') as string,
+    markets: ((cs.markets || cs.locales || []) as string[]).join(', '),
+    channel: (cs.channel || '') as string,
+    brandVoice: (cs.brandVoice || '') as string,
+    differentiators: (cs.differentiators || '') as string,
+    constraints: (cs.constraints || '') as string,
+    successDefinition: (cs.successDefinition || '') as string,
+    successMetrics: ((cs.successMetrics || []) as string[]).join('\n'),
+    researchObjectives: ((cs.researchObjectives || []) as string[]).join('\n'),
   };
 }
 
@@ -360,7 +361,7 @@ export default function CampaignPreview() {
     [messages],
   );
 
-  const enabledModules = campaignState.enabledModules || [];
+  const enabledModules = (campaignState as Record<string, any>).enabledModules || [];
   const coverage = Math.round((enabledModules.length / AGENT_SYSTEM.length) * 100);
   const uniqueTargets = new Set(researchRecords.map(record => record.targetId)).size;
 
@@ -449,7 +450,7 @@ export default function CampaignPreview() {
       const result = await dataService.generateProspects(campaignId, {
         reason: 'mission-control-run',
         limit: 24,
-      });
+      }) as ProspectingRun & { plan: ProspectingPlan; candidates: SourcedContact[] };
       setProspectingPlan(result.plan);
       setProspects(result.candidates);
       setProspectingRuns(current => [result.run, ...current]);

@@ -136,7 +136,7 @@ export interface Campaign {
   metrics?: CampaignMetrics;
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ContentPack {
@@ -144,7 +144,7 @@ export interface ContentPack {
   campaignId: string;
   variants: Variation[];
   createdAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface CampaignMetrics {
@@ -155,7 +155,7 @@ export interface CampaignMetrics {
   opened?: number;
   replied?: number;
   booked?: number;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Variation {
@@ -170,7 +170,7 @@ export interface Variation {
   tone?: string;
   status?: string;
   approved?: boolean;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Persona {
@@ -183,7 +183,7 @@ export interface Persona {
   status: string;
   description?: string;
   estimatedReach?: number;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Metric {
@@ -193,7 +193,7 @@ export interface Metric {
   unit: string;
   timestamp: string;
   change?: number;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Keyword {
@@ -203,7 +203,7 @@ export interface Keyword {
   difficulty: number;
   intent: string;
   source: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface MemoryPlaybook {
@@ -215,7 +215,7 @@ export interface MemoryPlaybook {
   observations: string[];
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface TargetProfile {
@@ -229,7 +229,7 @@ export interface TargetProfile {
   signals?: string[];
   enrichment?: Record<string, unknown>;
   createdAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface MemoryRecall {
@@ -238,14 +238,14 @@ export interface MemoryRecall {
   semanticMemories?: SemanticMemories;
   episodicMemories?: unknown[];
   tacticalInsights?: string[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface SemanticMemories {
   tacticObservations?: string[];
   strategyPatterns?: string[];
   channelInsights?: string[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ConnectorStatus {
@@ -255,7 +255,7 @@ export interface ConnectorStatus {
   lastSync?: string;
   error?: string;
   details?: Record<string, unknown>;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface OpenClawDiagnostic {
@@ -264,7 +264,7 @@ export interface OpenClawDiagnostic {
   latencyMs: number;
   error?: string;
   lastChecked?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ConnectorConfig {
@@ -272,21 +272,21 @@ export interface ConnectorConfig {
   settings: Record<string, unknown>;
   secrets?: string[];
   requiredFields?: string[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface SetupRequirements {
   ready: boolean;
   missing: string[];
   optional: string[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface OpenClawDiagnosticResponse {
   overall: string;
   checks: OpenClawDiagnostic[];
   timestamp: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ResearchRecord {
@@ -303,7 +303,7 @@ export interface ResearchRecord {
   origin?: string;
   sourceUrl?: string;
   createdAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ProspectingPlan {
@@ -314,7 +314,7 @@ export interface ProspectingPlan {
   filters: Record<string, unknown>;
   idealPersona?: Record<string, unknown>;
   createdAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface SourcedContact {
@@ -328,7 +328,7 @@ export interface SourcedContact {
   source: string;
   score?: number;
   status?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ProspectingRun {
@@ -340,7 +340,7 @@ export interface ProspectingRun {
   startedAt?: string;
   completedAt?: string;
   error?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ProspectPipeline {
@@ -348,14 +348,14 @@ export interface ProspectPipeline {
   stages: ProspectStage[];
   totalProspects: number;
   lastUpdated?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ProspectStage {
   name: string;
   count: number;
   prospects: SourcedContact[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ActivationRun {
@@ -367,7 +367,7 @@ export interface ActivationRun {
   startedAt?: string;
   completedAt?: string;
   error?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface FundingInvestor {
@@ -387,7 +387,7 @@ export interface FundingInvestor {
   enrichment?: Record<string, unknown>;
   lastEnrichedAt?: string;
   createdAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface FundingPipeline {
@@ -396,14 +396,14 @@ export interface FundingPipeline {
   stages: FundingStage[];
   summary: FundingSummary;
   lastUpdated?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface FundingStage {
   name: string;
   count: number;
   investors: FundingInvestor[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface FundingSummary {
@@ -413,7 +413,7 @@ export interface FundingSummary {
   interested: number;
   committed: number;
   passed: number;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface FundingOutreachEvent {
@@ -429,7 +429,7 @@ export interface FundingOutreachEvent {
   subject?: string;
   body?: string;
   error?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface FundingRun {
@@ -443,7 +443,7 @@ export interface FundingRun {
   startedAt?: string;
   completedAt?: string;
   error?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface OutreachEvent {
@@ -456,7 +456,7 @@ export interface OutreachEvent {
   sentAt?: string;
   subject?: string;
   error?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface DlqMessage {
@@ -465,14 +465,14 @@ export interface DlqMessage {
   error: string;
   payload?: Record<string, unknown>;
   createdAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface DlqState {
   messages: DlqMessage[];
   count: number;
   lastMessage?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface SafetyExecution {
@@ -483,7 +483,7 @@ export interface SafetyExecution {
   checkedAt?: string;
   passed?: boolean;
   details?: Record<string, unknown>;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface AnalyticsEvent {
@@ -494,7 +494,7 @@ export interface AnalyticsEvent {
   count: number;
   date?: string;
   metadata?: Record<string, unknown>;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Contact {
@@ -509,7 +509,7 @@ export interface Contact {
   customFields?: Record<string, unknown>;
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Opportunity {
@@ -523,7 +523,7 @@ export interface Opportunity {
   customFields?: Record<string, unknown>;
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Pipeline {
@@ -533,14 +533,14 @@ export interface Pipeline {
   stages?: PipelineStage[];
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface PipelineStage {
   id: string;
   name: string;
   position?: number;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Workflow {
@@ -551,7 +551,7 @@ export interface Workflow {
   steps?: WorkflowStep[];
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface WorkflowStep {
@@ -560,7 +560,7 @@ export interface WorkflowStep {
   type: string;
   position?: number;
   config?: Record<string, unknown>;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Note {
@@ -569,7 +569,7 @@ export interface Note {
   body: string;
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Task {
@@ -582,7 +582,7 @@ export interface Task {
   completedAt?: string;
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface CalendarEvent {
@@ -595,7 +595,7 @@ export interface CalendarEvent {
   location?: string;
   createdAt?: string;
   updatedAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface Tag {
@@ -604,7 +604,7 @@ export interface Tag {
   name: string;
   color?: string;
   createdAt?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface IngestOutcomePayload {
@@ -613,32 +613,32 @@ export interface IngestOutcomePayload {
     source: string;
     data: Record<string, unknown>;
   }>;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface AutomationPayload {
   campaignId?: string;
   reason?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface PromptAutopilotPayload {
   prompt: string;
   options?: Record<string, unknown>;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ContentGeneratePayload {
   campaignId: string;
   locales?: string[];
   reason?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface GhlSyncOptions {
   locationId?: string;
   limit?: number;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 // ─── 3. HELPER FUNCTIONS ─────────────────────────────────────────────────────
