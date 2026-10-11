@@ -42,6 +42,7 @@ const rolePlan = {
   refine: [runDataRefinement],
   outreach: [runOutreachReadiness],
   reporting: [runReporting],
+  discovery: [runDiscovery],
   funding: [runFunding],
   ci: [checkGithubRuns],
   audit: [checkRepoAudit],
@@ -61,6 +62,7 @@ function defaultInterval(role) {
     profile: 900,
     refine: 1200,
     outreach: 1800,
+    discovery: 3600,
     reporting: 900,
     funding: 7200,
     supervisor: 300,
@@ -443,6 +445,55 @@ async function runOutreachReadiness() {
     });
   }
   log(runs.every(run => run.ok && !run.connectorIssues.length) ? 'info' : 'error', 'outreach.readiness', { campaigns: runs });
+}
+
+const DISCOVERY_LIMIT = Number(process.env.CLAWDBOT_DISCOVERY_LIMIT || 5);
+const DISCOVERY_MAX_RESULTS = Number(process.env.CLAWDBOT_DISCOVERY_MAX_RESULTS || 20);
+
+async function runDiscovery() {
+  const campaigns = await getCampaigns();
+  const runs = [];
+  for (const campaign of campaigns.slice(0, DISCOVERY_LIMIT)) {
+    const query = campaignQuery(campaign);
+    const startedAt = Date.now();
+    try {
+      const { runFullDiscovery } = await import('../src/lib/scrapers/discovery-scout.mjs');
+      const report = await runFullDiscovery(query, {
+        githubToken: GITHUB_TOKEN,
+        maxResults: DISCOVERY_MAX_RESULTS,
+      });
+
+      // POST discovery results back to the API
+      const ingest = await requestApi('/discovery/ingest', {
+        method: 'POST',
+        body: JSON.stringify({
+          campaignId: campaign.id,
+          query,
+          report,
+        }),
+      });
+
+      runs.push({
+        campaignId: campaign.id,
+        query,
+        ok: ingest.ok,
+        status: ingest.status,
+        durationMs: Date.now() - startedAt,
+        summary: report.summary,
+        error: ingest.ok ? null : ingest.body,
+      });
+    } catch (error) {
+      runs.push({
+        campaignId: campaign.id,
+        query,
+        ok: false,
+        error: error.message,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+    await sleep(2000);
+  }
+  log(runs.every(run => run.ok) ? 'info' : 'error', 'discovery.run', { campaigns: runs });
 }
 
 async function runReporting() {

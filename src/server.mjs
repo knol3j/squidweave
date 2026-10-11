@@ -2,17 +2,82 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { timingSafeEqual } from "node:crypto";
 import { config } from "./config.mjs";
 
 // ── Auth middleware ───────────────────────────────────────────────
+// Fail closed: when a secret is configured, a missing or wrong credential is rejected.
+// Set SQUIDWEAVE_ALLOW_INSECURE=true only for throwaway local dev to restore the old
+// fail-open behavior.
+const INSECURE = ["1", "true", "yes", "on"].includes(String(process.env.SQUIDWEAVE_ALLOW_INSECURE || "").toLowerCase());
 const API_KEY = process.env.SQUIDWEAVE_API_KEY || null;
+
+// Paths that must stay reachable without an API key: health checks, email-tracking
+// pixels/redirects (loaded by recipients' mail clients), provider webhooks
+// (Brevo/Mailgun/GHL, which authenticate by their own signature, not our key), and
+// static UI assets (a browser cannot attach x-api-key to its initial document/asset
+// loads; those are gated by requireUiAuth instead).
+function isPublicPath(request, url, parts) {
+  if (url.pathname === "/health") return true;
+  if (parts[0] === "webhooks" && (parts[1] === "pixel" || parts[1] === "click")) return true;
+  if (url.pathname === "/webhooks/brevo" || url.pathname === "/webhooks/mailgun" || url.pathname === "/webhooks/email") return true;
+  if (url.pathname === "/integrations/ghl/webhook") return true;
+  if (request.method === "GET" && config.staticDir && (url.pathname === "/" || extname(url.pathname) !== "")) return true;
+  return false;
+}
+
+function safeEqual(provided, expected) {
+  const a = Buffer.from(String(provided ?? ""));
+  const b = Buffer.from(String(expected ?? ""));
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+// Decode a click-tracking target and only allow http(s) URLs on an allowlisted host.
+// Blocks javascript:/data:/relative schemes used for open-redirect and XSS payloads.
+// TRACKING_REDIRECT_ALLOWLIST (comma-separated host suffixes) restricts destinations;
+// when unset, any http(s) absolute URL is accepted.
+function safeRedirectTarget(encodedTarget) {
+  const FALLBACK = "https://example.com";
+  if (!encodedTarget) return FALLBACK;
+  let decoded;
+  try {
+    decoded = Buffer.from(encodedTarget, "base64url").toString("utf8");
+  } catch {
+    return FALLBACK;
+  }
+  let parsed;
+  try {
+    parsed = new URL(decoded);
+  } catch {
+    return FALLBACK;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return FALLBACK;
+  }
+  const allowlist = String(process.env.TRACKING_REDIRECT_ALLOWLIST || "")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+  if (allowlist.length) {
+    const host = parsed.hostname.toLowerCase();
+    const ok = allowlist.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+    if (!ok) return FALLBACK;
+  }
+  return parsed.toString();
+}
 
 function escapeHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function requireApiKey(request, response) {
-  if (!API_KEY) return true;
+function requireApiKey(request, response, url, parts) {
+  if (isPublicPath(request, url, parts)) return true;
+  if (!API_KEY) {
+    if (INSECURE) return true;
+    sendJson(request, response, 503, { error: "Server misconfigured: SQUIDWEAVE_API_KEY is not set. Refusing unauthenticated access." });
+    return false;
+  }
   const provided = request.headers["x-api-key"];
-  if (provided === API_KEY) return true;
+  if (provided && safeEqual(provided, API_KEY)) return true;
   sendJson(request, response, 401, { error: "Unauthorized. Provide x-api-key header matching SQUIDWEAVE_API_KEY." });
   return false;
 }
@@ -22,14 +87,14 @@ const UI_USER = process.env.UI_USER || "";
 const UI_PASS = process.env.UI_PASS || "";
 
 function requireUiAuth(request, response) {
-  if (!UI_USER || !UI_PASS) return true;
+  if (!UI_USER || !UI_PASS) {
+    if (INSECURE) return true;
+    sendUiAuthChallenge(response, "Authentication required");
+    return false;
+  }
   const header = request.headers["authorization"];
   if (!header || !header.startsWith("Basic ")) {
-    response.writeHead(401, {
-      "content-type": "application/json; charset=utf-8",
-      "www-authenticate": 'Basic realm="SquidWeave Console"',
-    });
-    response.end(JSON.stringify({ error: "Authentication required" }));
+    sendUiAuthChallenge(response, "Authentication required");
     return false;
   }
   const encoded = header.slice(6);
@@ -49,15 +114,19 @@ function requireUiAuth(request, response) {
   }
   const user = decoded.slice(0, colon);
   const pass = decoded.slice(colon + 1);
-  if (user !== UI_USER || pass !== UI_PASS) {
-    response.writeHead(401, {
-      "content-type": "application/json; charset=utf-8",
-      "www-authenticate": 'Basic realm="SquidWeave Console"',
-    });
-    response.end(JSON.stringify({ error: "Invalid credentials" }));
+  if (!safeEqual(user, UI_USER) || !safeEqual(pass, UI_PASS)) {
+    sendUiAuthChallenge(response, "Invalid credentials");
     return false;
   }
   return true;
+}
+
+function sendUiAuthChallenge(response, message) {
+  response.writeHead(401, {
+    "content-type": "application/json; charset=utf-8",
+    "www-authenticate": 'Basic realm="SquidWeave Console"',
+  });
+  response.end(JSON.stringify({ error: message }));
 }
 // ──────────────────────────────────────────────────────────────────
 import { normalizeEvent } from "./lib/analytics.mjs";
@@ -172,14 +241,26 @@ function getBearerToken(request) {
 }
 
 function requireOpenAiCompatAuth(request, response) {
-  const accepted = new Set([
+  const accepted = [
     process.env.OPENCLAW_TOKEN,
     process.env.CLAWDBOT_TOKEN,
     process.env.AUTH_TOKEN,
     process.env.SQUIDWEAVE_API_KEY,
-  ].filter(Boolean));
+  ].filter(Boolean);
 
-  if (!accepted.size || accepted.has(getBearerToken(request))) {
+  if (!accepted.length) {
+    if (INSECURE) return true;
+    sendJson(request, response, 503, {
+      error: {
+        message: "Server misconfigured: no OpenAI-compat token is set. Refusing unauthenticated access.",
+        type: "authentication_error",
+      },
+    });
+    return false;
+  }
+
+  const token = getBearerToken(request);
+  if (token && accepted.some((candidate) => safeEqual(token, candidate))) {
     return true;
   }
 
@@ -260,9 +341,16 @@ function writeSse(response, event, data) {
   response.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-async function readBody(request) {
+async function readBody(request, maxBytes = Number(process.env.MAX_BODY_BYTES || 1_000_000)) {
   const chunks = [];
+  let total = 0;
   for await (const chunk of request) {
+    total += chunk.length;
+    if (total > maxBytes) {
+      const err = new Error(`Request body too large (limit ${maxBytes} bytes).`);
+      err.statusCode = 413;
+      throw err;
+    }
     chunks.push(chunk);
   }
   const raw = Buffer.concat(chunks).toString("utf8");
@@ -682,7 +770,7 @@ async function createApp() {
       return;
     }
 
-    if (!requireApiKey(request, response)) return;
+    if (!requireApiKey(request, response, url, parts)) return;
 
     if (request.method === "GET" && url.pathname === "/health") {
       sendJson(request, response, 200, {
@@ -1384,6 +1472,91 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         },
         result,
       });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/discovery/ingest") {
+      const body = await readBody(request);
+      const campaignId = resolveCampaignId(store, body.campaignId);
+      const report = body.report;
+      if (!report) {
+        sendJson(request, response, 400, { error: "report is required." });
+        return;
+      }
+
+      // Store discovery records as research records
+      const discoveryRecords = [];
+      for (const result of (report.searchResults || [])) {
+        discoveryRecords.push({
+          campaignId,
+          targetId: `discovery-search-${Buffer.from(result.url).toString('base64').slice(0, 32)}`,
+          source: 'discovery-search',
+          title: result.title,
+          url: result.url,
+          snippet: result.snippet || '',
+          query: report.query,
+          metadata: { discoveryRole: true, searchSource: result.source || 'unknown' },
+        });
+      }
+      for (const repo of (report.github?.repos || [])) {
+        discoveryRecords.push({
+          campaignId,
+          targetId: `discovery-repo-${repo.name?.replace('/', '-')}`,
+          source: 'discovery-github',
+          title: repo.description || repo.name,
+          url: repo.url,
+          snippet: `${repo.stars} stars | ${repo.language || 'unknown'}`,
+          query: report.query,
+          metadata: { discoveryRole: true, stars: repo.stars, language: repo.language, topics: repo.topics },
+        });
+      }
+      for (const intel of (report.domainIntel || [])) {
+        discoveryRecords.push({
+          campaignId,
+          targetId: `discovery-domain-${intel.domain}`,
+          source: 'discovery-domain',
+          title: `Domain Intel: ${intel.domain}`,
+          url: `https://${intel.domain}`,
+          snippet: JSON.stringify(intel.summary || {}).slice(0, 500),
+          query: report.query,
+          metadata: {
+            discoveryRole: true,
+            domain: intel.domain,
+            dns: intel.dns,
+            whois: intel.whois,
+            subdomains: intel.subdomains,
+            securityHeaders: intel.securityHeaders,
+            tech: intel.tech,
+            sensitivePaths: intel.sensitivePaths,
+            openPorts: intel.openPorts,
+            emails: intel.emails,
+          },
+        });
+      }
+
+      const persisted = [];
+      for (const record of discoveryRecords.slice(0, 100)) {
+        try {
+          persisted.push(await store.addResearchRecord(record));
+        } catch { /* skip individual failures */ }
+      }
+
+      sendJson(request, response, 200, {
+        ok: true,
+        mode: "discovery",
+        campaignId,
+        recordsStored: persisted.length,
+        summary: report.summary,
+        report: { query: report.query, timestamp: report.timestamp, searchResults: report.searchResults?.length || 0, github: report.github, domainCount: report.domainIntel?.length || 0 },
+      });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/discovery/reports") {
+      const campaignId = url.searchParams.get("campaignId");
+      const records = store.listResearchRecords ? store.listResearchRecords(campaignId) : [];
+      const discoveryRecords = records.filter(r => r.metadata?.discoveryRole === true);
+      sendJson(request, response, 200, { records: discoveryRecords });
       return;
     }
 
@@ -3021,29 +3194,35 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     // ── Tracking Webhooks ──────────────────────────────────────
     // Email open tracking pixel
     if (request.method === "GET" && parts[0] === "webhooks" && parts[1] === "pixel" && parts.length >= 5) {
+      const [campaignId, investorId, emailId, token] = parts.slice(2, 6);
+      if (trackingEngine.verifyPixelToken(campaignId, investorId, emailId, token)) {
+        trackingEngine.recordOpen({
+          campaignId,
+          investorId,
+          emailId,
+          ip: request.headers["x-forwarded-for"] || request.socket?.remoteAddress,
+          userAgent: request.headers["user-agent"],
+        }).catch(() => {});
+      }
       trackingEngine.servePixel(request, response);
-      trackingEngine.recordOpen({
-        campaignId: parts[2],
-        investorId: parts[3],
-        emailId: parts[4],
-        ip: request.headers["x-forwarded-for"] || request.socket?.remoteAddress,
-        userAgent: request.headers["user-agent"],
-      }).catch(() => {});
       return;
     }
 
     // Email click tracking redirect
-    if (request.method === "GET" && parts[0] === "webhooks" && parts[1] === "click" && parts.length >= 5) {
-      const targetUrl = Buffer.from(parts[5] || "", "base64url").toString("utf8");
-      trackingEngine.recordClick({
-        campaignId: parts[2],
-        investorId: parts[3],
-        emailId: parts[4],
-        targetUrl,
-        ip: request.headers["x-forwarded-for"] || request.socket?.remoteAddress,
-        userAgent: request.headers["user-agent"],
-      }).catch(() => {});
-      response.writeHead(302, { location: targetUrl || "https://example.com" });
+    if (request.method === "GET" && parts[0] === "webhooks" && parts[1] === "click" && parts.length >= 6) {
+      const [campaignId, investorId, emailId, token, encodedTarget] = parts.slice(2, 7);
+      const targetUrl = safeRedirectTarget(encodedTarget);
+      if (trackingEngine.verifyPixelToken(campaignId, investorId, emailId, token)) {
+        trackingEngine.recordClick({
+          campaignId,
+          investorId,
+          emailId,
+          targetUrl,
+          ip: request.headers["x-forwarded-for"] || request.socket?.remoteAddress,
+          userAgent: request.headers["user-agent"],
+        }).catch(() => {});
+      }
+      response.writeHead(302, { location: targetUrl });
       response.end();
       return;
     }
@@ -3119,7 +3298,9 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     sendJson(request, response, 404, { error: "Not found" });
   } catch (error) {
     try {
-      const statusCode = error instanceof UnsafeExecutionError ? error.statusCode : 500;
+      const statusCode = error instanceof UnsafeExecutionError
+        ? error.statusCode
+        : (Number.isInteger(error?.statusCode) ? error.statusCode : 500);
       sendJson(request, response, statusCode, {
         error: error.message,
         details: error instanceof UnsafeExecutionError ? error.details : undefined,
