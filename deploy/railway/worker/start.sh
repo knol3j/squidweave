@@ -26,7 +26,7 @@ if [ ! -d "$SQUIDWEAVE_REPO_DIR" ]; then
   git clone --depth 1 --branch "$SQUIDWEAVE_REF" "$SQUIDWEAVE_REPO" "$SQUIDWEAVE_REPO_DIR" \
     && cd "$SQUIDWEAVE_REPO_DIR" \
     && npm ci --omit=dev \
-    && npm --prefix ui ci
+    && npm --prefix ui ci --include=dev
 fi
 
 # Required environment variables.
