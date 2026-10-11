@@ -33,6 +33,26 @@ function safeEqual(provided, expected) {
   return timingSafeEqual(a, b);
 }
 
+// True when the request carries valid Basic UI credentials. Lets a logged-in
+// browser session reach API routes without shipping SQUIDWEAVE_API_KEY to the
+// client. No side effects: callers decide how to respond.
+function basicAuthOk(request) {
+  if (!UI_USER || !UI_PASS) return false;
+  const header = request.headers["authorization"];
+  if (!header || !header.startsWith("Basic ")) return false;
+  let decoded;
+  try {
+    decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
+  } catch {
+    return false;
+  }
+  const colon = decoded.indexOf(":");
+  if (colon === -1) return false;
+  const user = decoded.slice(0, colon);
+  const pass = decoded.slice(colon + 1);
+  return safeEqual(user, UI_USER) && safeEqual(pass, UI_PASS);
+}
+
 // Decode a click-tracking target and only allow http(s) URLs on an allowlisted host.
 // Blocks javascript:/data:/relative schemes used for open-redirect and XSS payloads.
 // TRACKING_REDIRECT_ALLOWLIST (comma-separated host suffixes) restricts destinations;
@@ -73,11 +93,13 @@ function requireApiKey(request, response, url, parts) {
   if (isPublicPath(request, url, parts)) return true;
   if (!API_KEY) {
     if (INSECURE) return true;
+    if (basicAuthOk(request)) return true;
     sendJson(request, response, 503, { error: "Server misconfigured: SQUIDWEAVE_API_KEY is not set. Refusing unauthenticated access." });
     return false;
   }
   const provided = request.headers["x-api-key"];
   if (provided && safeEqual(provided, API_KEY)) return true;
+  if (basicAuthOk(request)) return true;
   sendJson(request, response, 401, { error: "Unauthorized. Provide x-api-key header matching SQUIDWEAVE_API_KEY." });
   return false;
 }

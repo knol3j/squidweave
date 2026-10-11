@@ -5,8 +5,11 @@
 
 // ─── 1. API INFRASTRUCTURE ───────────────────────────────────────────────────
 
-const RAILWAY_BASE = "https://squidweave-api-production.up.railway.app";
+const RAILWAY_BASE = (import.meta as any).env?.VITE_API_URL || "https://squidweave-api-production.up.railway.app";
 let API_BASE = RAILWAY_BASE;
+
+// API key comes from build-time env (VITE_API_KEY); never hardcode a real secret.
+const API_KEY: string = (import.meta as any).env?.VITE_API_KEY || "";
 
 // ─── Backend selection with localStorage persistence ───
 const STORAGE_KEY = "sw_api_base";
@@ -105,14 +108,15 @@ export class ApiError extends Error {
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    ...getAuthHeaders(),
+    ...(init?.headers as Record<string, string> || {}),
+  };
+  if (API_KEY) headers["x-api-key"] = API_KEY;
   const response = await fetch(getApiUrl(path), {
     ...init,
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": "squidweave-local-dev",
-      ...getAuthHeaders(),
-      ...(init?.headers || {}),
-    },
+    headers,
   });
   if (!response.ok) {
     if (response.status === 401) {
