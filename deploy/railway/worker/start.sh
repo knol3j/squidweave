@@ -14,6 +14,13 @@ if [ "${HERMES_SETUP_ON_BOOT:-false}" = "true" ]; then
   hermes config check || true
 fi
 
+# Seed Hermes credentials from the local agent so the worker uses the same auth.
+if [ -n "${HERMES_AUTH_JSON_B64:-}" ]; then
+  mkdir -p "$HERMES_HOME"
+  echo "$HERMES_AUTH_JSON_B64" | base64 -d > "${HERMES_HOME}/auth.json"
+  chmod 600 "${HERMES_HOME}/auth.json"
+fi
+
 # Ensure API base/token are present for SquidWeave integration
 if [ -z "${SQUIDWEAVE_API_BASE_URL:-}" ]; then
   echo "SQUIDWEAVE_API_BASE_URL is required"
