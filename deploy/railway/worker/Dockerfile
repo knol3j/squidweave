@@ -1,13 +1,13 @@
 FROM python:3.12-slim
 
-# Install system dependencies
+# Install system dependencies (libatomic1 is needed by Hermes's bundled Node)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     git \
     bash \
     xz-utils \
-    ca-certificates \
+    libatomic1 \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 22 (Hermes agents reuse SquidWeave Node scripts)
