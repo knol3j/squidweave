@@ -88,5 +88,19 @@ schedule_agent automation "1h"
 schedule_agent bootstrap  "6h"
 schedule_agent enrichment "1h"
 
-# Start Hermes gateway (Telegram + cron scheduler)
-exec hermes gateway run
+# Start Hermes gateway in the background for Telegram and cron heartbeat.
+hermes gateway run &
+GATEWAY_PID=$!
+
+# Give the gateway a moment to initialize before driving cron ticks.
+sleep 10
+
+# Drive the Hermes cron scheduler manually; `hermes cron tick` runs due jobs once.
+# This avoids needing an installed systemd/launchd gateway service in the container.
+while kill -0 "$GATEWAY_PID" 2>/dev/null; do
+  hermes cron tick >/dev/null 2>&1 || true
+  sleep 60
+done
+
+# If the gateway exits, so does the container.
+wait "$GATEWAY_PID"
