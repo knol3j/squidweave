@@ -1,71 +1,172 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Megaphone, Plus, TrendingUp, Users, Eye, MousePointer } from "lucide-react";
+import { Megaphone, Loader2, AlertCircle, Inbox } from "lucide-react";
+import {
+  dataService,
+  type Campaign,
+} from "@/services/dataService";
 
-interface Campaign { id: number; name: string; status: "active" | "paused" | "draft"; impressions: number; clicks: number; conversions: number; budget: string; spend: string; }
+function statusTone(status: string): string {
+  const s = (status || "").toLowerCase();
+  if (s === "active") return "bg-emerald-500/10 text-emerald-600";
+  if (s === "paused") return "bg-amber-500/10 text-amber-600";
+  return "bg-muted text-muted-foreground";
+}
 
 export default function Campaigns() {
-  const [campaigns] = useState<Campaign[]>([
-    { id: 1, name: "Summer Sale 2024", status: "active", impressions: 45200, clicks: 1840, conversions: 92, budget: "$5,000", spend: "$3,240" },
-    { id: 2, name: "Retargeting - Cart Abandoners", status: "active", impressions: 28300, clicks: 1240, conversions: 68, budget: "$3,000", spend: "$1,890" },
-    { id: 3, name: "Lookalike - Top Customers", status: "paused", impressions: 15600, clicks: 620, conversions: 31, budget: "$4,000", spend: "$980" },
-    { id: 4, name: "Email Nurture Sequence", status: "draft", impressions: 0, clicks: 0, conversions: 0, budget: "N/A", spend: "$0" },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const c = await dataService.getCampaigns();
+        if (!alive) return;
+        setCampaigns(Array.isArray(c) ? c : []);
+      } catch (e: unknown) {
+        if (!alive) return;
+        const status = (e as { status?: number })?.status;
+        setError(
+          status === 401 || status === 503
+            ? "The backend rejected the request (missing or invalid credentials). Sign in again and reload."
+            : "Could not reach the SquidWeave backend. Check that it is running and reachable."
+        );
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const activeCount = campaigns.filter(
+    (c) => (c.status || "").toLowerCase() === "active"
+  ).length;
+  const totalImpressions = campaigns.reduce(
+    (sum, c) => sum + (Number(c.metrics?.impressions) || 0),
+    0
+  );
+  const totalClicks = campaigns.reduce(
+    (sum, c) => sum + (Number(c.metrics?.clicks) || 0),
+    0
+  );
+  const ctr = totalImpressions
+    ? Math.round((totalClicks / totalImpressions) * 1000) / 10
+    : null;
+
+  const stats = [
+    { label: "Campaigns", value: loading ? "…" : String(campaigns.length), icon: <Megaphone className="w-5 h-5" /> },
+    { label: "Active", value: loading ? "…" : String(activeCount), icon: <Megaphone className="w-5 h-5" /> },
+    { label: "Impressions", value: loading ? "…" : totalImpressions.toLocaleString(), icon: <Megaphone className="w-5 h-5" /> },
+    { label: "CTR", value: loading ? "…" : ctr === null ? "—" : `${ctr}%`, icon: <Megaphone className="w-5 h-5" /> },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Campaigns</h1>
-            <p className="text-slate-400 mt-1">Manage your marketing campaigns</p>
-          </div>
-          <Button className="bg-gradient-to-r from-blue-600 to-purple-600"><Plus className="w-4 h-4 mr-2" /> New Campaign</Button>
-        </div>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Campaigns</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Your campaigns and their live performance.
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[{ label: "Active Campaigns", value: "12", icon: <Megaphone className="w-5 h-5" />, color: "from-blue-500 to-cyan-500" },
-            { label: "Total Impressions", value: "89.1K", icon: <Eye className="w-5 h-5" />, color: "from-purple-500 to-pink-500" },
-            { label: "CTR", value: "4.2%", icon: <MousePointer className="w-5 h-5" />, color: "from-emerald-500 to-teal-500" }].map((stat, i) => (
-            <Card key={i} className="bg-slate-900/50 border-slate-700/50">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-gradient-to-r ${stat.color}`}>{stat.icon}</div>
-                  <div>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-slate-400">{stat.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {error && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="p-5 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium text-destructive">Backend unavailable</p>
+              <p className="text-sm text-muted-foreground mt-1">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        <div className="space-y-4">
-          {campaigns.map(c => (
-            <Card key={c.id} className="bg-slate-900/50 border-slate-700/50">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold">{c.name}</h3>
-                    <Badge className={c.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : c.status === 'paused' ? 'bg-amber-500/10 text-amber-400' : 'bg-slate-500/10 text-slate-400'}>{c.status}</Badge>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <Card key={stat.label}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>{stat.icon}</span>
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              </div>
+              <p className="mt-3 text-2xl font-semibold tabular-nums">{stat.value}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{stat.label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {!loading && !error && campaigns.length === 0 && (
+        <Card>
+          <CardContent className="py-12 flex flex-col items-center gap-2 text-center">
+            <Inbox className="w-8 h-8 text-muted-foreground" />
+            <p className="font-medium">No campaigns yet</p>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Campaigns you create will appear here with their real impressions,
+              clicks, and conversions.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-4">
+        {!loading &&
+          campaigns.map((c) => {
+            const m = c.metrics || {};
+            return (
+              <Card key={c.id}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-4 gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <h3 className="text-lg font-semibold truncate">{c.name}</h3>
+                      <Badge className={statusTone(c.status)}>
+                        {c.status || "draft"}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-slate-400">Budget: {c.budget}</p>
-                    <p className="text-sm text-slate-400">Spend: {c.spend}</p>
+                  {c.goal && (
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {c.goal}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                    <div>
+                      <p className="text-xl font-semibold tabular-nums">
+                        {(Number(m.impressions) || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Impressions</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-semibold tabular-nums">
+                        {(Number(m.clicks) || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Clicks</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-semibold tabular-nums">
+                        {(Number(m.conversions) || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Conversions</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-semibold tabular-nums">
+                        {(Number(m.sent) || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Sent</p>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div><p className="text-xl font-bold">{c.impressions.toLocaleString()}</p><p className="text-xs text-slate-400">Impressions</p></div>
-                  <div><p className="text-xl font-bold">{c.clicks.toLocaleString()}</p><p className="text-xs text-slate-400">Clicks</p></div>
-                  <div><p className="text-xl font-bold">{c.conversions}</p><p className="text-xs text-slate-400">Conversions</p></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            );
+          })}
       </div>
     </div>
   );
