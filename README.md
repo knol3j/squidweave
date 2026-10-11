@@ -2,6 +2,9 @@
 
 Localized marketing automation brain with a LocaleWeave React control surface.
 
+Now includes autonomous OSINT discovery, search-derived data funnels, and a
+free tier for marketing + investor outreach.
+
 ## Full Documentation
 
 - **[skills.md](skills.md)** — Complete technical inventory: all endpoints, architecture decisions, connectors, and notable commits
