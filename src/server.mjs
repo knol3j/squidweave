@@ -611,6 +611,23 @@ function resolveCampaignId(store, requestedId) {
   return first?.id || "main-campaign";
 }
 
+async function runBlackarchTool(tool, args = [], timeoutMs = 30000) {
+  const { spawn } = await import("node:child_process");
+  const startedAt = Date.now();
+  return new Promise((resolve) => {
+    const child = spawn(tool, args, { timeout: timeoutMs, killSignal: "SIGKILL" });
+    let stdout = "", stderr = "";
+    child.stdout?.on("data", d => { stdout += d.toString(); if (stdout.length > 200000) stdout = stdout.slice(-200000); });
+    child.stderr?.on("data", d => { stderr += d.toString(); if (stderr.length > 50000) stderr = stderr.slice(-50000); });
+    child.on("close", code => {
+      resolve({ tool, args, ok: code === 0, exitCode: code, stdout: stdout.slice(-100000), stderr: stderr.slice(-10000), durationMs: Date.now() - startedAt });
+    });
+    child.on("error", err => {
+      resolve({ tool, args, ok: false, exitCode: -1, error: err.message, stdout: stdout.slice(-100000), stderr: stderr.slice(-10000), durationMs: Date.now() - startedAt });
+    });
+  });
+}
+
 async function ensurePromptCampaign({ store, memoryEngine, prompt, campaignId, reason }) {
   const resolvedId = resolveCampaignId(store, campaignId);
   const existing = store.getCampaign(resolvedId);
@@ -1472,6 +1489,18 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         },
         result,
       });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/blackarch/run") {
+      const body = await readBody(request);
+      const { tool, args = [], timeoutMs = 30000 } = body;
+      if (!tool) {
+        sendJson(request, response, 400, { error: "tool is required" });
+        return;
+      }
+      const result = await runBlackarchTool(tool, args, Math.min(timeoutMs, 120000));
+      sendJson(request, response, 200, result);
       return;
     }
 
