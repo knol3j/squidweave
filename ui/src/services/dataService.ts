@@ -5,7 +5,10 @@
 
 // ─── 1. API INFRASTRUCTURE ───────────────────────────────────────────────────
 
-const RAILWAY_BASE = (import.meta as any).env?.VITE_API_URL || "https://squidweave-api-production.up.railway.app";
+// CRM data lives on the main SquidWeave backend. Keep this separate from the
+// ad-engine base (VITE_AD_API_URL in lib/api.ts) — the two services expose
+// different route sets.
+const RAILWAY_BASE = (import.meta as any).env?.VITE_CRM_API_URL || "https://squidweave-api-production.up.railway.app";
 let API_BASE = RAILWAY_BASE;
 
 // API key comes from build-time env (VITE_API_KEY); never hardcode a real secret.

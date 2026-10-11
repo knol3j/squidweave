@@ -1,4 +1,5 @@
 import http from 'http';
+import { timingSafeEqual } from 'node:crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -87,17 +88,83 @@ async function sendEmailSmtp({ host, port, user, pass, from, to, subject, html, 
   });
 }
 
+// ── Auth (fail closed) ───────────────────────────────────────────
+// Mirrors src/server.mjs: accept x-api-key (SQUIDWEAVE_API_KEY) OR Basic UI
+// credentials (UI_USER/UI_PASS) so a logged-in browser session works without
+// shipping the API key to the client. If no secret is configured and INSECURE
+// is not set, refuse all access (503) rather than run open.
+const INSECURE = ['1', 'true', 'yes', 'on'].includes(String(process.env.SQUIDWEAVE_ALLOW_INSECURE || '').toLowerCase());
+const API_KEY = process.env.SQUIDWEAVE_API_KEY || null;
+const UI_USER = process.env.UI_USER || '';
+const UI_PASS = process.env.UI_PASS || '';
+
+function safeEqual(provided, expected) {
+  const a = Buffer.from(String(provided ?? ''));
+  const b = Buffer.from(String(expected ?? ''));
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+function basicAuthOk(req) {
+  if (!UI_USER || !UI_PASS) return false;
+  const header = req.headers['authorization'];
+  if (!header || !header.startsWith('Basic ')) return false;
+  let decoded;
+  try { decoded = Buffer.from(header.slice(6), 'base64').toString('utf8'); }
+  catch { return false; }
+  const colon = decoded.indexOf(':');
+  if (colon === -1) return false;
+  const user = decoded.slice(0, colon);
+  const pass = decoded.slice(colon + 1);
+  return safeEqual(user, UI_USER) && safeEqual(pass, UI_PASS);
+}
+
+// Health check must stay reachable without credentials (Railway/uptime probes).
+function isPublicPath(url) {
+  return url.pathname === '/health';
+}
+
+function sendJson(res, status, obj) {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(obj));
+}
+
+// Returns true when the request is authorized; otherwise writes the response.
+function requireAuth(req, res, url) {
+  if (isPublicPath(url)) return true;
+  if (!API_KEY) {
+    if (INSECURE) return true;
+    if (basicAuthOk(req)) return true;
+    sendJson(res, 503, { error: 'Server misconfigured: SQUIDWEAVE_API_KEY is not set. Refusing unauthenticated access.' });
+    return false;
+  }
+  const provided = req.headers['x-api-key'];
+  if (provided && safeEqual(provided, API_KEY)) return true;
+  if (basicAuthOk(req)) return true;
+  sendJson(res, 401, { error: 'Unauthorized. Provide x-api-key or valid Basic credentials.' });
+  return false;
+}
+
 const server = http.createServer(async (req, res) => {
-  // CORS headers
+  // CORS headers — allow the auth headers the browser client sends.
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(200); res.end(); return;
   }
 
   const url = new URL(req.url, `http://${req.headers.host}`);
+
+  // Public health check (no body parsing / auth).
+  if (url.pathname === '/health' && req.method === 'GET') {
+    sendJson(res, 200, { status: 'ok', service: 'squidweave-ad-engine' });
+    return;
+  }
+
+  // Authenticate before doing any work or touching data.
+  if (!requireAuth(req, res, url)) return;
 
   // Parse body for POST requests
   let body = '';
@@ -257,6 +324,7 @@ const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`SquidWeave Marketing API running on port ${PORT}`);
   console.log(`Core endpoints:`);
+  console.log(`  GET  /health`);
   console.log(`  GET  /api/smtp`);
   console.log(`  POST /api/smtp`);
   console.log(`  POST /api/smtp/test`);

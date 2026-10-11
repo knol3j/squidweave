@@ -35,7 +35,11 @@ jobs:
       - name: Build UI app
         run: |
           cd ui
-          VITE_API_URL="https://ad-engine-production-1582.up.railway.app" npm run build
+          # Two backends: CRM data (dataService) and the ad-engine (/api/*).
+          # Both require auth; the browser sends the login Basic creds.
+          VITE_CRM_API_URL="https://squidweave-api-production.up.railway.app" \
+          VITE_AD_API_URL="https://ad-engine-production-1582.up.railway.app" \
+          npm run build
 
       - name: Prepare combined site
         run: |

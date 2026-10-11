@@ -1,4 +1,16 @@
-const API_BASE = (window as any).__ENV__?.SQUIDWEAVE_API_URL || import.meta.env.VITE_API_URL || 'https://ad-engine-production-1582.up.railway.app';
+// Ad-engine service (/api/* routes: SMTP, SEO, ads, pixels, prospecting).
+// Separate from the CRM backend (VITE_CRM_API_URL in services/dataService.ts).
+const API_BASE = (window as any).__ENV__?.SQUIDWEAVE_AD_API_URL || import.meta.env.VITE_AD_API_URL || 'https://ad-engine-production-1582.up.railway.app';
+
+// Reuse the login credentials the main app stores (base64 user:pass) so the
+// ad-engine's fail-closed auth accepts the browser session.
+function authHeaders(): Record<string, string> {
+  try {
+    const stored = sessionStorage.getItem('squidweave_auth');
+    if (stored) return { Authorization: `Basic ${stored}` };
+  } catch { /* sessionStorage unavailable */ }
+  return {};
+}
 
 export interface SmtpConfig {
   host: string;
@@ -45,7 +57,7 @@ class ApiClient {
 
   private async fetch(path: string, options?: RequestInit): Promise<any> {
     const res = await fetch(`${this.baseUrl}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
+      headers: { 'Content-Type': 'application/json', ...authHeaders(), ...options?.headers },
       ...options,
     });
     if (!res.ok) {
