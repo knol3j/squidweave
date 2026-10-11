@@ -2,7 +2,7 @@ name: Deploy Landing Page + App to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -26,24 +26,25 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
 
       - name: Install UI dependencies
         run: |
           cd ui
-          npm install
+          npm ci
 
       - name: Build UI app
         run: |
           cd ui
           npm run build
 
-      - name: Prepare combined site
+      - name: Prepare site
         run: |
-          mkdir -p _site/app
-          cp marketing/landing/index.html _site/index.html
-          cp -r ui/dist/* _site/app/
-          if [ ! -f _site/app/index.html ]; then
-            echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=./"></head></html>' > _site/app/index.html
+          mkdir -p _site
+          cp -r ui/dist/* _site/
+          # Ensure a root index.html exists for GitHub Pages
+          if [ ! -f _site/index.html ]; then
+            echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=./"></head><body></body></html>' > _site/index.html
           fi
 
       - name: Setup Pages
