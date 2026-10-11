@@ -8,24 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     dnsutils \
     whois \
-    netcat-openbsd \
     jq \
-    nmap \
-    nikto \
-    wafw00f \
-    whatweb \
-    gobuster \
-    ffuf \
-    hydra \
-    smbclient \
-    tcpdump \
-    python3 \
-    python3-pip \
     unzip \
-    file \
     && rm -rf /var/lib/apt/lists/*
-
-RUN pip3 install --break-system-packages dnspython requests shodan
 
 ARG SQUIDWEAVE_REPO=https://github.com/knol3j/squidweave.git
 ARG SQUIDWEAVE_REF=main
