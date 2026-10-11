@@ -379,6 +379,15 @@
         "signedPartners": 5,
         "pipelineCoverage": 1000000
       }
+    },
+    "osint-test": {
+      "createdAt": "2026-10-10T20:17:51.585Z",
+      "id": "osint-test",
+      "name": "OSINT pipeline test",
+      "objective": "test",
+      "category": "test",
+      "lastOsintRunAt": "2026-10-10T20:17:51.585Z",
+      "lastUpdatedAt": "2026-10-10T20:17:51.585Z"
     }
   },
   "connectorConfigs": {},
@@ -2833,6 +2842,456 @@
         "verificationStatus": ""
       },
       "capturedAt": "2026-06-14T15:05:06.408Z"
+    },
+    {
+      "id": "fa49e900-ff1b-413f-bafb-90c44d93e1b4",
+      "campaignId": "osint-test",
+      "targetId": "hn:49971921",
+      "source": "hn",
+      "company": "Hacker News",
+      "contactName": "jgx0",
+      "title": "Example.com just launched the biggest redesign in decades",
+      "segment": "developer-community",
+      "region": "global",
+      "preferredChannel": "social",
+      "channels": [
+        "social"
+      ],
+      "fitScore": 1,
+      "intentScore": 1,
+      "recencyScore": 0.95,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://www.debugbear.com/blog/example-dot-com-redesign-history",
+      "evidence": [
+        "Example.com just launched the biggest redesign in decades",
+        "points:359"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://www.debugbear.com/blog/example-dot-com-redesign-history",
+        "publishedAt": "2026-10-05T22:55:11Z",
+        "evidence": [
+          "Example.com just launched the biggest redesign in decades",
+          "points:359"
+        ],
+        "sourceReliability": 0.62,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:55.973Z"
+    },
+    {
+      "id": "c2c2da09-574a-49b5-b3d6-31f7cfb725a3",
+      "campaignId": "osint-test",
+      "targetId": "hn:46731996",
+      "source": "hn",
+      "company": "Hacker News",
+      "contactName": "mrled",
+      "title": "Microsoft mishandling example.com",
+      "segment": "developer-community",
+      "region": "global",
+      "preferredChannel": "social",
+      "channels": [
+        "social"
+      ],
+      "fitScore": 1,
+      "intentScore": 0.7416666666666667,
+      "recencyScore": 0.5,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://tinyapps.org/blog/microsoft-mishandling-example-com.html",
+      "evidence": [
+        "Microsoft mishandling example.com",
+        "points:249"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://tinyapps.org/blog/microsoft-mishandling-example-com.html",
+        "publishedAt": "2026-01-23T13:04:09Z",
+        "evidence": [
+          "Microsoft mishandling example.com",
+          "points:249"
+        ],
+        "sourceReliability": 0.62,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:55.973Z"
+    },
+    {
+      "id": "fdacc557-61ac-4679-8ed2-d438da50aca7",
+      "campaignId": "osint-test",
+      "targetId": "hn:8057442",
+      "source": "hn",
+      "company": "Hacker News",
+      "contactName": "mkr-hn",
+      "title": "Ask HN: What does traffic to example.com look like?",
+      "segment": "developer-community",
+      "region": "global",
+      "preferredChannel": "social",
+      "channels": [
+        "social"
+      ],
+      "fitScore": 0.34,
+      "intentScore": 0.26666666666666666,
+      "recencyScore": 0.35,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://news.ycombinator.com/item?id=8057442",
+      "evidence": [
+        "Ask HN: What does traffic to example.com look like?",
+        "points:68"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://news.ycombinator.com/item?id=8057442",
+        "publishedAt": "2014-07-19T13:41:08Z",
+        "evidence": [
+          "Ask HN: What does traffic to example.com look like?",
+          "points:68"
+        ],
+        "sourceReliability": 0.62,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:55.973Z"
+    },
+    {
+      "id": "317a362b-d518-4d2d-b67e-4295168749ea",
+      "campaignId": "osint-test",
+      "targetId": "hn:49915060",
+      "source": "hn",
+      "company": "Hacker News",
+      "contactName": "oliverdunk",
+      "title": "IANA's email about why example.com changed",
+      "segment": "developer-community",
+      "region": "global",
+      "preferredChannel": "social",
+      "channels": [
+        "social"
+      ],
+      "fitScore": 0.325,
+      "intentScore": 0.25833333333333336,
+      "recencyScore": 0.8,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://www.oliverdunk.com/2026/09/30/iana-reply",
+      "evidence": [
+        "IANA's email about why example.com changed",
+        "points:65"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://www.oliverdunk.com/2026/09/30/iana-reply",
+        "publishedAt": "2026-09-30T22:00:23Z",
+        "evidence": [
+          "IANA's email about why example.com changed",
+          "points:65"
+        ],
+        "sourceReliability": 0.62,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:55.973Z"
+    },
+    {
+      "id": "d3b4f0e0-25fc-4bdd-a34c-bfd982072303",
+      "campaignId": "osint-test",
+      "targetId": "hn:3263849",
+      "source": "hn",
+      "company": "Hacker News",
+      "contactName": "xbryanx",
+      "title": "Where does email sent to *example.com go?",
+      "segment": "developer-community",
+      "region": "global",
+      "preferredChannel": "social",
+      "channels": [
+        "social"
+      ],
+      "fitScore": 0.145,
+      "intentScore": 0.05,
+      "recencyScore": 0.35,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "http://stackoverflow.com/questions/8221381/where-does-email-sent-to-example-com-go",
+      "evidence": [
+        "Where does email sent to *example.com go?",
+        "points:29"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "http://stackoverflow.com/questions/8221381/where-does-email-sent-to-example-com-go",
+        "publishedAt": "2011-11-22T02:53:10Z",
+        "evidence": [
+          "Where does email sent to *example.com go?",
+          "points:29"
+        ],
+        "sourceReliability": 0.62,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:55.973Z"
+    },
+    {
+      "id": "49eda6a1-ec25-4741-9ed5-d4a1d9b9ccfe",
+      "campaignId": "osint-test",
+      "targetId": "gh:1203085989",
+      "source": "github",
+      "company": "hussein-bassem",
+      "contactName": "hussein-bassem",
+      "title": "hussein-bassem/example.com",
+      "segment": "open-source",
+      "region": "global",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "social"
+      ],
+      "fitScore": 0,
+      "intentScore": 0,
+      "recencyScore": 0.95,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://github.com/hussein-bassem/example.com",
+      "evidence": [
+        "stars:0"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://github.com/hussein-bassem/example.com",
+        "publishedAt": "2026-10-10T19:36:35Z",
+        "evidence": [
+          "stars:0"
+        ],
+        "sourceReliability": 0.71,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:57.496Z"
+    },
+    {
+      "id": "74eaf99f-7d1f-4f3e-a565-5ef0382f1b2f",
+      "campaignId": "osint-test",
+      "targetId": "gh:1409268771",
+      "source": "github",
+      "company": "techprofree",
+      "contactName": "techprofree",
+      "title": "techprofree/ollama-python-local-llm",
+      "segment": "open-source",
+      "region": "global",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "social"
+      ],
+      "fitScore": 0,
+      "intentScore": 0,
+      "recencyScore": 0.95,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://github.com/techprofree/ollama-python-local-llm",
+      "evidence": [
+        "Run LLMs locally with Ollama and Python — step-by-step examples: text generation, streaming, chat with memory, multimodal, and OpenAI-compatible API. Full tutorial on techprofree.com",
+        "stars:0"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://github.com/techprofree/ollama-python-local-llm",
+        "publishedAt": "2026-10-10T19:05:33Z",
+        "evidence": [
+          "Run LLMs locally with Ollama and Python — step-by-step examples: text generation, streaming, chat with memory, multimodal, and OpenAI-compatible API. Full tutorial on techprofree.com",
+          "stars:0"
+        ],
+        "sourceReliability": 0.71,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:57.496Z"
+    },
+    {
+      "id": "6c39a7f5-17c3-465e-a325-3dc997a16f83",
+      "campaignId": "osint-test",
+      "targetId": "gh:949523913",
+      "source": "github",
+      "company": "rodrigosf672",
+      "contactName": "rodrigosf672",
+      "title": "rodrigosf672/measure-loading-times",
+      "segment": "open-source",
+      "region": "global",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "social"
+      ],
+      "fitScore": 0,
+      "intentScore": 0,
+      "recencyScore": 0.95,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://github.com/rodrigosf672/measure-loading-times",
+      "evidence": [
+        "Simulates 1–5 concurrent users with Playwright to measure and report average page load times for performance testing, using google.com page as example.",
+        "stars:0"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://github.com/rodrigosf672/measure-loading-times",
+        "publishedAt": "2026-10-10T19:00:36Z",
+        "evidence": [
+          "Simulates 1–5 concurrent users with Playwright to measure and report average page load times for performance testing, using google.com page as example.",
+          "stars:0"
+        ],
+        "sourceReliability": 0.71,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:57.496Z"
+    },
+    {
+      "id": "fad369f6-806a-4645-b4f1-97d54f139247",
+      "campaignId": "osint-test",
+      "targetId": "gh:1413544163",
+      "source": "github",
+      "company": "yp969803",
+      "contactName": "yp969803",
+      "title": "yp969803/complex-java-example",
+      "segment": "open-source",
+      "region": "global",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "social"
+      ],
+      "fitScore": 0,
+      "intentScore": 0,
+      "recencyScore": 0.95,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://github.com/yp969803/complex-java-example",
+      "evidence": [
+        "stars:0"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://github.com/yp969803/complex-java-example",
+        "publishedAt": "2026-10-10T18:41:02Z",
+        "evidence": [
+          "stars:0"
+        ],
+        "sourceReliability": 0.71,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:57.497Z"
+    },
+    {
+      "id": "145c0ff8-b518-4c9e-b346-de1a29ee5365",
+      "campaignId": "osint-test",
+      "targetId": "gh:1953077",
+      "source": "github",
+      "company": "AllBinary",
+      "contactName": "AllBinary",
+      "title": "AllBinary/AllBinary-Platform",
+      "segment": "open-source",
+      "region": "global",
+      "preferredChannel": "email",
+      "channels": [
+        "email",
+        "social"
+      ],
+      "fitScore": 0.007,
+      "intentScore": 0.0175,
+      "recencyScore": 0.95,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://github.com/AllBinary/AllBinary-Platform",
+      "evidence": [
+        "AllBinary Game Engine (Example Games: https://allbinary.itch.io), Freeblisket E-Commerce Solution (https://allbinary.com), AllBinary Input Automation, and everything else AllBinary.",
+        "stars:35"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://github.com/AllBinary/AllBinary-Platform",
+        "publishedAt": "2026-10-10T18:14:11Z",
+        "evidence": [
+          "AllBinary Game Engine (Example Games: https://allbinary.itch.io), Freeblisket E-Commerce Solution (https://allbinary.com), AllBinary Input Automation, and everything else AllBinary.",
+          "stars:35"
+        ],
+        "sourceReliability": 0.71,
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:17:57.497Z"
+    },
+    {
+      "id": "426f5688-4c87-4bab-8dcb-2503053b80ed",
+      "campaignId": "osint-test",
+      "targetId": "osint:example.com",
+      "source": "pentest-osint",
+      "company": "Example Domain",
+      "contactName": "",
+      "title": "Example Domain",
+      "segment": "company-footprint",
+      "region": "global",
+      "preferredChannel": "social",
+      "channels": [
+        "social"
+      ],
+      "fitScore": 1,
+      "intentScore": 0,
+      "recencyScore": 0.7,
+      "estimatedReach": null,
+      "notes": "",
+      "sourceUrl": "https://example.com",
+      "evidence": [
+        "Example Domain",
+        "hosts:25107",
+        "emails:0"
+      ],
+      "verificationStatus": "",
+      "metadata": {
+        "sourceUrl": "https://example.com",
+        "evidence": [
+          "Example Domain",
+          "hosts:25107",
+          "emails:0"
+        ],
+        "sourceReliability": 0.68,
+        "tools": {
+          "theharvester": {
+            "ok": false,
+            "error": "theharvester timed out after 45000ms"
+          },
+          "subfinder": {
+            "ok": true,
+            "hosts": 25107
+          },
+          "amass": {
+            "ok": false,
+            "error": "amass timed out after 60000ms"
+          }
+        },
+        "verificationStatus": ""
+      },
+      "capturedAt": "2026-10-10T20:22:54.437Z"
+    },
+    {
+      "campaignId": "osint-test",
+      "targetId": "scrape:example.com",
+      "source": "osint-scrape",
+      "company": "Example Domain",
+      "title": "Example Domain",
+      "description": "",
+      "segment": "website-content",
+      "region": "global",
+      "preferredChannel": "email",
+      "channels": [
+        "email"
+      ],
+      "website": "https://example.com",
+      "domain": "example.com",
+      "fitScore": 0.6,
+      "intentScore": 0.5,
+      "recencyScore": 0.8,
+      "metadata": {
+        "sourceUrl": "https://example.com",
+        "evidence": [
+          "Example Domain"
+        ],
+        "sourceReliability": 0.7,
+        "scrapedText": "Example Domain This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes."
+      }
     }
   ],
   "outreachEvents": [],
@@ -19648,6 +20107,26 @@
       "thesisMatch": 0.6,
       "stageMatch": 0.6,
       "checkSizeMatch": 0.55,
+      "warmPath": 0.35,
+      "status": "sourced"
+    },
+    {
+      "campaignId": "osint-test",
+      "fundName": "Example Domain",
+      "partnerName": "",
+      "thesis": "OSINT footprint for ",
+      "website": "https://example.com",
+      "domain": "",
+      "sectors": [],
+      "stageFocus": [
+        "growth"
+      ],
+      "geoFocus": [
+        "global"
+      ],
+      "thesisMatch": 1,
+      "stageMatch": 0.55,
+      "checkSizeMatch": 0.5,
       "warmPath": 0.35,
       "status": "sourced"
     }

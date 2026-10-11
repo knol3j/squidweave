@@ -58,15 +58,15 @@ export class AgentOrchestrator {
     return this.catalog.filter(agent => enabled.includes(agent.id));
   }
 
-  buildContext(campaignId, options = {}) {
+  async buildContext(campaignId, options = {}) {
     const campaign = options.campaign || this.store.getCampaign(campaignId);
     const summary = options.summary || null;
     const memoryContext = options.memoryContext || {};
     const targeting = options.targeting || {};
     const latestContentPack = options.contentPack || this.store.getLatestContentPack(campaignId);
     const researchRecords = this.store.listResearchRecords(campaignId);
-    const outreachEvents = this.store.listOutreachEvents(campaignId);
-    const analyticsEvents = this.store.listEvents(campaignId);
+    const outreachEvents = await this.store.listOutreachEvents(campaignId);
+    const analyticsEvents = await this.store.listEvents(campaignId);
     const decisions = this.store.listDecisions(campaignId);
     const automationRuns = this.store.listAutomationRuns(campaignId);
     const previousAgentRuns = this.store.listAgentRuns ? this.store.listAgentRuns(campaignId) : [];
@@ -87,7 +87,7 @@ export class AgentOrchestrator {
   }
 
   async runCampaign(campaignId, options = {}) {
-    const context = this.buildContext(campaignId, options);
+    const context = await this.buildContext(campaignId, options);
     if (!context.campaign) {
       throw new Error(`Unknown campaign: ${campaignId}`);
     }

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Example Investor",
+    "firm": "Example Fund",
+    "email": "investor@example.com",
+    "personalHook": "Personalized hook for this investor"
+  }
+]

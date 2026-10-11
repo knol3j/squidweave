@@ -245,6 +245,9 @@ export class Store {
     this._persistDebounceMs = options.persistDebounceMs ?? 500;
     this._maxEventsPerCollection = options.maxEventsPerCollection ?? 50_000;
     this._indexes = new Map();
+    this._outreachRepo = options.outreachEventRepository || null;
+    this._analyticsRepo = options.analyticsEventRepository || null;
+    this._useRelationalEvents = !!(this._outreachRepo && this._analyticsRepo);
   }
 
   async init() {
@@ -364,7 +367,10 @@ export class Store {
     return this.state.connectorConfigs[connectorName];
   }
 
-  listEvents(campaignId) {
+  async listEvents(campaignId) {
+    if (this._useRelationalEvents) {
+      return this._analyticsRepo.list({ campaignId, limit: this._maxEventsPerCollection });
+    }
     if (!campaignId) {
       return [...this.state.analyticsEvents];
     }
@@ -372,6 +378,11 @@ export class Store {
   }
 
   async addEvent(event) {
+    if (this._useRelationalEvents) {
+      const saved = await this._analyticsRepo.add(event);
+      this.emitChange("analyticsEvents", "insert", { item: saved });
+      return saved;
+    }
     this.state.analyticsEvents.push(event);
     await this.persist();
     this.emitChange("analyticsEvents", "insert", { item: event });
@@ -419,7 +430,10 @@ export class Store {
     return this.listResearchRecords(campaignId);
   }
 
-  listOutreachEvents(campaignId, targetId) {
+  async listOutreachEvents(campaignId, targetId) {
+    if (this._useRelationalEvents) {
+      return this._outreachRepo.list({ campaignId, targetId, limit: this._maxEventsPerCollection });
+    }
     return this.state.outreachEvents.filter(event => {
       if (campaignId && event.campaignId !== campaignId) {
         return false;
@@ -432,6 +446,11 @@ export class Store {
   }
 
   async addOutreachEvent(event) {
+    if (this._useRelationalEvents) {
+      const saved = await this._outreachRepo.add(event);
+      this.emitChange("outreachEvents", "insert", { item: saved });
+      return saved;
+    }
     this.state.outreachEvents.push(event);
     await this.persist();
     this.emitChange("outreachEvents", "insert", { item: event });

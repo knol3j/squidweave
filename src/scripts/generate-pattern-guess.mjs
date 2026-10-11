@@ -1,17 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { SEED_VC_FUNDS } from '../connectors/vc-sourcing-connector.mjs';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const STATE_PATH = path.join(ROOT_DIR, 'data/state.json');
-const CONNECTOR_PATH = path.join(ROOT_DIR, 'src/connectors/vc-sourcing-connector.mjs');
 
-const src = fs.readFileSync(CONNECTOR_PATH, 'utf8');
-const match = src.match(/const SEED_VC_FUNDS = (\[[\s\S]*?\]);/);
-const funds = eval(match[1]);
-
-const uniqueDomains = [...new Set(funds.map(f => f.domain))];
-console.log('Fund entries:', funds.length, '| Unique domains:', uniqueDomains.length);
+const uniqueDomains = [...new Set(SEED_VC_FUNDS.map(f => f.domain))];
+console.log('Fund entries:', SEED_VC_FUNDS.length, '| Unique domains:', uniqueDomains.length);
 
 const state = JSON.parse(fs.readFileSync(STATE_PATH, 'utf8'));
 
@@ -63,7 +59,7 @@ for (const domain of uniqueDomains) {
     }
   }
 
-  const domainFunds = funds.filter(f => f.domain === domain);
+  const domainFunds = SEED_VC_FUNDS.filter(f => f.domain === domain);
   for (const f of domainFunds) {
     if (!existingFunds.has(f.fund)) {
       fundRecords.push({

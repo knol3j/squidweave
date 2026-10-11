@@ -80,7 +80,7 @@ export class MemoryEngine {
 
   async consolidateCampaign(campaignId) {
     const researchRecords = this.store.listResearchRecords(campaignId);
-    const outreachEvents = this.store.listOutreachEvents(campaignId);
+    const outreachEvents = await this.store.listOutreachEvents(campaignId);
     const decisions = this.store.listDecisions(campaignId);
     const agentRuns = this.store.listAgentRuns ? this.store.listAgentRuns(campaignId) : [];
     const campaigns = this.store.listCampaigns ? this.store.listCampaigns() : [];
@@ -257,7 +257,7 @@ export class MemoryEngine {
     const tacticObservations = this.store.listTacticObservations(campaignId);
     const playbooks = this.store.listPlaybooks(campaignId);
     const researchRecords = this.store.listResearchRecords(campaignId);
-    const outreachEvents = this.store.listOutreachEvents(campaignId, options.targetId);
+    const outreachEvents = await this.store.listOutreachEvents(campaignId, options.targetId);
     const decisions = this.store.listDecisions(campaignId);
     const targetProfile = options.targetId
       ? targetProfiles.find(profile => profile.targetId === options.targetId) || null

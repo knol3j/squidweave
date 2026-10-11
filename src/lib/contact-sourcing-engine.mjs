@@ -115,11 +115,11 @@ export class ContactSourcingEngine {
     return campaign;
   }
 
-  buildPlan(campaignId) {
+  async buildPlan(campaignId) {
     const campaign = this.getCampaign(campaignId);
-    const targetDecision = this.targetingEngine.buildDecision(campaignId);
+    const targetDecision = await this.targetingEngine.buildDecision(campaignId);
     const memoryContext = this.memoryEngine.buildDecisionContext
-      ? this.memoryEngine.buildDecisionContext(campaignId)
+      ? await this.memoryEngine.buildDecisionContext(campaignId)
       : null;
     const records = this.store.listResearchRecords(campaignId)
       .filter(record => isActionableResearchRecord(record, campaign))
@@ -215,7 +215,7 @@ export class ContactSourcingEngine {
   }
 
   async generateAndPersist(campaignId, options = {}) {
-    const plan = this.buildPlan(campaignId);
+    const plan = await this.buildPlan(campaignId);
     const candidates = this.generateCandidates(campaignId, options);
     const run = {
       id: crypto.randomUUID(),

@@ -5,8 +5,8 @@
 
 // ─── 1. API INFRASTRUCTURE ───────────────────────────────────────────────────
 
-const RAILWAY_BASE = "https://squidweave-api-production.up.railway.app";
-let API_BASE = RAILWAY_BASE;
+const DEFAULT_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:4010";
+let API_BASE = DEFAULT_BASE;
 
 // ─── Backend selection with localStorage persistence ───
 const STORAGE_KEY = "sw_api_base";
@@ -55,10 +55,10 @@ export function switchToLocalBackend(endpoint: string): void {
   console.log("[SquidWeave] Switched to:", API_BASE);
 }
 
-export function resetToRailway(): void {
-  API_BASE = RAILWAY_BASE;
+export function resetToDefault(): void {
+  API_BASE = DEFAULT_BASE;
   clearSavedBase();
-  console.log("[SquidWeave] Reset to Railway");
+  console.log("[SquidWeave] Reset to default backend");
 }
 
 export function getApiBase(): string {
@@ -104,15 +104,29 @@ export class ApiError extends Error {
   }
 }
 
+const API_KEY = import.meta.env.VITE_API_KEY || "";
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    ...getAuthHeaders(),
+  };
+  const initHeaders = init?.headers;
+  if (initHeaders) {
+    if (Array.isArray(initHeaders)) {
+      for (const [k, v] of initHeaders) headers[k] = v;
+    } else if (initHeaders instanceof Headers) {
+      initHeaders.forEach((v, k) => { headers[k] = v; });
+    } else {
+      Object.assign(headers, initHeaders);
+    }
+  }
+  if (API_KEY) {
+    headers["x-api-key"] = API_KEY;
+  }
   const response = await fetch(getApiUrl(path), {
     ...init,
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": "squidweave-local-dev",
-      ...getAuthHeaders(),
-      ...(init?.headers || {}),
-    },
+    headers,
   });
   if (!response.ok) {
     if (response.status === 401) {

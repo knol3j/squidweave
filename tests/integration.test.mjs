@@ -79,11 +79,11 @@ describe('Integration: Full campaign cycle', () => {
     assert.ok(report.overallHealth);
 
     // 7. Verify events were recorded
-    const events = store.listEvents('integ-campaign-1');
+    const events = await store.listEvents('integ-campaign-1');
     assert.ok(events.length >= 4); // 4 tracking events
 
     // 8. Verify outreach events
-    const outreach = store.listOutreachEvents('integ-campaign-1');
+    const outreach = await store.listOutreachEvents('integ-campaign-1');
     assert.ok(outreach.length >= 4);
 
     // 9. Verify analytics health score

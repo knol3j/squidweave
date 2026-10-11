@@ -1,0 +1,47 @@
+{
+  "comment": "Seed domains for the daily autonomous OSINT pipeline. Each entry becomes a campaign. When discover is true, the pipeline queries search engines to find fresh high-yield domains and merges them with the anchor domains below. Keep anchors small; the daily cron job expands them dynamically.",
+  "seeds": [
+    {
+      "campaignId": "osint-b2b-saas",
+      "name": "B2B SaaS prospecting",
+      "category": "marketing",
+      "query": "b2b saas marketing automation",
+      "discover": true,
+      "discoverQuery": "top B2B SaaS companies 2025 marketing automation CRM",
+      "domains": [
+        "builtin.com",
+        "g2.com"
+      ],
+      "limit": 10,
+      "scrape": true
+    },
+    {
+      "campaignId": "osint-vc-outreach",
+      "name": "VC and investor outreach",
+      "category": "investment",
+      "query": "venture capital seed series a",
+      "discover": true,
+      "discoverQuery": "top venture capital firms 2025 seed series A",
+      "domains": [
+        "openvc.app",
+        "sequoiacap.com"
+      ],
+      "limit": 10,
+      "scrape": true
+    },
+    {
+      "campaignId": "osint-competitor-intel",
+      "name": "Competitive intelligence",
+      "category": "research",
+      "query": "autonomous marketing platform",
+      "discover": true,
+      "discoverQuery": "best sales engagement platforms 2025 Apollo Clay alternatives",
+      "domains": [
+        "g2.com",
+        "apollo.io"
+      ],
+      "limit": 8,
+      "scrape": true
+    }
+  ]
+}

@@ -1,4 +1,5 @@
-const API_BASE = (window as any).__ENV__?.SQUIDWEAVE_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = (window as any).__ENV__?.SQUIDWEAVE_API_URL || import.meta.env.VITE_MARKETING_API_URL || 'http://localhost:3001';
+const API_KEY = (window as any).__ENV__?.SQUIDWEAVE_API_KEY || import.meta.env.VITE_API_KEY || '';
 
 export interface SmtpConfig {
   host: string;
@@ -44,8 +45,15 @@ class ApiClient {
   }
 
   private async fetch(path: string, options?: RequestInit): Promise<any> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...options?.headers as Record<string, string>,
+    };
+    if (API_KEY) {
+      headers['x-api-key'] = API_KEY;
+    }
     const res = await fetch(`${this.baseUrl}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
+      headers,
       ...options,
     });
     if (!res.ok) {

@@ -7,16 +7,10 @@
 
 import { createConnection } from 'node:net';
 import { connect as tlsConnect } from 'node:tls';
+import { config } from '../config.mjs';
 
 function getConfig() {
-  return {
-    host: process.env.SMTP_HOST || '',
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-    fromName: process.env.SMTP_FROM_NAME || 'SquidWeave',
-    fromEmail: process.env.SMTP_FROM_EMAIL || '',
-  };
+  return config.smtp;
 }
 
 /**
@@ -72,7 +66,7 @@ export async function sendEmail({ to, subject, html, text }) {
 
   try {
     const socket = useTLS
-      ? tlsConnect({ host: config.host, port: config.port, rejectUnauthorized: false })
+      ? tlsConnect({ host: config.host, port: config.port })
       : createConnection({ host: config.host, port: config.port });
 
     // Read greeting
@@ -85,7 +79,7 @@ export async function sendEmail({ to, subject, html, text }) {
     if (!useTLS) {
       await smtpDialog(socket, 220, 'STARTTLS');
       // Upgrade to TLS
-      const tlsSocket = tlsConnect({ socket, rejectUnauthorized: false });
+      const tlsSocket = tlsConnect({ socket });
       // Re-wrap
       await smtpDialog(tlsSocket, 250, `EHLO ${config.host}`);
       // AUTH LOGIN

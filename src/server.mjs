@@ -92,6 +92,7 @@ import { ExecutionGuard, UnsafeExecutionError } from "./lib/execution-guard.mjs"
 import { enrichInvestorEmail, batchEnrichInvestors, getEnrichmentProvidersStatus } from "./lib/email-enrichment-engine.mjs";
 import { createFreeSourceConnectors } from "./connectors/free-sources.mjs";
 import { VcSourcingConnector } from "./connectors/vc-sourcing-connector.mjs";
+import { PentestOsintConnector } from "./connectors/pentest-osint-connector.mjs";
 import { GhlBridge } from "./integrations/ghl-bridge.mjs";
 import { registerFunnelRoutes, getFunnelCollections } from "./modules/funnel/funnel-routes.mjs";
 import { registerMessagingRoutes, getMessagingCollections } from "./modules/messaging/messaging-routes.mjs";
@@ -100,7 +101,9 @@ import * as adapters from "./adapters/index.mjs";
 import * as calendly from "./adapters/calendly.mjs";
 import { TrackingEngine } from "./lib/tracking-engine.mjs";
 import { RateLimiter } from "./lib/rate-limiter.mjs";
+import { enqueue } from "./lib/queue.mjs";
 import { buildResearchVerificationGate } from "./lib/actionability.mjs";
+import { createTierGuard } from "./lib/tier.mjs";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -260,17 +263,51 @@ function writeSse(response, event, data) {
   response.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-async function readBody(request) {
+async function readRawBody(request) {
   const chunks = [];
+  let length = 0;
   for await (const chunk of request) {
+    length += chunk.length;
+    if (length > config.limits.maxBodySizeBytes) {
+      const error = new Error(`Request body exceeds ${config.limits.maxBodySizeBytes} bytes`);
+      error.statusCode = 413;
+      throw error;
+    }
     chunks.push(chunk);
   }
-  const raw = Buffer.concat(chunks).toString("utf8");
-  return raw ? JSON.parse(raw) : {};
+  return Buffer.concat(chunks);
+}
+
+async function readBody(request) {
+  const raw = await readRawBody(request);
+  const text = raw.toString("utf8");
+  return text ? JSON.parse(text) : {};
 }
 
 function splitPath(pathname) {
   return pathname.split("/").filter(Boolean);
+}
+
+async function dispatchJob(queueName, payload, fallback) {
+  if (config.jobQueue.enabled && !config.jobQueue.syncJobs) {
+    const jobId = await enqueue(queueName, payload);
+    return { queued: true, jobId };
+  }
+  return { queued: false, result: await fallback() };
+}
+
+function isAllowedRedirectUrl(targetUrl) {
+  try {
+    const url = new URL(targetUrl);
+    if (!/^https?:$/i.test(url.protocol)) return false;
+    // Block common dangerous protocols/schemes even though protocol check above catches them
+    if (/^(javascript|data|vbscript|file):/i.test(targetUrl.trim())) return false;
+    const allowed = config.tracking.allowedDomains;
+    if (allowed.length === 0) return true; // no restriction configured
+    return allowed.some((domain) => url.hostname === domain || url.hostname.endsWith(`.${domain}`));
+  } catch {
+    return false;
+  }
 }
 
 function parseJsonParam(value, fallback = null) {
@@ -556,6 +593,13 @@ async function ensurePromptCampaign({ store, memoryEngine, prompt, campaignId, r
 }
 
 async function createApp() {
+  let outreachRepo = null;
+  let analyticsRepo = null;
+  if (config.postgresRelationalEvents && config.stateBackend === "postgres") {
+    const { OutreachEventRepository, AnalyticsEventRepository } = await import("./lib/repositories/event-repository.mjs");
+    outreachRepo = new OutreachEventRepository();
+    analyticsRepo = new AnalyticsEventRepository();
+  }
   const store = await new Store(config.dataFile, {
     seedFileUrl: config.seedDataFile,
     databaseUrl: config.databaseUrl,
@@ -563,6 +607,8 @@ async function createApp() {
     postgresSchema: config.postgresSchema,
     postgresTable: config.postgresStateTable,
     postgresStateKey: config.postgresStateKey,
+    outreachEventRepository: outreachRepo,
+    analyticsEventRepository: analyticsRepo,
   }).init();
   const llmProvider = createLlmProvider(config);
   const planner = new LocalPlanner(config.localizationModel, {
@@ -625,7 +671,7 @@ async function createApp() {
   });
   const sourceIngestionEngine = new SourceIngestionEngine({
     store,
-    connectors: [...createFreeSourceConnectors(), VcSourcingConnector],
+    connectors: [...createFreeSourceConnectors(), VcSourcingConnector, PentestOsintConnector],
   });
   // fundingEngine must come after fundingDeckEngine
   const fundingEngine = new FundingEngine({ store, fundingDeckEngine, sourceIngestionEngine });
@@ -648,6 +694,7 @@ async function createApp() {
     windowMs: 60_000,
     maxRequests: Number(process.env.RATE_LIMIT_MAX || 120),
   });
+  const tierGuard = createTierGuard();
   const scheduler = new AutomationScheduler({
     store,
     automationEngine,
@@ -669,6 +716,11 @@ async function createApp() {
     const url = new URL(request.url, `http://${request.headers.host}`);
     const parts = splitPath(url.pathname);
 
+    // Rate limit all requests (except OPTIONS handled above)
+    await new Promise((resolve) => {
+      rateLimiter.middleware()(request, response, resolve);
+    });
+
     if (request.method === "GET" && url.pathname === "/v1/models") {
       if (!requireOpenAiCompatAuth(request, response)) return;
       sendOpenAiModels(request, response);
@@ -677,7 +729,9 @@ async function createApp() {
 
     if (request.method === "POST" && url.pathname === "/v1/chat/completions") {
       if (!requireOpenAiCompatAuth(request, response)) return;
+      tierGuard.assertFeature("llm-generation", { key: "openai-compat" });
       const body = await readBody(request);
+      tierGuard.recordLlmCall("openai-compat");
       sendJson(request, response, 200, buildOpenAiCompatResponse(body));
       return;
     }
@@ -814,7 +868,7 @@ async function createApp() {
     }
 
     if (request.method === "GET" && url.pathname === "/analytics/events") {
-      sendJson(request, response, 200, store.listEvents(url.searchParams.get("campaignId")));
+      sendJson(request, response, 200, await store.listEvents(url.searchParams.get("campaignId")));
       return;
     }
 
@@ -948,7 +1002,7 @@ async function createApp() {
     }
 
     if (request.method === "GET" && url.pathname === "/outreach/events") {
-      sendJson(request, response, 200, store.listOutreachEvents(url.searchParams.get("campaignId"), url.searchParams.get("targetId")));
+      sendJson(request, response, 200, await store.listOutreachEvents(url.searchParams.get("campaignId"), url.searchParams.get("targetId")));
       return;
     }
 
@@ -1006,7 +1060,7 @@ async function createApp() {
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      sendJson(request, response, 200, targetingEngine.rankTargets(campaignId));
+      sendJson(request, response, 200, await targetingEngine.rankTargets(campaignId));
       return;
     }
 
@@ -1064,7 +1118,7 @@ async function createApp() {
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      sendJson(request, response, 200, contactSourcingEngine.buildPlan(campaignId));
+      sendJson(request, response, 200, await contactSourcingEngine.buildPlan(campaignId));
       return;
     }
 
@@ -1074,6 +1128,7 @@ async function createApp() {
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
+      tierGuard.assertFeature("bulk-outreach", { batchSize: body.limit || config.safety.maxFundingBatch });
       const result = await contactSourcingEngine.generateAndPersist(body.campaignId, {
         reason: body.reason || "manual",
         limit: body.limit,
@@ -1132,6 +1187,7 @@ async function createApp() {
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
+      tierGuard.assertFeature("bulk-outreach", { batchSize: body.limit || config.safety.maxFundingBatch });
       const result = await prospectActivationEngine.enrichContacts(body.campaignId, {
         provider: body.provider,
         limit: body.limit,
@@ -1148,6 +1204,7 @@ async function createApp() {
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
+      tierGuard.assertFeature("bulk-outreach", { batchSize: body.limit || config.safety.maxFundingBatch });
       const result = await prospectActivationEngine.sequenceContacts(body.campaignId, {
         limit: body.limit,
         dispatch: body.dispatch,
@@ -1286,6 +1343,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         return;
       }
       const maxPerRun = Number.isFinite(Number(body.maxPerRun)) ? Number(body.maxPerRun) : config.safety.maxFundingBatch;
+      tierGuard.assertFeature("bulk-outreach", { batchSize: maxPerRun });
       executionGuard.assertBatchWithinLimit(maxPerRun, config.safety.maxFundingBatch, { executionType: "funding_sequence" });
       const result = await fundingEngine.sequenceOutreach(body.campaignId, {
         limit: body.limit,
@@ -1302,28 +1360,32 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         return;
       }
       const maxPerRun = Number.isFinite(Number(body.maxPerRun)) ? Number(body.maxPerRun) : config.safety.maxFundingBatch;
+      tierGuard.assertFeature("bulk-outreach", { batchSize: maxPerRun });
       executionGuard.assertBatchWithinLimit(maxPerRun, config.safety.maxFundingBatch, { executionType: "funding_run" });
-      const guarded = await executionGuard.run({
-        campaignId: body.campaignId,
-        executionType: "funding_run",
-        reason: body.reason || "manual",
-        liveSideEffect: true,
-        approvalToken: String(body.approvalToken || ""),
-        idempotencyKey: executionGuard.buildIdempotencyKey({
+      const result = await dispatchJob("squidweave:funding:run", { campaignId: body.campaignId, options: { prioritizedLimit: body.limit, maxPerRun, sourceQuery: body.sourceQuery, sourceLimit: body.sourceLimit } }, async () => {
+        const guarded = await executionGuard.run({
           campaignId: body.campaignId,
           executionType: "funding_run",
           reason: body.reason || "manual",
-          keyParts: [body.limit || "", maxPerRun],
-        }),
-        metadata: { limit: body.limit || null, maxPerRun },
-        operation: () => fundingEngine.runCampaign(body.campaignId, {
-          prioritizedLimit: body.limit,
-          maxPerRun,
-          sourceQuery: body.sourceQuery,
-          sourceLimit: body.sourceLimit,
-        }),
+          liveSideEffect: true,
+          approvalToken: String(body.approvalToken || ""),
+          idempotencyKey: executionGuard.buildIdempotencyKey({
+            campaignId: body.campaignId,
+            executionType: "funding_run",
+            reason: body.reason || "manual",
+            keyParts: [body.limit || "", maxPerRun],
+          }),
+          metadata: { limit: body.limit || null, maxPerRun },
+          operation: () => fundingEngine.runCampaign(body.campaignId, {
+            prioritizedLimit: body.limit,
+            maxPerRun,
+            sourceQuery: body.sourceQuery,
+            sourceLimit: body.sourceLimit,
+          }),
+        });
+        return { executionReceiptId: guarded.receiptId, ...guarded.result };
       });
-      sendJson(request, response, 200, { executionReceiptId: guarded.receiptId, ...guarded.result });
+      sendJson(request, response, 200, result);
       return;
     }
 
@@ -1854,6 +1916,9 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
+      const fullPipelineMaxPerRun = Number.isFinite(Number(body.maxPerRun)) ? Number(body.maxPerRun) : 20;
+      const fullPipelineLimit = Number.isFinite(Number(body.prioritizedLimit)) ? Number(body.prioritizedLimit) : 200;
+      tierGuard.assertFeature("bulk-outreach", { batchSize: Math.max(fullPipelineMaxPerRun, fullPipelineLimit) });
 
       // Step 1: Source investors (if sourceIngestionEngine configured)
       let sourcingResult = null;
@@ -1939,7 +2004,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      sendJson(request, response, 200, targetingEngine.buildDecision(body.campaignId));
+      sendJson(request, response, 200, await targetingEngine.buildDecision(body.campaignId));
       return;
     }
 
@@ -1949,7 +2014,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
-      const decision = targetingEngine.buildDecision(campaignId);
+      const decision = await targetingEngine.buildDecision(campaignId);
       sendJson(request, response, 200, {
         campaignId,
         updatedAt: decision.updatedAt,
@@ -2046,6 +2111,8 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
+      tierGuard.assertFeature("llm-generation", { key: "decision-run" });
+      tierGuard.recordLlmCall("decision-run");
       const job = jobManager.createJob("decision", { campaignId: body.campaignId });
       try {
         jobManager.push(job.id, "running", "Decision engine started.");
@@ -2073,17 +2140,28 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 400, { error: "campaignId is required." });
         return;
       }
+      tierGuard.assertFeature("llm-generation", { key: "content-generate" });
+      tierGuard.recordLlmCall("content-generate");
       const job = jobManager.createJob("content", { campaignId: body.campaignId });
       try {
         jobManager.push(job.id, "running", "Content generation started.");
-        const pack = await automationEngine.generateContentPack(body.campaignId, {
-          locales: normalizeLocales(body.locales, config.defaultLocale),
-          reason: body.reason || "manual",
+        const locales = normalizeLocales(body.locales, config.defaultLocale);
+        const result = await dispatchJob("squidweave:content:generate", { campaignId: body.campaignId, locales, reason: body.reason || "manual" }, async () => {
+          const pack = await automationEngine.generateContentPack(body.campaignId, {
+            locales,
+            reason: body.reason || "manual",
+          });
+          return { contentPack: pack };
         });
-        jobManager.complete(job.id, pack);
+        if (result.queued) {
+          jobManager.push(job.id, "queued", `Job ${result.jobId} queued for content generation.`);
+          sendJson(request, response, 202, { job: jobManager.getJob(job.id), queuedJobId: result.jobId });
+          return;
+        }
+        jobManager.complete(job.id, result.result.contentPack);
         sendJson(request, response, 201, {
           job: jobManager.getJob(job.id),
-          contentPack: pack,
+          contentPack: result.result.contentPack,
         });
       } catch (error) {
         jobManager.fail(job.id, error);
@@ -2100,31 +2178,39 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     if (request.method === "POST" && url.pathname === "/automation/run") {
       const body = await readBody(request);
       const campaignId = resolveCampaignId(store, body.campaignId);
+      tierGuard.assertFeature("llm-generation", { key: "automation-run" });
+      tierGuard.recordLlmCall("automation-run");
       const job = jobManager.createJob("automation", { campaignId, reason: body.reason || "manual" });
       try {
         jobManager.push(job.id, "running", "Automation run started.");
-        const guarded = await executionGuard.run({
-          campaignId,
-          executionType: "automation_run",
-          reason: body.reason || "manual",
-          idempotencyKey: executionGuard.buildIdempotencyKey({
+        const result = await dispatchJob("squidweave:automation:run", { campaignId, reason: body.reason || "manual", locales: body.locales }, async () => {
+          const guarded = await executionGuard.run({
             campaignId,
             executionType: "automation_run",
             reason: body.reason || "manual",
-            keyParts: [JSON.stringify(body.locales || [])],
-          }),
-          metadata: { locales: body.locales || [] },
-          operation: () => automationEngine.runCampaign(campaignId, {
-            locales: body.locales,
-            reason: body.reason || "manual",
-          }),
+            idempotencyKey: executionGuard.buildIdempotencyKey({
+              campaignId,
+              executionType: "automation_run",
+              reason: body.reason || "manual",
+              keyParts: [JSON.stringify(body.locales || [])],
+            }),
+            metadata: { locales: body.locales || [] },
+            operation: () => automationEngine.runCampaign(campaignId, {
+              locales: body.locales,
+              reason: body.reason || "manual",
+            }),
+          });
+          return { executionReceiptId: guarded.receiptId, ...guarded.result };
         });
-        const result = guarded.result;
-        jobManager.complete(job.id, result);
+        if (result.queued) {
+          jobManager.push(job.id, "queued", `Job ${result.jobId} queued for automation run.`);
+          sendJson(request, response, 202, { job: jobManager.getJob(job.id), queuedJobId: result.jobId });
+          return;
+        }
+        jobManager.complete(job.id, result.result);
         sendJson(request, response, 200, {
           job: jobManager.getJob(job.id),
-          executionReceiptId: guarded.receiptId,
-          ...result,
+          ...result.result,
         });
       } catch (error) {
         jobManager.fail(job.id, error);
@@ -2139,6 +2225,8 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         sendJson(request, response, 400, { error: "prompt is required." });
         return;
       }
+      tierGuard.assertFeature("llm-generation", { key: "automation-prompt-run" });
+      tierGuard.recordLlmCall("automation-prompt-run");
 
       const { campaign, reason } = await ensurePromptCampaign({
         store,
@@ -3020,12 +3108,19 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
 
     // ── Tracking Webhooks ──────────────────────────────────────
     // Email open tracking pixel
-    if (request.method === "GET" && parts[0] === "webhooks" && parts[1] === "pixel" && parts.length >= 5) {
+    if (request.method === "GET" && parts[0] === "webhooks" && parts[1] === "pixel" && parts.length >= 6) {
+      const [campaignId, investorId, emailId, token] = parts.slice(2, 6);
+      const tokenValid = trackingEngine.verifyPixelToken({ campaignId, investorId, emailId, token });
+      if (!tokenValid) {
+        response.writeHead(403, { "content-type": "image/gif" });
+        response.end(trackingEngine.pixelGif);
+        return;
+      }
       trackingEngine.servePixel(request, response);
       trackingEngine.recordOpen({
-        campaignId: parts[2],
-        investorId: parts[3],
-        emailId: parts[4],
+        campaignId,
+        investorId,
+        emailId,
         ip: request.headers["x-forwarded-for"] || request.socket?.remoteAddress,
         userAgent: request.headers["user-agent"],
       }).catch(() => {});
@@ -3033,24 +3128,39 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     }
 
     // Email click tracking redirect
-    if (request.method === "GET" && parts[0] === "webhooks" && parts[1] === "click" && parts.length >= 5) {
+    if (request.method === "GET" && parts[0] === "webhooks" && parts[1] === "click" && parts.length >= 6) {
+      const [campaignId, investorId, emailId, token] = parts.slice(2, 6);
+      const tokenValid = trackingEngine.verifyPixelToken({ campaignId, investorId, emailId, token });
+      if (!tokenValid) {
+        sendJson(request, response, 403, { error: "Invalid tracking token" });
+        return;
+      }
       const targetUrl = Buffer.from(parts[5] || "", "base64url").toString("utf8");
+      if (!isAllowedRedirectUrl(targetUrl)) {
+        sendJson(request, response, 400, { error: "Redirect URL not allowed" });
+        return;
+      }
       trackingEngine.recordClick({
-        campaignId: parts[2],
-        investorId: parts[3],
-        emailId: parts[4],
+        campaignId,
+        investorId,
+        emailId,
         targetUrl,
         ip: request.headers["x-forwarded-for"] || request.socket?.remoteAddress,
         userAgent: request.headers["user-agent"],
       }).catch(() => {});
-      response.writeHead(302, { location: targetUrl || "https://example.com" });
+      response.writeHead(302, { location: targetUrl });
       response.end();
       return;
     }
 
     // Brevo (Sendinblue) webhook
     if (request.method === "POST" && url.pathname === "/webhooks/brevo") {
-      const body = await readBody(request);
+      const raw = await readRawBody(request);
+      if (!trackingEngine.verifyBrevoSignature(raw, request.headers, process.env.BREVO_WEBHOOK_SECRET || "")) {
+        sendJson(request, response, 401, { error: "Invalid webhook signature" });
+        return;
+      }
+      const body = JSON.parse(raw.toString("utf8") || "{}");
       const result = await trackingEngine.handleBrevoWebhook(body);
       sendJson(request, response, 200, result);
       return;
@@ -3058,7 +3168,12 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
 
     // Mailgun webhook
     if (request.method === "POST" && url.pathname === "/webhooks/mailgun") {
-      const body = await readBody(request);
+      const raw = await readRawBody(request);
+      const body = JSON.parse(raw.toString("utf8") || "{}");
+      if (!trackingEngine.verifyMailgunSignature(body, process.env.MAILGUN_API_KEY || "")) {
+        sendJson(request, response, 401, { error: "Invalid webhook signature" });
+        return;
+      }
       const result = await trackingEngine.handleMailgunWebhook(body);
       sendJson(request, response, 200, result);
       return;
@@ -3066,7 +3181,12 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
 
     // Generic webhook (reply, bounce detection)
     if (request.method === "POST" && url.pathname === "/webhooks/email") {
-      const body = await readBody(request);
+      const raw = await readRawBody(request);
+      if (!trackingEngine.verifyGenericSignature(raw, request.headers, config.tracking.secret)) {
+        sendJson(request, response, 401, { error: "Invalid webhook signature" });
+        return;
+      }
+      const body = JSON.parse(raw.toString("utf8") || "{}");
       const result = await trackingEngine.handleGenericWebhook(body);
       sendJson(request, response, 200, result);
       return;
@@ -3119,9 +3239,16 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     sendJson(request, response, 404, { error: "Not found" });
   } catch (error) {
     try {
-      const statusCode = error instanceof UnsafeExecutionError ? error.statusCode : 500;
+      const statusCode =
+        error instanceof UnsafeExecutionError
+          ? error.statusCode
+          : typeof error.statusCode === "number" && error.statusCode >= 400 && error.statusCode < 600
+            ? error.statusCode
+            : 500;
       sendJson(request, response, statusCode, {
         error: error.message,
+        code: error.code || undefined,
+        feature: error.feature || undefined,
         details: error instanceof UnsafeExecutionError ? error.details : undefined,
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       });
@@ -3134,12 +3261,44 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
   }
   });
 
-  return { server, scheduler };
+  const engines = {
+    store,
+    llmProvider,
+    planner,
+    connectors,
+    resolveConnectorName,
+    workflowEngine,
+    pipelineEngine,
+    contactSourcingEngine,
+    prospectActivationEngine,
+    fundingDeckEngine,
+    sourceIngestionEngine,
+    fundingEngine,
+    decisionEngine,
+    automationEngine,
+    socialDispatchEngine,
+    analyticsEngine,
+    ghlBridge,
+    funnelHandlers,
+    messagingHandlers,
+    calendarHandlers,
+    executionGuard,
+    trackingEngine,
+    rateLimiter,
+    scheduler,
+    memoryEngine,
+    agentOrchestrator,
+    targetingEngine,
+  };
+
+  return { server, scheduler, engines };
 }
 
 let shuttingDown = false;
 let activeServer = null;
 let activeScheduler = null;
+
+export { createApp };
 
 export async function startServer({ port = config.port, host = process.env.HOST || "127.0.0.1" } = {}) {
   const { server, scheduler } = await createApp();

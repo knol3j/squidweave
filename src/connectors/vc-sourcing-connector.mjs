@@ -12,6 +12,7 @@
  */
 
 import crypto from "node:crypto";
+import { discoverInvestors } from "../lib/data-derivation.mjs";
 
 const CRUNCHBASE_API_KEY = process.env.CRUNCHBASE_API_KEY || "";
 const CRUNCHBASE_BASIC = process.env.CRUNCHBASE_BASIC_API_KEY || ""; // free-tier key
@@ -192,7 +193,7 @@ async function searchAngelList(query, limit = 10) {
 /*  Provider 3: Seed Dataset — Top VC Funds                           */
 /* ------------------------------------------------------------------ */
 
-const SEED_VC_FUNDS = [
+export const SEED_VC_FUNDS = [
   { fund: "a16z", domain: "a16z.com", sectors: ["enterprise", "crypto", "fintech", "ai", "gaming", "consumer"], stage: ["seed", "series-a", "growth"], geo: ["us"] },
   { fund: "Sequoia Capital", domain: "sequoiacap.com", sectors: ["enterprise", "consumer", "fintech", "ai", "healthcare"], stage: ["seed", "series-a", "growth"], geo: ["us", "india", "sea"] },
   { fund: "Accel", domain: "accel.com", sectors: ["enterprise", "saas", "security", "data"], stage: ["seed", "series-a", "growth"], geo: ["us", "europe", "india"] },
@@ -360,6 +361,43 @@ function searchSeedVCs(query = "", limit = 25) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Provider 4: Web-search-derived investor discovery                  */
+/* ------------------------------------------------------------------ */
+
+async function searchDerivedInvestors(query, limit = 10) {
+  try {
+    const discovered = await discoverInvestors(query || "top venture capital firms 2025", { limit });
+    return discovered.map((inv, i) => ({
+      source: "derived-web",
+      targetId: `derived:${inv.domain || crypto.randomUUID()}`,
+      company: inv.fundName,
+      contactName: "",
+      title: `${inv.fundName} — Venture Capital`,
+      description: inv.thesisSummary || `${inv.fundName} invests in ${inv.stageFocus} stage companies.`,
+      segment: "vc-firm",
+      region: "global",
+      preferredChannel: "email",
+      channels: ["email"],
+      website: inv.website || `https://${inv.domain}`,
+      domain: inv.domain,
+      fundingStage: inv.stageFocus,
+      categories: inv.sectorFocus,
+      stageScore: inv.stageFocus === "seed" ? 0.9 : inv.stageFocus === "series-a" ? 0.75 : 0.6,
+      relevanceScore: Math.max(0.5, 1 - (i * 0.03)),
+      recencyScore: 0.7,
+      metadata: {
+        sourceUrl: inv.website || `https://${inv.domain}`,
+        evidence: [inv.thesisSummary || ""],
+        sourceReliability: 0.65,
+      },
+    }));
+  } catch (err) {
+    console.error("[VcSourcingConnector] derived search error:", err.message);
+    return [];
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main Connector Object                                              */
 /* ------------------------------------------------------------------ */
 
@@ -394,7 +432,13 @@ export const VcSourcingConnector = {
       results.push(...alResults);
     }
 
-    // Provider 3: Seed dataset (always available, no API needed)
+    // Provider 3: Web-search-derived investor discovery
+    if (results.length < limit) {
+      const derivedResults = await searchDerivedInvestors(query, Math.max(1, limit - results.length));
+      results.push(...derivedResults);
+    }
+
+    // Provider 4: Seed dataset (always available, no API needed)
     const seedResults = searchSeedVCs(query || "", Math.max(5, limit));
     // Deduplicate seed results against API results
     const existingDomains = new Set(

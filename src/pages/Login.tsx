@@ -60,15 +60,6 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     setChecking(false);
   };
 
-  const handleLegacyLogin = () => {
-    if (password === "squidweave") {
-      localStorage.setItem("sw_authenticated", "true");
-      onLogin();
-    } else {
-      setError("Invalid legacy password");
-    }
-  };
-
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -168,17 +159,6 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                   {checking ? "Signing in..." : <>Sign In <ArrowRight className="w-3.5 h-3.5" /></>}
                 </button>
               </form>
-
-              {/* Legacy login fallback */}
-              {!hasUsers && (
-                <div className="mt-4 pt-4 border-t border-white/[0.06]">
-                  <div className="text-[10px] text-slate-500 mb-2 text-center">No registered users yet. Use legacy access:</div>
-                  <button onClick={handleLegacyLogin}
-                    className="w-full text-[10px] py-1.5 rounded-lg border border-white/[0.1] text-slate-400 hover:text-slate-200 hover:bg-white/[0.03] transition-colors">
-                    Legacy Access (password: squidweave)
-                  </button>
-                </div>
-              )}
             </>
           )}
 

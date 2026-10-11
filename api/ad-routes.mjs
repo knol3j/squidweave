@@ -1,6 +1,15 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createTierGuard } from '../src/lib/tier.mjs';
+import { discoverKeywords } from '../src/lib/data-derivation.mjs';
+
+const tierGuard = createTierGuard();
+
+function sendTierError(res, err) {
+  res.writeHead(402, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: err.message, code: err.code, feature: err.feature }));
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
@@ -19,9 +28,8 @@ async function saveJson(file, data) {
   await fs.writeFile(file, JSON.stringify(data, null, 2));
 }
 
-// ===== ORGANIC MARKETING =====
+// Organic marketing routes
 
-// POST /api/organic/schedule
 export async function schedulePost(req, res) {
   try {
     const post = JSON.parse(req.body);
@@ -36,7 +44,6 @@ export async function schedulePost(req, res) {
   }
 }
 
-// GET /api/organic/scheduled
 export async function getScheduledPosts(req, res) {
   try {
     const posts = await loadJson(POSTS_FILE);
@@ -48,39 +55,55 @@ export async function getScheduledPosts(req, res) {
   }
 }
 
-// POST /api/seo/analyze
 export async function analyzeSEO(req, res) {
   try {
     const { url } = JSON.parse(req.body);
-    const mockScore = Math.floor(Math.random() * 30) + 60;
-    const result = {
-      url,
-      score: mockScore,
-      issues: mockScore < 70
-        ? ['Missing meta description', 'Slow page speed', 'No structured data']
-        : mockScore < 85
-          ? ['Image alt tags missing', 'H1 too long']
-          : ['Minor: Add canonical tag'],
-      meta: {
-        title: 'Sample Page Title',
-        description: 'Sample meta description for SEO analysis',
-        keywords: 'sample, keywords'
-      },
-      suggestions: ['Add more internal links', 'Optimize images', 'Improve mobile responsiveness']
-    };
+    const parsed = new URL(url);
+    const html = await fetch(url, {
+      headers: { 'user-agent': 'squidweave-seo/0.1' },
+      signal: AbortSignal.timeout(8000),
+    }).then(r => r.ok ? r.text() : '').catch(() => '');
+
+    const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() || '';
+    const description = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i)?.[1]?.trim()
+      || html.match(/<meta[^>]*content=["']([^"']*)["'][^>]*name=["']description["']/i)?.[1]?.trim()
+      || '';
+    const h1s = [...html.matchAll(/<h1[^>]*>([^<]*)<\/h1>/gi)].map(m => m[1].trim()).filter(Boolean);
+
+    const issues = [];
+    if (!title) issues.push('Missing <title> tag');
+    if (!description) issues.push('Missing meta description');
+    if (h1s.length === 0) issues.push('Missing H1 heading');
+    if (html.length < 500) issues.push('Page content is very short or could not be fetched');
+
+    const baseTopic = title || h1s[0] || parsed.hostname;
+    const keywordSuggestions = await discoverKeywords(baseTopic, { limit: 10 });
+
+    const score = Math.max(0, Math.min(100, 60 - issues.length * 15 + (keywordSuggestions.length ? 10 : 0)));
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(result));
+    res.end(JSON.stringify({
+      url,
+      score,
+      issues,
+      meta: { title, description, keywords: keywordSuggestions.map(k => k.keyword).join(', ') },
+      headings: { h1: h1s.slice(0, 5) },
+      suggestions: [
+        ...issues.map(i => `Fix: ${i}`),
+        `Consider targeting related keywords: ${keywordSuggestions.map(k => k.keyword).slice(0, 5).join(', ')}`,
+      ],
+    }));
   } catch (err) {
     res.writeHead(500);
     res.end(JSON.stringify({ error: err.message }));
   }
 }
 
-// ===== AD PLATFORM CREDENTIALS =====
+// Ad platform credential routes
 
-// POST /api/ads/google/connect
 export async function connectGoogleAds(req, res) {
   try {
+    tierGuard.assertFeature('paid-ads');
     const { clientId, clientSecret, developerToken, accountId } = JSON.parse(req.body);
     const ads = await loadJson(ADS_FILE);
     ads.google = { clientId, clientSecret, developerToken, accountId, connected: true, connectedAt: new Date().toISOString() };
@@ -88,14 +111,18 @@ export async function connectGoogleAds(req, res) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, message: 'Google Ads connected' }));
   } catch (err) {
+    if (err.statusCode === 402) {
+      sendTierError(res, err);
+      return;
+    }
     res.writeHead(500);
     res.end(JSON.stringify({ error: err.message }));
   }
 }
 
-// POST /api/ads/meta/connect
 export async function connectMetaAds(req, res) {
   try {
+    tierGuard.assertFeature('paid-ads');
     const { appId, appSecret, accessToken, adAccountId } = JSON.parse(req.body);
     const ads = await loadJson(ADS_FILE);
     ads.meta = { appId, appSecret, accessToken, adAccountId, connected: true, connectedAt: new Date().toISOString() };
@@ -103,14 +130,18 @@ export async function connectMetaAds(req, res) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, message: 'Meta Ads connected' }));
   } catch (err) {
+    if (err.statusCode === 402) {
+      sendTierError(res, err);
+      return;
+    }
     res.writeHead(500);
     res.end(JSON.stringify({ error: err.message }));
   }
 }
 
-// POST /api/ads/linkedin/connect
 export async function connectLinkedInAds(req, res) {
   try {
+    tierGuard.assertFeature('paid-ads');
     const { clientId, clientSecret, accessToken, accountId } = JSON.parse(req.body);
     const ads = await loadJson(ADS_FILE);
     ads.linkedin = { clientId, clientSecret, accessToken, accountId, connected: true, connectedAt: new Date().toISOString() };
@@ -118,12 +149,15 @@ export async function connectLinkedInAds(req, res) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, message: 'LinkedIn Ads connected' }));
   } catch (err) {
+    if (err.statusCode === 402) {
+      sendTierError(res, err);
+      return;
+    }
     res.writeHead(500);
     res.end(JSON.stringify({ error: err.message }));
   }
 }
 
-// GET /api/ads/status
 export async function getAdsStatus(req, res) {
   try {
     const ads = await loadJson(ADS_FILE);
@@ -139,9 +173,8 @@ export async function getAdsStatus(req, res) {
   }
 }
 
-// ===== RETARGETING PIXELS =====
+// Retargeting pixel routes
 
-// GET /api/retargeting/pixels
 export async function getPixels(req, res) {
   try {
     const pixels = await loadJson(PIXELS_FILE);
@@ -153,7 +186,6 @@ export async function getPixels(req, res) {
   }
 }
 
-// POST /api/retargeting/pixels
 export async function createPixel(req, res) {
   try {
     const pixel = JSON.parse(req.body);
@@ -239,28 +271,22 @@ twq('config','${id}');
   }
 }
 
-// ===== AD CAMPAIGNS =====
+// Ad campaign routes
 
-// GET /api/ads/campaigns
 export async function getAdCampaigns(req, res) {
   try {
-    const campaigns = [
-      {id:'adc1',name:'Crypto Mining Keywords',platform:'google',status:'active',budget:50,spend:1240,impressions:45000,clicks:890,conversions:34,ctr:1.98,cpc:1.39,roas:2.8},
-      {id:'adc2',name:'DeFi Audience',platform:'meta',status:'active',budget:40,spend:890,impressions:32000,clicks:560,conversions:22,ctr:1.75,cpc:1.59,roas:2.4},
-      {id:'adc3',name:'LinkedIn B2B',platform:'linkedin',status:'paused',budget:75,spend:0,impressions:0,clicks:0,conversions:0,ctr:0,cpc:0,roas:0},
-      {id:'adc4',name:'YouTube Pre-roll',platform:'google',status:'draft',budget:100,spend:0,impressions:0,clicks:0,conversions:0,ctr:0,cpc:0,roas:0},
-    ];
+    const ads = await loadJson(ADS_FILE);
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(campaigns));
+    res.end(JSON.stringify(ads.campaigns || []));
   } catch (err) {
     res.writeHead(500);
     res.end(JSON.stringify({ error: err.message }));
   }
 }
 
-// POST /api/ads/campaigns
 export async function createAdCampaign(req, res) {
   try {
+    tierGuard.assertFeature('paid-ads');
     const campaign = JSON.parse(req.body);
     const ads = await loadJson(ADS_FILE);
     if (!ads.campaigns) ads.campaigns = [];
@@ -270,6 +296,10 @@ export async function createAdCampaign(req, res) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, campaign: newCampaign }));
   } catch (err) {
+    if (err.statusCode === 402) {
+      sendTierError(res, err);
+      return;
+    }
     res.writeHead(500);
     res.end(JSON.stringify({ error: err.message }));
   }

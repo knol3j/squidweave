@@ -1,91 +1,121 @@
-import { loadEnvFiles } from "./load-env.mjs";
 import { pathToFileURL } from "node:url";
-
-loadEnvFiles();
-
-const toNumber = (value, fallback) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
-const toBoolean = (value, fallback) => {
-  if (value === undefined) {
-    return fallback;
-  }
-  return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
-};
+import { env } from "./env.mjs";
 
 export const config = {
-  port: toNumber(process.env.PORT, 4010),
-  dryRun: toBoolean(process.env.DRY_RUN, true),
-  databaseUrl: process.env.DATABASE_URL || "",
-  stateBackend: process.env.STATE_BACKEND || "",
-  postgresSchema: process.env.POSTGRES_SCHEMA || "public",
-  postgresStateTable: process.env.POSTGRES_STATE_TABLE || "squidweave_state",
-  postgresStateKey: process.env.POSTGRES_STATE_KEY || "primary",
-  lmStudioModel: process.env.LMSTUDIO_MODEL || "google/gemma-3n-e4b",
-  defaultConnector: process.env.DEFAULT_CONNECTOR || "openclaw",
-  defaultLocale: process.env.DEFAULT_LOCALE || "en-US",
-  localizationModel: process.env.LOCALIZATION_MODEL || process.env.LMSTUDIO_MODEL || "google/gemma-3n-e4b",
+  port: env.PORT,
+  host: env.HOST,
+  nodeEnv: env.NODE_ENV,
+  dryRun: env.DRY_RUN,
+  databaseUrl: env.DATABASE_URL || "",
+  stateBackend: env.STATE_BACKEND,
+  postgresRelationalEvents: env.POSTGRES_RELATIONAL_EVENTS,
+  postgresSchema: env.POSTGRES_SCHEMA,
+  postgresStateTable: env.POSTGRES_STATE_TABLE,
+  postgresStateKey: env.POSTGRES_STATE_KEY,
+  lmStudioModel: env.LMSTUDIO_MODEL,
+  lmStudioBaseUrl: env.LMSTUDIO_BASE_URL || "",
+  defaultConnector: env.DEFAULT_CONNECTOR,
+  defaultLocale: env.DEFAULT_LOCALE,
+  localizationModel: env.LOCALIZATION_MODEL || env.LMSTUDIO_MODEL,
   llm: {
-    baseUrl: process.env.LLM_BASE_URL || "",
-    apiKey: process.env.LLM_API_KEY || "",
-    model: process.env.LLM_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
-    timeoutMs: toNumber(process.env.LLM_TIMEOUT_MS, 60000),
+    baseUrl: env.LLM_BASE_URL || "",
+    apiKey: env.LLM_API_KEY || "",
+    model: env.LLM_MODEL,
+    timeoutMs: env.LLM_TIMEOUT_MS,
   },
   gemini: {
-    apiKey: process.env.GEMINI_API_KEY || "",
-    model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
-    timeoutMs: toNumber(process.env.GEMINI_TIMEOUT_MS, 60000),
+    apiKey: env.GEMINI_API_KEY || "",
+    model: env.GEMINI_MODEL,
+    timeoutMs: env.GEMINI_TIMEOUT_MS,
   },
   ollama: {
-    baseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
-    model: process.env.OLLAMA_MODEL || "gemma3n",
+    baseUrl: env.OLLAMA_BASE_URL,
+    model: env.OLLAMA_MODEL,
   },
-  schedulerIntervalSeconds: toNumber(process.env.SCHEDULER_INTERVAL_SECONDS, 120),
-  maxDailyBudgetDelta: toNumber(process.env.MAX_DAILY_BUDGET_DELTA, 0.2),
-  maxOutreachBatch: toNumber(process.env.MAX_OUTREACH_BATCH, 50),
-  maxUnsubscribeRate: toNumber(process.env.MAX_UNSUBSCRIBE_RATE, 0.03),
-  minRoasToScaleUp: toNumber(process.env.MIN_ROAS_TO_SCALE_UP, 2),
-  decisionCooldownMinutes: toNumber(process.env.DECISION_COOLDOWN_MINUTES, 30),
-  defaultBrandVoice: process.env.DEFAULT_BRAND_VOICE || "direct, credible, concise, and conversion-focused",
-  defaultOffer: process.env.DEFAULT_OFFER || "",
-  dataFile: process.env.DATA_FILE
-    ? pathToFileURL(process.env.DATA_FILE)
+  schedulerIntervalSeconds: env.SCHEDULER_INTERVAL_SECONDS,
+  maxDailyBudgetDelta: env.MAX_DAILY_BUDGET_DELTA,
+  maxOutreachBatch: env.MAX_OUTREACH_BATCH,
+  maxUnsubscribeRate: env.MAX_UNSUBSCRIBE_RATE,
+  minRoasToScaleUp: env.MIN_ROAS_TO_SCALE_UP,
+  decisionCooldownMinutes: env.DECISION_COOLDOWN_MINUTES,
+  defaultBrandVoice: env.DEFAULT_BRAND_VOICE,
+  defaultOffer: env.DEFAULT_OFFER,
+  dataFile: env.DATA_FILE
+    ? pathToFileURL(env.DATA_FILE)
     : new URL("../data/state.json", import.meta.url),
-  seedDataFile: process.env.SEED_DATA_FILE
-    ? pathToFileURL(process.env.SEED_DATA_FILE)
+  seedDataFile: env.SEED_DATA_FILE
+    ? pathToFileURL(env.SEED_DATA_FILE)
     : new URL("../data/state.json", import.meta.url),
-  staticDir: process.env.STATIC_DIR
-    ? pathToFileURL(process.env.STATIC_DIR)
+  staticDir: env.STATIC_DIR
+    ? pathToFileURL(env.STATIC_DIR)
     : null,
   connectors: {
     openclaw: {
-      baseUrl: process.env.OPENCLAW_BASE_URL || process.env.MOLTBOT_BASE_URL || "",
-      token: process.env.OPENCLAW_TOKEN || process.env.MOLTBOT_TOKEN || "",
+      baseUrl: env.OPENCLAW_BASE_URL || env.MOLTBOT_BASE_URL || "",
+      token: env.OPENCLAW_TOKEN || env.MOLTBOT_TOKEN || "",
     },
     clawdbot: {
-      baseUrl: process.env.CLAWDBOT_BASE_URL || "",
-      token: process.env.CLAWDBOT_TOKEN || "",
+      baseUrl: env.CLAWDBOT_BASE_URL || "",
+      token: env.CLAWDBOT_TOKEN || "",
     },
   },
   hermes: {
-    baseUrl: process.env.HERMES_BASE_URL || "",
-    token: process.env.HERMES_TOKEN || "",
-    healthPath: process.env.HERMES_HEALTH_PATH || "/health",
-    upsertPath: process.env.HERMES_MEMORY_UPSERT_PATH || "/v1/memory/upsert",
-    recallPath: process.env.HERMES_MEMORY_RECALL_PATH || "/v1/memory/recall",
+    baseUrl: env.HERMES_BASE_URL || "",
+    token: env.HERMES_TOKEN || "",
+    healthPath: env.HERMES_HEALTH_PATH,
+    upsertPath: env.HERMES_MEMORY_UPSERT_PATH,
+    recallPath: env.HERMES_MEMORY_RECALL_PATH,
   },
   ghl: {
-    apiKey: process.env.GHL_API_KEY || "",
-    locationId: process.env.GHL_LOCATION_ID || "",
-    webhookSecret: process.env.GHL_WEBHOOK_SECRET || "",
-    defaultCampaignId: process.env.GHL_DEFAULT_CAMPAIGN_ID || "",
+    apiKey: env.GHL_API_KEY || "",
+    locationId: env.GHL_LOCATION_ID || "",
+    webhookSecret: env.GHL_WEBHOOK_SECRET || "",
+    defaultCampaignId: env.GHL_DEFAULT_CAMPAIGN_ID || "",
+  },
+  smtp: {
+    host: env.SMTP_HOST || "",
+    port: env.SMTP_PORT,
+    user: env.SMTP_USER || "",
+    pass: env.SMTP_PASS || "",
+    fromName: env.SMTP_FROM_NAME,
+    fromEmail: env.SMTP_FROM_EMAIL || "",
   },
   safety: {
-    requireLiveApproval: toBoolean(process.env.REQUIRE_LIVE_APPROVAL, true),
-    executionDedupeWindowSeconds: toNumber(process.env.EXECUTION_DEDUPE_WINDOW_SECONDS, 900),
-    maxConcurrentExecutions: toNumber(process.env.MAX_CONCURRENT_EXECUTIONS, 1),
-    maxFundingBatch: toNumber(process.env.MAX_FUNDING_BATCH, 20),
+    requireLiveApproval: env.REQUIRE_LIVE_APPROVAL,
+    executionDedupeWindowSeconds: env.EXECUTION_DEDUPE_WINDOW_SECONDS,
+    maxConcurrentExecutions: env.MAX_CONCURRENT_EXECUTIONS,
+    maxFundingBatch: env.MAX_FUNDING_BATCH,
+  },
+  tracking: {
+    baseUrl: env.TRACKING_BASE_URL,
+    secret: env.TRACKING_SECRET,
+    allowedDomains: env.TRACKING_ALLOWED_DOMAINS
+      ? env.TRACKING_ALLOWED_DOMAINS.split(",").map((d) => d.trim()).filter(Boolean)
+      : [],
+  },
+  rateLimit: {
+    maxRequests: env.RATE_LIMIT_MAX,
+  },
+  limits: {
+    maxBodySizeBytes: env.MAX_BODY_SIZE_BYTES,
+    maxIngestLimit: env.MAX_INGEST_LIMIT,
+    maxIngestTotal: env.MAX_INGEST_TOTAL,
+    maxIngestConnectors: env.MAX_INGEST_CONNECTORS,
+  },
+  apiKey: env.SQUIDWEAVE_API_KEY || null,
+  uiAuth: env.UI_USER && env.UI_PASS ? { user: env.UI_USER, pass: env.UI_PASS } : null,
+  allowedOrigins: env.ALLOWED_ORIGINS
+    ? env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+    : [],
+  schedulerAutostart: env.SCHEDULER_AUTOSTART,
+  jobQueue: {
+    enabled: env.JOB_QUEUE_ENABLED && env.STATE_BACKEND === "postgres" && !!env.DATABASE_URL,
+    syncJobs: env.SYNC_JOBS,
+  },
+  tier: {
+    mode: env.TIER_MODE,
+    freeLlmCallsPerHour: env.FREE_LLM_CALLS_PER_HOUR,
+    freeOutreachBatchMax: env.FREE_OUTREACH_BATCH_MAX,
+    freeAdsConnectorsEnabled: env.FREE_ADS_CONNECTORS_ENABLED,
   },
 };

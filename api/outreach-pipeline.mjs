@@ -11,10 +11,16 @@ import path from 'path';
 import fs from 'fs/promises';
 
 const API_BASE = process.env.API_URL || 'http://localhost:3001';
+const API_KEY = process.env.SQUIDWEAVE_API_KEY || '';
 const PROSPECT_SCRIPT = path.resolve('../scripts/prospect.mjs');
 
 async function runPipeline(query, options = {}) {
   const { limit = 10, language = 'en', output = './pipeline-results.json' } = options;
+
+  if (!API_KEY) {
+    console.error('SQUIDWEAVE_API_KEY is not set');
+    process.exit(1);
+  }
 
   console.log(`🔍 Running prospecting query: "${query}"`);
   console.log(`   Limit: ${limit}, Language: ${language}`);
@@ -50,7 +56,7 @@ async function runPipeline(query, options = {}) {
 
         const response = await fetch(`${API_BASE}/api/prospecting/import`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
           body: JSON.stringify({ results })
         });
 

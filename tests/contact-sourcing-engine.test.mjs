@@ -111,9 +111,9 @@ function buildEngine() {
   return { engine, store };
 }
 
-test("ContactSourcingEngine builds a structured sourcing plan", () => {
+test("ContactSourcingEngine builds a structured sourcing plan", async () => {
   const { engine } = buildEngine();
-  const plan = engine.buildPlan("c1");
+  const plan = await engine.buildPlan("c1");
 
   assert.equal(plan.campaignId, "c1");
   assert.equal(plan.topAccounts.length, 2);

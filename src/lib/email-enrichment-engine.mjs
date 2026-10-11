@@ -15,6 +15,7 @@
 import https from 'node:https';
 import http from 'node:http';
 import { scrapeFundTeam } from './scrape-enrichment-engine.mjs';
+import { discoverContacts, deriveEmailPattern } from './data-derivation.mjs';
 
 /* ------------------------------------------------------------------ */
 /*  Config                                                            */
@@ -24,6 +25,69 @@ const ENV = {
   HUNTER_API_KEY:     process.env.HUNTER_API_KEY || '',
   APOLLO_API_KEY:     process.env.APOLLO_API_KEY || '',
 };
+
+/* ------------------------------------------------------------------ */
+/*  Provider: Derived contacts / email pattern (free web search)       */
+/* ------------------------------------------------------------------ */
+
+async function huntWithDerivedContacts(domain, firstName, lastName) {
+  try {
+    const role = firstName && lastName ? "founder" : "investor";
+    const contacts = await discoverContacts(domain, role, { limit: 8 });
+    if (firstName && lastName) {
+      const match = contacts.find(c => {
+        const parts = (c.name || "").toLowerCase().split(/\s+/);
+        return parts.includes(firstName.toLowerCase()) && parts.includes(lastName.toLowerCase());
+      });
+      if (match) {
+        return {
+          email: null,
+          source: "derived-contacts",
+          confidence: null,
+          scrapedPeople: [{ name: match.name, title: match.title }],
+        };
+      }
+    }
+    if (contacts.length > 0) {
+      return {
+        email: null,
+        source: "derived-contacts",
+        confidence: null,
+        scrapedPeople: contacts.slice(0, 5).map(c => ({ name: c.name, title: c.title })),
+      };
+    }
+    return { email: null, source: "derived-contacts-empty", confidence: null };
+  } catch (err) {
+    return { email: null, source: "derived-contacts-error", confidence: null };
+  }
+}
+
+async function huntWithDerivedPattern(domain, firstName, lastName) {
+  try {
+    const derived = await deriveEmailPattern(domain, { count: 3 });
+    if (firstName && lastName) {
+      const email = buildEmailFromPattern(firstName, lastName, domain, derived.primaryPattern);
+      if (email) {
+        return { email, source: "derived-pattern", confidence: Math.round(derived.patterns[0].confidence * 100) };
+      }
+    }
+    return { email: null, source: "derived-pattern", confidence: null, patterns: derived.patterns };
+  } catch (err) {
+    return { email: null, source: "derived-pattern-error", confidence: null };
+  }
+}
+
+function buildEmailFromPattern(firstName, lastName, domain, pattern) {
+  if (!firstName || !lastName || !domain || !pattern) return null;
+  const f = firstName.toLowerCase();
+  const l = lastName.toLowerCase();
+  return pattern
+    .replace(/\{first\}/g, f)
+    .replace(/\{last\}/g, l)
+    .replace(/\{first\[0\]\}/g, f[0])
+    .replace(/\{last\[0\]\}/g, l[0])
+    .replace(/\{domain\}/g, domain);
+}
 
 /* ------------------------------------------------------------------ */
 /*  Provider: Website Scraper (free)                                   */
@@ -249,7 +313,7 @@ export async function enrichInvestorEmail(investor, opts = {}) {
   }
 
   // Try providers in order
-  const providers = [huntWithScrape, huntWithHunter, huntWithApollo];
+  const providers = [huntWithScrape, huntWithDerivedContacts, huntWithHunter, huntWithApollo, huntWithDerivedPattern];
   for (const provider of providers) {
     const result = await provider(domain, firstName, lastName);
     if (result?.email) {
@@ -298,6 +362,8 @@ export async function batchEnrichInvestors(investors, opts = {}) {
 export function getEnrichmentProvidersStatus() {
   return {
     scraper: { configured: true, description: 'free website scraper for /team /about pages' },
+    derivedContacts: { configured: true, description: 'free web-search-derived people and roles' },
+    derivedPattern: { configured: true, description: 'free web-search-derived email patterns' },
     hunter: { configured: !!ENV.HUNTER_API_KEY, keyPrefix: ENV.HUNTER_API_KEY ? ENV.HUNTER_API_KEY.slice(0, 6) + '...' : null },
     apollo: { configured: !!ENV.APOLLO_API_KEY, keyPrefix: ENV.APOLLO_API_KEY ? ENV.APOLLO_API_KEY.slice(0, 6) + '...' : null },
   };

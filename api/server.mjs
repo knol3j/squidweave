@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import net from 'net';
+import crypto from 'crypto';
 import {
   schedulePost, getScheduledPosts, analyzeSEO,
   connectGoogleAds, connectMetaAds, connectLinkedInAds, getAdsStatus,
@@ -12,6 +13,33 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
 await fs.mkdir(DATA_DIR, { recursive: true });
+
+// Fail secure: if no API key is configured, all /api/* requests are rejected.
+const API_KEY = process.env.SQUIDWEAVE_API_KEY || '';
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+
+function isAuthorized(req) {
+  if (!API_KEY) return false;
+  const header = req.headers['x-api-key'] || '';
+  try {
+    return crypto.timingSafeEqual(Buffer.from(header), Buffer.from(API_KEY));
+  } catch {
+    return false;
+  }
+}
+
+function sendUnauthorized(res) {
+  res.writeHead(401, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: 'Unauthorized. Set SQUIDWEAVE_API_KEY and send it as x-api-key.' }));
+}
+
+function getCorsOrigin(req) {
+  const origin = req.headers.origin || '';
+  if (!origin) return '';
+  if (ALLOWED_ORIGINS.length === 0) return '';
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  return '';
+}
 
 const SMTP_FILE = path.join(DATA_DIR, 'smtp.json');
 const CAMPAIGNS_FILE = path.join(DATA_DIR, 'campaigns.json');
@@ -87,27 +115,48 @@ async function sendEmailSmtp({ host, port, user, pass, from, to, subject, html, 
   });
 }
 
+const MAX_BODY_BYTES = Number(process.env.MAX_BODY_SIZE_BYTES) || 1024 * 1024;
+
 const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+
   // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const corsOrigin = getCorsOrigin(req);
+  if (corsOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(200); res.end(); return;
   }
 
-  const url = new URL(req.url, `http://${req.headers.host}`);
-
-  // Parse body for POST requests
+  // Parse body for POST requests with size limit
   let body = '';
   if (req.method === 'POST') {
-    body = await new Promise((resolve) => {
+    body = await new Promise((resolve, reject) => {
       let data = '';
-      req.on('data', chunk => data += chunk);
+      let length = 0;
+      req.on('data', chunk => {
+        length += chunk.length;
+        if (length > MAX_BODY_BYTES) {
+          reject(new Error('Request body too large'));
+          return;
+        }
+        data += chunk;
+      });
       req.on('end', () => resolve(data));
+      req.on('error', reject);
     });
     req.body = body;
+  }
+
+  // Enforce API key on all /api/* routes
+  if (url.pathname.startsWith('/api/') && !isAuthorized(req)) {
+    sendUnauthorized(res);
+    return;
   }
 
   try {

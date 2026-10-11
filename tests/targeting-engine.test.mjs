@@ -42,7 +42,7 @@ function actionableResearchRecord(input) {
   });
 }
 
-test("TargetingEngine ranks fresh high-intent targets above suppressed ones", () => {
+test("TargetingEngine ranks fresh high-intent targets above suppressed ones", async () => {
   const records = [
     actionableResearchRecord({
       campaignId: "c1",
@@ -73,14 +73,14 @@ test("TargetingEngine ranks fresh high-intent targets above suppressed ones", ()
   ];
 
   const engine = new TargetingEngine({ store: createStore(records, outreachEvents) });
-  const rankings = engine.rankTargets("c1");
+  const rankings = await engine.rankTargets("c1");
 
   assert.equal(rankings[0].targetId, "t1");
   assert.equal(rankings[1].recommendation, "suppress");
   assert.equal(rankings[1].score, 0);
 });
 
-test("TargetingEngine builds a reengagement queue from real outreach timing", () => {
+test("TargetingEngine builds a reengagement queue from real outreach timing", async () => {
   const records = [
     actionableResearchRecord({
       campaignId: "c1",
@@ -102,14 +102,14 @@ test("TargetingEngine builds a reengagement queue from real outreach timing", ()
   ];
 
   const engine = new TargetingEngine({ store: createStore(records, outreachEvents) });
-  const decision = engine.buildDecision("c1");
+  const decision = await engine.buildDecision("c1");
 
   assert.equal(decision.reengagementQueue.length, 1);
   assert.equal(decision.reengagementQueue[0].targetId, "t3");
   assert.equal(decision.reengagementQueue[0].recommendation, "reengage");
 });
 
-test("TargetingEngine uses learned cadence days for sent-only outreach", () => {
+test("TargetingEngine uses learned cadence days for sent-only outreach", async () => {
   const now = new Date();
   const capturedAt = new Date(now.getTime() - (2 * 24 * 60 * 60 * 1000)).toISOString();
   const sentAt = new Date(now.getTime() - (1 * 24 * 60 * 60 * 1000)).toISOString();
@@ -148,13 +148,13 @@ test("TargetingEngine uses learned cadence days for sent-only outreach", () => {
   }];
 
   const engine = new TargetingEngine({ store });
-  const rankings = engine.rankTargets("c1");
+  const rankings = await engine.rankTargets("c1");
 
   assert.equal(rankings[0].nextEligibleAt, expectedNextEligibleAt);
   assert.equal(rankings[0].recommendation, "wait");
 });
 
-test("TargetingEngine boosts records with higher source reliability", () => {
+test("TargetingEngine boosts records with higher source reliability", async () => {
   const base = {
     campaignId: "c1",
     fitScore: 0.7,
@@ -179,7 +179,7 @@ test("TargetingEngine boosts records with higher source reliability", () => {
     }),
   ];
   const engine = new TargetingEngine({ store: createStore(records, []) });
-  const rankings = engine.rankTargets("c1");
+  const rankings = await engine.rankTargets("c1");
 
   assert.equal(rankings[0].targetId, "hi");
   assert.ok(rankings[0].score > rankings[1].score);

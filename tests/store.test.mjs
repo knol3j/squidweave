@@ -51,7 +51,7 @@ describe('Store', () => {
       timestamp: new Date().toISOString(),
     };
     await store.addEvent(event);
-    const events = store.listEvents('test-1');
+    const events = await store.listEvents('test-1');
     assert.ok(events.length >= 1);
     assert.equal(events[0].type, 'open');
   });
@@ -80,7 +80,7 @@ describe('Store', () => {
       timestamp: new Date().toISOString(),
     };
     await store.addOutreachEvent(event);
-    const events = store.listOutreachEvents('test-1');
+    const events = await store.listOutreachEvents('test-1');
     assert.ok(events.length >= 1);
   });
 

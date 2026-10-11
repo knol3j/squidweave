@@ -193,12 +193,12 @@ export class TargetingEngine {
     this.store = store;
   }
 
-  rankTargets(campaignId) {
+  async rankTargets(campaignId) {
     const campaign = this.store.getCampaign ? this.store.getCampaign(campaignId) : {};
     const researchRecords = this.store
       .listResearchRecords(campaignId)
       .filter(record => isActionableResearchRecord(record, campaign));
-    const outreachEvents = this.store.listOutreachEvents(campaignId);
+    const outreachEvents = await this.store.listOutreachEvents(campaignId);
     const playbooks = this.store.listPlaybooks ? this.store.listPlaybooks(campaignId) : [];
     const grouped = new Map();
 
@@ -291,8 +291,8 @@ export class TargetingEngine {
       .sort((a, b) => b.score - a.score);
   }
 
-  buildDecision(campaignId) {
-    const rankings = this.rankTargets(campaignId);
+  async buildDecision(campaignId) {
+    const rankings = await this.rankTargets(campaignId);
     const actionable = rankings.filter(target => ["initial_outreach", "reengage", "advance"].includes(target.recommendation));
     const initialTargets = actionable.filter(target => target.recommendation === "initial_outreach").slice(0, 5);
     const reengagementQueue = actionable.filter(target => target.recommendation === "reengage").slice(0, 5);

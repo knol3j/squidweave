@@ -21,13 +21,13 @@ export class DecisionEngine {
       throw new Error(`Unknown campaign: ${campaignId}`);
     }
 
-    const events = this.store.listEvents(campaignId);
+    const events = await this.store.listEvents(campaignId);
     const summary = summarizeCampaign(campaign, events);
     const recentDecisions = this.store.listDecisions(campaignId);
     const policyResult = evaluatePolicy(campaign, summary, this.config, recentDecisions);
     const memoryContext = await this.memoryEngine.buildDecisionContext(campaignId);
     const plan = await this.planner.buildActionPlan(campaign, summary, policyResult, memoryContext);
-    const targeting = this.targetingEngine.buildDecision(campaignId);
+    const targeting = await this.targetingEngine.buildDecision(campaignId);
 
     let execution = null;
     let executions = [];

@@ -3,6 +3,7 @@ import { searchDuck, extractDomain } from './scrapers/search-scout.mjs';
 import { lookupWhois, parseDomain } from './scrapers/whois-scout.mjs';
 import { findJobs } from './scrapers/jobpost-scout.mjs';
 import { permuteEmail, validateDomain } from './scrapers/email-permutator.mjs';
+import { discoverCompanies } from './data-derivation.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -28,10 +29,11 @@ export class ProspectingEngine {
   async run(icp) {
     console.log(`Prospecting for ICP: ${icp.description || 'custom'}`);
     await mkdir(this.outDir, { recursive: true });
-    let gh = [], web = [];
+    let gh = [], web = [], derived = [];
     try { gh = await this.scoutGitHub(icp); } catch (e) { console.warn(`GitHub scout failed: ${e.message}`); }
     try { web = await this.scoutWeb(icp); } catch (e) { console.warn(`Web scout failed: ${e.message}`); }
-    const combined = this.dedupe([...gh, ...web]);
+    try { derived = await this.scoutDerived(icp); } catch (e) { console.warn(`Derived scout failed: ${e.message}`); }
+    const combined = this.dedupe([...gh, ...web, ...derived]);
     console.log(`Found ${combined.length} unique companies, enriching...`);
     const enriched = await this.enrichBatch(combined.slice(0, this.maxLeads));
     this.leads = this.scoreAll(enriched, icp);
@@ -68,6 +70,20 @@ export class ProspectingEngine {
     return results.map(r => ({
       source: 'web', name: r.title.split(/[-|:]/)[0].trim(),
       domain: extractDomain(r.url), url: r.url, snippet: r.title, confidence: 3
+    }));
+  }
+
+  async scoutDerived(icp) {
+    const query = icp.derivedQuery || icp.webQuery || `${icp.keyword || 'startup'} ${icp.industry || ''} companies 2025`;
+    console.log(`Derived company discovery: ${query}`);
+    const companies = await discoverCompanies(query, { limit: this.maxLeads });
+    return companies.map(c => ({
+      source: 'derived',
+      name: c.name,
+      domain: c.domain,
+      url: c.url,
+      snippet: c.description,
+      confidence: 4,
     }));
   }
 

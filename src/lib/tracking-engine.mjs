@@ -10,18 +10,22 @@
  */
 
 import crypto from 'node:crypto';
+import { config } from '../config.mjs';
 
-const BASE_URL = process.env.TRACKING_BASE_URL || process.env.PUBLIC_URL || 'http://localhost:4010';
+const BASE_URL = config.tracking.baseUrl;
 
 // 1x1 transparent GIF
-const PIXEL = Buffer.from(
+export const PIXEL = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
   'base64',
 );
 
 export class TrackingEngine {
+  static pixelGif = PIXEL;
+
   constructor({ store }) {
     this.store = store;
+    this.pixelGif = PIXEL;
   }
 
   /**
@@ -33,13 +37,26 @@ export class TrackingEngine {
    * @returns {string} URL to embed as <img src="...">
    */
   generatePixelUrl({ campaignId, investorId, emailId }) {
-    const token = crypto
-      .createHmac('sha256', process.env.TRACKING_SECRET || 'squidweave-tracking')
+    const token = this._generateToken(campaignId, investorId, emailId);
+    return `${BASE_URL}/webhooks/pixel/${campaignId}/${investorId}/${emailId}/${token}`;
+  }
+
+  _generateToken(campaignId, investorId, emailId) {
+    return crypto
+      .createHmac('sha256', config.tracking.secret)
       .update(`${campaignId}:${investorId}:${emailId}`)
       .digest('hex')
       .slice(0, 32);
+  }
 
-    return `${BASE_URL}/webhooks/pixel/${campaignId}/${investorId}/${emailId}/${token}`;
+  verifyPixelToken({ campaignId, investorId, emailId, token }) {
+    if (!token || !campaignId || !investorId || !emailId) return false;
+    const expected = this._generateToken(campaignId, investorId, emailId);
+    try {
+      return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(token));
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -203,6 +220,55 @@ export class TrackingEngine {
     });
 
     return event;
+  }
+
+  /**
+   * Verify Brevo webhook signature.
+   * Brevo uses HMAC-SHA256 of the raw request body; the signature may be sent
+   * in X-Brevo-Signature or X-Webhook-Signature headers.
+   */
+  verifyBrevoSignature(rawBody, headers, secret) {
+    if (!secret) return true; // not configured: accept (warned in production)
+    const signature = headers['x-brevo-signature'] || headers['x-webhook-signature'] || '';
+    if (!signature) return false;
+    const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+    try {
+      return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Verify Mailgun webhook signature.
+   * Mailgun sends { signature: { token, timestamp, signature } } where
+   * signature = HMAC-SHA256(timestamp + token, API key).
+   */
+  verifyMailgunSignature(payload, apiKey) {
+    if (!apiKey) return true; // not configured: accept (warned in production)
+    const sig = payload?.signature;
+    if (!sig || !sig.timestamp || !sig.token || !sig.signature) return false;
+    const expected = crypto.createHmac('sha256', apiKey).update(sig.timestamp + sig.token).digest('hex');
+    try {
+      return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig.signature));
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Verify a generic shared-secret webhook.
+   */
+  verifyGenericSignature(rawBody, headers, secret) {
+    if (!secret) return false; // generic webhooks require a secret
+    const signature = headers['x-squidweave-signature'] || '';
+    if (!signature) return false;
+    const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+    try {
+      return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+    } catch {
+      return false;
+    }
   }
 
   /**
