@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     xz-utils \
     libatomic1 \
+    cron \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 22 (Hermes agents reuse SquidWeave Node scripts)

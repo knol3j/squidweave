@@ -5,24 +5,21 @@ export HERMES_HOME="${HERMES_HOME:-/app/.hermes}"
 export SQUIDWEAVE_REPO_DIR="${SQUIDWEAVE_REPO_DIR:-/app/squidweave}"
 mkdir -p "$HERMES_HOME"
 
-# Bootstrap gateway config for Telegram-centric hosting
+# Bootstrap gateway config for Telegram-centric hosting.
 hermes config set gateway.platforms.telegram.enabled true >/dev/null 2>&1 || true
 hermes config set gateway.platforms.discord.enabled false >/dev/null 2>&1 || true
 
-# Optional one-time setup hook (safe if already configured)
 if [ "${HERMES_SETUP_ON_BOOT:-false}" = "true" ]; then
   hermes config check || true
 fi
 
 # Seed Hermes credentials from the local agent so the worker uses the same auth.
 if [ -n "${HERMES_AUTH_JSON_B64:-}" ]; then
-  mkdir -p "$HERMES_HOME"
   echo "$HERMES_AUTH_JSON_B64" | base64 -d > "${HERMES_HOME}/auth.json"
   chmod 600 "${HERMES_HOME}/auth.json"
 fi
 
 # Clone SquidWeave at runtime so backend/site/automation agents have the repo.
-# Doing this at startup keeps the Docker image small and push fast.
 SQUIDWEAVE_REPO="${SQUIDWEAVE_REPO:-https://github.com/knol3j/squidweave.git}"
 SQUIDWEAVE_REF="${SQUIDWEAVE_REF:-main}"
 if [ ! -d "$SQUIDWEAVE_REPO_DIR" ]; then
@@ -32,7 +29,7 @@ if [ ! -d "$SQUIDWEAVE_REPO_DIR" ]; then
     && npm --prefix ui ci
 fi
 
-# Ensure API base/token are present for SquidWeave integration
+# Required environment variables.
 if [ -z "${SQUIDWEAVE_API_BASE_URL:-}" ]; then
   echo "SQUIDWEAVE_API_BASE_URL is required"
   exit 1
@@ -48,59 +45,57 @@ if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
   exit 1
 fi
 
-# Generate per-role wrappers so Hermes cron can run each agent with the right role.
+# Generate per-role wrappers that log to the container's stdout/stderr.
 SCRIPTS_DIR="${HERMES_HOME}/scripts"
 mkdir -p "$SCRIPTS_DIR"
+
+ENV_FILE="${HERMES_HOME}/agent.env"
+{
+  declare -p HERMES_HOME SQUIDWEAVE_REPO_DIR SQUIDWEAVE_API_BASE_URL SQUIDWEAVE_AUTH_TOKEN TELEGRAM_BOT_TOKEN
+  declare -p TELEGRAM_CHAT_ID GITHUB_TOKEN GITHUB_REPOSITORY RAILWAY_DEPLOYMENT_ID RAILWAY_SERVICE_NAME 2>/dev/null || true
+} > "$ENV_FILE"
+
 for role in health site backend ci audit scraper profile refine outreach reporting funding automation bootstrap enrichment; do
   cat > "${SCRIPTS_DIR}/sw-agent-${role}" <<EOF
 #!/usr/bin/env bash
-exec python3 /app/.hermes/scripts/sw-agent.py ${role}
+set -euo pipefail
+set -a
+source ${ENV_FILE}
+set +a
+exec >> /proc/1/fd/1 2>> /proc/1/fd/2
+echo "[cron] starting sw-agent-${role} at \$(date -Iseconds)"
+exec python3 ${SCRIPTS_DIR}/sw-agent.py ${role}
 EOF
   chmod +x "${SCRIPTS_DIR}/sw-agent-${role}"
 done
 
-# Schedule Hermes cron agents that replace the legacy clawdbot-* roles.
-schedule_agent() {
-  local role="$1"
-  local schedule="$2"
-  local name="hermes-${role}"
-  # Remove existing job with the same name to make the script idempotent
-  hermes cron remove "$name" >/dev/null 2>&1 || true
-  hermes cron create "$schedule" \
-    --name "$name" \
-    --no-agent \
-    --script "sw-agent-${role}" \
-    "Run SquidWeave ${role} agent"
-}
+# Build a system crontab that replaces the legacy Hermes cron scheduler.
+CRONTAB_FILE="${HERMES_HOME}/crontab"
+cat > "$CRONTAB_FILE" <<EOF
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/.local/bin
 
-schedule_agent health     "5m"
-schedule_agent site       "10m"
-schedule_agent backend    "30m"
-schedule_agent ci         "30m"
-schedule_agent audit      "2h"
-schedule_agent scraper    "30m"
-schedule_agent profile    "15m"
-schedule_agent refine     "20m"
-schedule_agent outreach   "30m"
-schedule_agent reporting  "15m"
-schedule_agent funding    "2h"
-schedule_agent automation "1h"
-schedule_agent bootstrap  "6h"
-schedule_agent enrichment "1h"
+*/5 * * * * ${SCRIPTS_DIR}/sw-agent-health
+*/10 * * * * ${SCRIPTS_DIR}/sw-agent-site
+*/30 * * * * ${SCRIPTS_DIR}/sw-agent-backend
+*/30 * * * * ${SCRIPTS_DIR}/sw-agent-ci
+0 */2 * * * ${SCRIPTS_DIR}/sw-agent-audit
+*/30 * * * * ${SCRIPTS_DIR}/sw-agent-scraper
+*/15 * * * * ${SCRIPTS_DIR}/sw-agent-profile
+*/20 * * * * ${SCRIPTS_DIR}/sw-agent-refine
+*/30 * * * * ${SCRIPTS_DIR}/sw-agent-outreach
+*/15 * * * * ${SCRIPTS_DIR}/sw-agent-reporting
+0 */2 * * * ${SCRIPTS_DIR}/sw-agent-funding
+0 * * * * ${SCRIPTS_DIR}/sw-agent-automation
+0 */6 * * * ${SCRIPTS_DIR}/sw-agent-bootstrap
+0 * * * * ${SCRIPTS_DIR}/sw-agent-enrichment
+EOF
 
-# Start Hermes gateway in the background for Telegram and cron heartbeat.
-hermes gateway run &
-GATEWAY_PID=$!
+crontab "$CRONTAB_FILE"
+echo "Installed crontab with $(wc -l < "$CRONTAB_FILE") lines"
 
-# Give the gateway a moment to initialize before driving cron ticks.
-sleep 10
+# Start the system cron daemon in the background.
+cron
 
-# Drive the Hermes cron scheduler manually; `hermes cron tick` runs due jobs once.
-# This avoids needing an installed systemd/launchd gateway service in the container.
-while kill -0 "$GATEWAY_PID" 2>/dev/null; do
-  hermes cron tick >/dev/null 2>&1 || true
-  sleep 60
-done
-
-# If the gateway exits, so does the container.
-wait "$GATEWAY_PID"
+# Keep the container alive via the Hermes Telegram gateway.
+exec hermes gateway run
