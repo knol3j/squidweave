@@ -21,6 +21,17 @@ if [ -n "${HERMES_AUTH_JSON_B64:-}" ]; then
   chmod 600 "${HERMES_HOME}/auth.json"
 fi
 
+# Clone SquidWeave at runtime so backend/site/automation agents have the repo.
+# Doing this at startup keeps the Docker image small and push fast.
+SQUIDWEAVE_REPO="${SQUIDWEAVE_REPO:-https://github.com/knol3j/squidweave.git}"
+SQUIDWEAVE_REF="${SQUIDWEAVE_REF:-main}"
+if [ ! -d "$SQUIDWEAVE_REPO_DIR" ]; then
+  git clone --depth 1 --branch "$SQUIDWEAVE_REF" "$SQUIDWEAVE_REPO" "$SQUIDWEAVE_REPO_DIR" \
+    && cd "$SQUIDWEAVE_REPO_DIR" \
+    && npm ci --omit=dev \
+    && npm --prefix ui ci
+fi
+
 # Ensure API base/token are present for SquidWeave integration
 if [ -z "${SQUIDWEAVE_API_BASE_URL:-}" ]; then
   echo "SQUIDWEAVE_API_BASE_URL is required"

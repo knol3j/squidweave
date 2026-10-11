@@ -24,14 +24,6 @@ RUN for i in 1 2 3; do \
 ENV PATH="/root/.local/bin:${PATH}"
 WORKDIR /app
 
-# Clone SquidWeave so agents can run backend checks and automation scripts
-ARG SQUIDWEAVE_REPO=https://github.com/knol3j/squidweave.git
-ARG SQUIDWEAVE_REF=main
-RUN git clone --depth 1 --branch "${SQUIDWEAVE_REF}" "${SQUIDWEAVE_REPO}" /app/squidweave \
-  && cd /app/squidweave \
-  && npm ci --omit=dev \
-  && npm --prefix ui ci
-
 # Create hermes home and copy skills / agent scripts
 RUN mkdir -p /app/.hermes
 COPY deploy/railway/worker/skills/ /app/.hermes/skills/
