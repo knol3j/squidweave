@@ -2,6 +2,7 @@
 set -euo pipefail
 
 export HERMES_HOME="${HERMES_HOME:-/app/.hermes}"
+export SQUIDWEAVE_REPO_DIR="${SQUIDWEAVE_REPO_DIR:-/app/squidweave}"
 mkdir -p "$HERMES_HOME"
 
 # Bootstrap gateway config for Telegram-centric hosting
@@ -29,5 +30,45 @@ if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
   exit 1
 fi
 
-# Start Hermes gateway (Telegram + other configured platforms)
+# Generate per-role wrappers so Hermes cron can run each agent with the right role.
+SCRIPTS_DIR="${HERMES_HOME}/scripts"
+mkdir -p "$SCRIPTS_DIR"
+for role in health site backend ci audit scraper profile refine outreach reporting funding automation bootstrap enrichment; do
+  cat > "${SCRIPTS_DIR}/sw-agent-${role}" <<EOF
+#!/usr/bin/env bash
+exec python3 /app/.hermes/scripts/sw-agent.py ${role}
+EOF
+  chmod +x "${SCRIPTS_DIR}/sw-agent-${role}"
+done
+
+# Schedule Hermes cron agents that replace the legacy clawdbot-* roles.
+schedule_agent() {
+  local role="$1"
+  local schedule="$2"
+  local name="hermes-${role}"
+  # Remove existing job with the same name to make the script idempotent
+  hermes cron remove "$name" >/dev/null 2>&1 || true
+  hermes cron create "$schedule" \
+    --name "$name" \
+    --no-agent \
+    --script "sw-agent-${role}" \
+    "Run SquidWeave ${role} agent"
+}
+
+schedule_agent health     "5m"
+schedule_agent site       "10m"
+schedule_agent backend    "30m"
+schedule_agent ci         "30m"
+schedule_agent audit      "2h"
+schedule_agent scraper    "30m"
+schedule_agent profile    "15m"
+schedule_agent refine     "20m"
+schedule_agent outreach   "30m"
+schedule_agent reporting  "15m"
+schedule_agent funding    "2h"
+schedule_agent automation "1h"
+schedule_agent bootstrap  "6h"
+schedule_agent enrichment "1h"
+
+# Start Hermes gateway (Telegram + cron scheduler)
 exec hermes gateway run
