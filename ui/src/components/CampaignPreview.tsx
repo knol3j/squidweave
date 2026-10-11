@@ -94,14 +94,14 @@ function buildIntakeDraft(campaignState: ReturnType<typeof useCollaboration>['ca
     clientNeed: campaignState.clientNeed || campaignState.activePrompt || campaignState.objective || '',
     audience: campaignState.audience || '',
     offer: campaignState.offer || '',
-    markets: (campaignState.markets || campaignState.locales || []).join(', '),
-    channel: campaignState.channel || '',
-    brandVoice: campaignState.brandVoice || '',
-    differentiators: campaignState.differentiators || '',
-    constraints: campaignState.constraints || '',
-    successDefinition: campaignState.successDefinition || '',
-    successMetrics: (campaignState.successMetrics || []).join('\n'),
-    researchObjectives: (campaignState.researchObjectives || []).join('\n'),
+    markets: ((campaignState.markets || campaignState.locales || []) as string[]).join(', '),
+    channel: (campaignState.channel || '') as string,
+    brandVoice: (campaignState.brandVoice || '') as string,
+    differentiators: (campaignState.differentiators || '') as string,
+    constraints: (campaignState.constraints || '') as string,
+    successDefinition: (campaignState.successDefinition || '') as string,
+    successMetrics: ((campaignState.successMetrics || []) as string[]).join('\n'),
+    researchObjectives: ((campaignState.researchObjectives || []) as string[]).join('\n'),
   };
 }
 
