@@ -475,13 +475,12 @@ export default function CampaignPreview() {
     try {
       const imported = await dataService.importProspects(
         campaignState.id || 'main-campaign',
-        contacts,
+        contacts as SourcedContact[],
         contactImportDraft.source.trim() || 'manual-import',
       );
-      setProspects(current => [...imported, ...current]);
       setContactImportDraft(emptyContactImportDraft());
       await Promise.all([refreshProspecting(), refreshActivation()]);
-      setStatus({ type: 'success', text: `Imported ${imported.length} validated contacts into the sourcing queue.` });
+      setStatus({ type: 'success', text: `Imported ${imported.imported} contacts (${imported.skipped} skipped).` });
     } catch (error) {
       console.error(error);
       setStatus({ type: 'error', text: 'Failed to import contacts.' });
@@ -498,10 +497,8 @@ export default function CampaignPreview() {
         provider: 'internal-waterfall',
         limit: 24,
       });
-      setProspects(result.contacts);
-      setProspectPipeline(result.pipeline);
-      setActivationRuns(current => [result.run, ...current]);
-      setStatus({ type: 'success', text: `Enrichment advanced ${result.run.processedContacts} contacts toward sequencing.` });
+      await Promise.all([refreshProspecting(), refreshActivation()]);
+      setStatus({ type: 'success', text: `Enrichment advanced ${result.enriched} contacts toward sequencing.` });
     } catch (error) {
       console.error(error);
       setStatus({ type: 'error', text: 'Failed to enrich prospect queue.' });
@@ -517,10 +514,8 @@ export default function CampaignPreview() {
       const result = await dataService.sequenceProspects(campaignState.id || 'main-campaign', {
         limit: 24,
       });
-      setProspects(result.contacts);
-      setProspectPipeline(result.pipeline);
-      setActivationRuns(current => [result.run, ...current]);
-      setStatus({ type: 'success', text: `Built sequence plans for ${result.run.processedContacts} contacts.` });
+      await Promise.all([refreshProspecting(), refreshActivation()]);
+      setStatus({ type: 'success', text: `Built sequence plans for ${result.sequenced} contacts.` });
     } catch (error) {
       console.error(error);
       setStatus({ type: 'error', text: 'Failed to build sequence plans.' });
