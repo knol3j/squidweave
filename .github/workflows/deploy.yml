@@ -35,7 +35,7 @@ jobs:
       - name: Build UI app
         run: |
           cd ui
-          npm run build
+          VITE_API_URL="https://ad-engine-production-1582.up.railway.app" npm run build
 
       - name: Prepare combined site
         run: |

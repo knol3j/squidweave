@@ -1,4 +1,4 @@
-const API_BASE = (window as any).__ENV__?.SQUIDWEAVE_API_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = (window as any).__ENV__?.SQUIDWEAVE_API_URL || import.meta.env.VITE_API_URL || 'https://ad-engine-production-1582.up.railway.app';
 
 export interface SmtpConfig {
   host: string;
