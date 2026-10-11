@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SquidWeave — Autonomous Marketing & Investment Outreach</title>
+    <style>
+      :root {
+        --bg: #0b0f19;
+        --fg: #f8fafc;
+        --muted: #94a3b8;
+        --accent: #6366f1;
+        --accent-2: #8b5cf6;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        line-height: 1.6;
+      }
+      .hero {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+      }
+      .hero h1 {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        margin: 0 0 1rem;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .hero p {
+        font-size: clamp(1rem, 2.5vw, 1.25rem);
+        color: var(--muted);
+        max-width: 640px;
+        margin: 0 0 2rem;
+      }
+      .cta {
+        display: inline-flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .cta a {
+        padding: 0.875rem 1.5rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        font-weight: 600;
+        transition: transform 0.15s ease, opacity 0.15s ease;
+      }
+      .cta a:hover { transform: translateY(-2px); opacity: 0.9; }
+      .cta-primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: white;
+      }
+      .cta-secondary {
+        border: 1px solid rgba(255,255,255,0.2);
+        color: var(--fg);
+      }
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        max-width: 960px;
+        width: 100%;
+        margin-top: 3rem;
+      }
+      .feature {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: left;
+      }
+      .feature h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+      .feature p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    </style>
+  </head>
+  <body>
+    <section class="hero">
+      <h1>SquidWeave</h1>
+      <p>
+        The no-cost entry point for autonomous B2B marketing and meaningful
+        investor outreach. Run campaigns, source leads, and track growth from
+        day one.
+      </p>
+      <div class="cta">
+        <a class="cta-primary" href="./app/">Launch App</a>
+        <a class="cta-secondary" href="https://github.com/knol3j/squidweave">GitHub</a>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <h3>Autonomous Marketing</h3>
+          <p>Discover prospects, enrich contacts, and run outreach sequences without paid APIs.</p>
+        </div>
+        <div class="feature">
+          <h3>Investor Outreach</h3>
+          <p>Find VCs, derive email patterns, and build a warm investor pipeline.</p>
+        </div>
+        <div class="feature">
+          <h3>Free Tier First</h3>
+          <p>Marketing and investment features are free. Upgrade only when you need paid distribution.</p>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>
