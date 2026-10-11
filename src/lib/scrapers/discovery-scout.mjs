@@ -458,6 +458,130 @@ export async function discoverJobs(company) {
   } catch { return []; }
 }
 
+// ── BlackArch Tool Execution ────────────────────────────────────────────────
+
+import { execSync } from 'node:child_process';
+
+const BLACKARCH_TOOLS = {
+  // Recon
+  'nmap': { cmd: 'nmap', args: (target) => ['-sV', '-sC', '--top-ports', '100', '-T4', target] },
+  'masscan': { cmd: 'masscan', args: (target) => [target, '-p1-65535', '--rate=1000'] },
+  'amass': { cmd: 'amass', args: (target) => ['enum', '-passive', '-d', target] },
+  'subfinder': { cmd: 'subfinder', args: (target) => ['-d', target, '-silent'] },
+  'httpx': { cmd: 'httpx', args: (target) => ['-u', target, '-silent', '-status-code', '-tech-detect', '-title'] },
+  'nuclei': { cmd: 'nuclei', args: (target) => ['-u', target, '-silent', '-severity', 'critical,high,medium'] },
+  'theharvester': { cmd: 'theHarvester', args: (target) => ['-d', target, '-b', 'all', '-l', '50'] },
+  'dnsrecon': { cmd: 'dnsrecon', args: (target) => ['-d', target] },
+  'dnsenum': { cmd: 'dnsenum', args: (target) => [target] },
+  'fierce': { cmd: 'fierce', args: (target) => ['--domain', target] },
+  'dmitry': { cmd: 'dmitry', args: (target) => ['-winsepfb', target] },
+  'netdiscover': { cmd: 'netdiscover', args: () => ['-r', '10.0.0.0/24', '-P'] },
+  'arp-scan': { cmd: 'arp-scan', args: () => ['--localnet'] },
+  'recon-ng': { cmd: 'recon-cli', args: (target) => ['-m', 'recon/domains-hosts/hackertarget', '-o', `SOURCE=${target}`, '-x'] },
+
+  // Web
+  'gobuster': { cmd: 'gobuster', args: (target) => ['dir', '-u', target, '-w', '/usr/share/wordlists/dirb/common.txt', '-q', '-t', '50'] },
+  'ffuf': { cmd: 'ffuf', args: (target) => ['-u', `${target}/FUZZ`, '-w', '/usr/share/wordlists/dirb/common.txt', '-mc', '200,301,302,403', '-t', '50'] },
+  'dirb': { cmd: 'dirb', args: (target) => [target] },
+  'nikto': { cmd: 'nikto', args: (target) => ['-h', target, '-Tuning', '1234567890abc'] },
+  'sqlmap': { cmd: 'sqlmap', args: (target) => ['-u', target, '--batch', '--level=1', '--risk=1', '--random-agent'] },
+  'wpscan': { cmd: 'wpscan', args: (target) => ['--url', target, '--enumerate', 'vp,vt,u', '--no-banner'] },
+  'wafw00f': { cmd: 'wafw00f', args: (target) => [target] },
+  'whatweb': { cmd: 'whatweb', args: (target) => ['-a', '3', target] },
+
+  // Credential / Exploit
+  'hydra': { cmd: 'hydra', args: () => ['-L', '/usr/share/wordlists/metasploit/unix_users.txt', '-P', '/usr/share/wordlists/metasploit/unix_passwords.txt', '-t', '4', '-f'] },
+  'john': { cmd: 'john', args: () => ['--test'] },
+  'hashcat': { cmd: 'hashcat', args: () => ['--version'] },
+  'crackmapexec': { cmd: 'crackmapexec', args: () => ['--version'] },
+  'searchsploit': { cmd: 'searchsploit', args: () => ['--help'] },
+  'msfvenom': { cmd: 'msfvenom', args: () => ['--list', 'payloads'] },
+
+  // Network
+  'responder': { cmd: 'responder', args: () => ['-I', 'eth0', '-A'] },
+  'mitm6': { cmd: 'mitm6', args: () => ['-d', 'test.local'] },
+  'bettercap': { cmd: 'bettercap', args: () => ['-h'] },
+  'yersinia': { cmd: 'yersinia', args: () => ['-h'] },
+  'scapy': { cmd: 'python3', args: () => ['-c', 'from scapy.all import *; print("scapy ready")'] },
+  'tcpdump': { cmd: 'tcpdump', args: () => ['--version'] },
+  'tshark': { cmd: 'tshark', args: () => ['--version'] },
+
+  // Windows
+  'smbclient': { cmd: 'smbclient', args: () => ['--version'] },
+  'smbmap': { cmd: 'smbmap', args: () => ['-h'] },
+  'enum4linux': { cmd: 'enum4linux', args: () => ['-h'] },
+  'onesixtyone': { cmd: 'onesixtyone', args: () => ['-h'] },
+
+  // DNS
+  'dig': { cmd: 'dig', args: (target) => [target, 'ANY'] },
+  'whois': { cmd: 'whois', args: (target) => [target] },
+};
+
+const BLACKARCH_CATEGORIES = {
+  recon: ['nmap', 'masscan', 'amass', 'subfinder', 'httpx', 'nuclei', 'theharvester', 'dnsrecon', 'dnsenum', 'fierce', 'dmitry', 'netdiscover', 'arp-scan', 'recon-ng', 'dig', 'whois'],
+  web: ['gobuster', 'ffuf', 'dirb', 'nikto', 'sqlmap', 'wpscan', 'wafw00f', 'whatweb'],
+  exploit: ['hydra', 'john', 'hashcat', 'crackmapexec', 'searchsploit', 'msfvenom'],
+  network: ['responder', 'mitm6', 'bettercap', 'yersinia', 'scapy', 'tcpdump', 'tshark'],
+  windows: ['smbclient', 'smbmap', 'enum4linux', 'onesixtyone'],
+};
+
+export async function runBlackarchScan(target, categories = ['recon'], maxToolsPerCategory = 3) {
+  const results = { target, timestamp: new Date().toISOString(), categories: {} };
+
+  for (const category of categories) {
+    const toolNames = (BLACKARCH_CATEGORIES[category] || []).slice(0, maxToolsPerCategory);
+    const categoryResults = [];
+
+    for (const toolName of toolNames) {
+      const tool = BLACKARCH_TOOLS[toolName];
+      if (!tool) continue;
+
+      try {
+        const args = tool.args(target);
+        const startedAt = Date.now();
+        const { stdout, stderr, status } = await execPromise(tool.cmd, args, 30000);
+        categoryResults.push({
+          tool: toolName,
+          ok: status === 0,
+          exitCode: status,
+          stdout: (stdout || '').slice(-10000),
+          stderr: (stderr || '').slice(-2000),
+          durationMs: Date.now() - startedAt,
+        });
+      } catch (error) {
+        categoryResults.push({
+          tool: toolName,
+          ok: false,
+          error: error.message,
+        });
+      }
+    }
+
+    results.categories[category] = categoryResults;
+  }
+
+  results.summary = {
+    totalTools: Object.values(results.categories).flat().length,
+    successful: Object.values(results.categories).flat().filter(r => r.ok).length,
+    failed: Object.values(results.categories).flat().filter(r => !r.ok).length,
+    categories: categories,
+  };
+
+  return results;
+}
+
+function execPromise(cmd, args, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const { spawn } = require('node:child_process');
+    const child = spawn(cmd, args, { timeout: timeoutMs, killSignal: 'SIGKILL' });
+    let stdout = '', stderr = '';
+    child.stdout?.on('data', d => stdout += d.toString());
+    child.stderr?.on('data', d => stderr += d.toString());
+    child.on('close', code => resolve({ stdout, stderr, status: code }));
+    child.on('error', err => reject(err));
+  });
+}
+
 // ── Full Discovery Pipeline ─────────────────────────────────────────────────
 
 export async function runFullDiscovery(query, { githubToken = '', maxResults = 20 } = {}) {
@@ -507,6 +631,13 @@ export async function runFullDiscovery(query, { githubToken = '', maxResults = 2
     intel.openPorts = await portScan(domain, [80, 443, 8080, 8443], 1500).catch(() => []);
     intel.emails = await discoverEmails(domain).catch(() => []);
 
+    // BlackArch deep scan on top domain
+    try {
+      intel.blackarch = await runBlackarchScan(domain, ['recon', 'web'], 3);
+    } catch (e) {
+      intel.blackarch = { error: e.message };
+    }
+
     domainIntel.push(intel);
     await sleep(1000);
   }
@@ -534,6 +665,8 @@ export async function runFullDiscovery(query, { githubToken = '', maxResults = 2
     mailProviders: [...new Set(domainIntel.map(d => d.dns?.mailProvider || []).flat())],
     sensitivePathsFound: domainIntel.reduce((sum, d) => sum + (d.sensitivePaths?.length || 0), 0),
     openPortsFound: [...new Set(domainIntel.flatMap(d => d.openPorts || []))],
+    blackarchToolsRun: domainIntel.reduce((sum, d) => sum + (d.blackarch?.summary?.totalTools || 0), 0),
+    blackarchSuccessful: domainIntel.reduce((sum, d) => sum + (d.blackarch?.summary?.successful || 0), 0),
   };
 
   return report;
