@@ -25,10 +25,37 @@ export async function sendMessage(text, options = {}) {
   if (!channelId) {
     return { ok: false, error: 'TELEGRAM_CHANNEL_ID not configured' };
   }
+  return sendDirectMessage(channelId, text, options);
+}
+
+/**
+ * Send a direct message to any Telegram chat.
+ *
+ * @param {string} chatId - Target chat id or username
+ * @param {string} text - Message text
+ * @param {object} [options]
+ * @param {boolean} [options.silent]
+ * @param {boolean} [options.simulate] - When true and no token, return a simulated success
+ * @returns {Promise<{ok: boolean, status: string, externalId?: string, messageId?: number, chatId?: string|number, error?: string}>}
+ */
+export async function sendDirectMessage(chatId, text, options = {}) {
+  const token = process.env.TELEGRAM_BOT_TOKEN || '';
+  if (!token) {
+    if (options.simulate) {
+      return {
+        ok: true,
+        status: 'simulated',
+        externalId: `tg-sim-${Date.now()}`,
+        messageId: null,
+        chatId,
+      };
+    }
+    return { ok: false, status: 'error', error: 'TELEGRAM_BOT_TOKEN not configured' };
+  }
 
   const url = `${TELEGRAM_API}${token}/sendMessage`;
   const payload = {
-    chat_id: channelId,
+    chat_id: chatId,
     text,
     parse_mode: 'HTML',
     disable_web_page_preview: true,
@@ -43,12 +70,36 @@ export async function sendMessage(text, options = {}) {
     });
     const data = await response.json();
     if (!data.ok) {
-      return { ok: false, error: data.description || 'Telegram API error' };
+      return { ok: false, status: 'error', error: data.description || 'Telegram API error' };
     }
-    return { ok: true, result: data.result };
+    return {
+      ok: true,
+      status: 'published',
+      externalId: `tg-${data.result?.message_id || Date.now()}`,
+      messageId: data.result?.message_id,
+      chatId: data.result?.chat?.id || chatId,
+    };
   } catch (err) {
-    return { ok: false, error: err.message };
+    return { ok: false, status: 'error', error: err.message };
   }
+}
+
+/**
+ * Convenience wrapper for one-to-one outreach: defaults to simulation when no
+ * bot token is configured, and passes the simulate flag through when one is.
+ */
+export async function sendTelegramMessage({ chatId, body, simulate = false }) {
+  const token = process.env.TELEGRAM_BOT_TOKEN || '';
+  if (!token) {
+    return {
+      ok: true,
+      status: 'simulated',
+      externalId: `tg-sim-${Date.now()}`,
+      messageId: null,
+      chatId,
+    };
+  }
+  return sendDirectMessage(chatId, body, { simulate });
 }
 
 /**
@@ -101,4 +152,4 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;');
 }
 
-export default { sendMessage, telegramAdapter };
+export default { sendMessage, sendTelegramMessage, telegramAdapter };

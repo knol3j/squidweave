@@ -19,6 +19,15 @@ import { checkOutreachAllowed, recordSuppression } from "./compliance-gate.mjs";
 import { EmailVerificationQueue } from "./email-verifier.mjs";
 import { candidatesFor } from "./email-candidates.mjs";
 import { enrichWithFallbacks } from "./enrichment/index.mjs";
+import { sendTelegramMessage } from "../adapters/telegram.mjs";
+import {
+  queueTelegramMessage,
+  sendNextPendingMessages,
+  handleTelegramUpdate,
+  listTelegramSequences,
+} from "./telegram-outreach-engine.mjs";
+
+const DRY_RUN = process.env.DRY_RUN !== "false";
 
 /** Clamp a numeric query param to a safe range. */
 function intParam(value, fallback, min, max) {
@@ -334,6 +343,56 @@ export function registerB2BRoutes({ b2b, sendJson, readJsonBody, log = () => {} 
         `select * from suppression_list order by created_at desc limit $1`,
         [limit],
       );
+      sendJson(request, response, 200, rows);
+      return true;
+    }
+
+    // ── Telegram outreach sequences ───────────────────────────────
+
+    if (method === "POST" && path === "/b2b/telegram/message") {
+      const body = await readJsonBody(request);
+      if (!body.personId || !body.chatId || !body.body) {
+        sendJson(request, response, 400, { error: "personId, chatId, and body are required" });
+        return true;
+      }
+      const seq = await queueTelegramMessage(b2b, {
+        personId: body.personId,
+        chatId: String(body.chatId),
+        body: body.body,
+      });
+      sendJson(request, response, 201, seq);
+      return true;
+    }
+
+    if (method === "POST" && path === "/b2b/telegram/send-pending") {
+      const body = await readJsonBody(request);
+      const limit = intParam(body?.limit, 10, 1, 100);
+      const result = await sendNextPendingMessages(
+        b2b,
+        ({ chatId, body: text }) =>
+          sendTelegramMessage({ chatId, body: text, simulate: DRY_RUN || !process.env.TELEGRAM_BOT_TOKEN }),
+        limit,
+      );
+      sendJson(request, response, 200, result);
+      return true;
+    }
+
+    if (method === "POST" && path === "/b2b/telegram/webhook") {
+      const body = await readJsonBody(request);
+      const result = await handleTelegramUpdate(b2b, body);
+      if (!result) {
+        sendJson(request, response, 400, { error: "unprocessable update" });
+        return true;
+      }
+      sendJson(request, response, 200, result);
+      return true;
+    }
+
+    if (method === "GET" && path === "/b2b/telegram/sequences") {
+      const personId = url.searchParams.get("personId");
+      const state = url.searchParams.get("state");
+      const limit = intParam(url.searchParams.get("limit"), 100, 1, 500);
+      const rows = await listTelegramSequences(b2b, { personId, state, limit });
       sendJson(request, response, 200, rows);
       return true;
     }

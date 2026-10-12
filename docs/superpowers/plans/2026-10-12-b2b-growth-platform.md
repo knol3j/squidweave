@@ -33,11 +33,11 @@
 ## Current state (verified 2026-10-12)
 
 - Backend running at `http://127.0.0.1:4010`, `/health` returns `ok: true`.
-- `npm test`: 189 passing, 0 failing.
+- `npm test`: 217 passing, 0 failing.
 - PostgreSQL `squidweave` database: 51 tables, relational backend active.
 - B2B tables populated: `companies` 57, `people` 275, `company_sources` 333, `account_scores` 57.
-- Existing modules: `b2b-store.mjs`, `b2b-ingestion-engine.mjs`, `b2b-routes.mjs`, `account-scoring-engine.mjs`, `compliance-gate.mjs`, `email-verifier.mjs`, `email-candidates.mjs`.
-- Existing migrations: `001_initial_schema.sql`, `002_b2b_database.sql`, `003_email_status_blocked.sql`, `004_compliance.sql`, `005_relocate_synthetic_edgar_domains.sql`.
+- Existing modules: `b2b-store.mjs`, `b2b-ingestion-engine.mjs`, `b2b-routes.mjs`, `account-scoring-engine.mjs`, `compliance-gate.mjs`, `email-verifier.mjs`, `email-candidates.mjs`, `telegram-outreach-engine.mjs`.
+- Existing migrations: `001_initial_schema.sql` through `007_telegram_sequences.sql` applied.
 - Frontend gaps: `ProspectIntelligence.tsx` builds prospects from `localStorage` and fabricated rows; `RevenueAttribution.tsx` uses hardcoded defaults; `EmailWarming.tsx` is localStorage-only; `CompanyDossier.tsx` is presentational and not wired to `/b2b/companies/:domain`.
 - Missing backend: deliverability engine, revenue-attribution resolver, LinkedIn outreach adapter beyond posting.
 
@@ -46,7 +46,7 @@
 - **Data sources:** Build and run our own public-source scouts as the primary volume engine. Wire in paid enrichment platform modules (Hunter, Snov, Dropcontact, Apollo) as optional fallback/enrichment only, disabled by default until configured.
 - **Messaging channel:** Use Telegram for person-to-person outreach sequences now; LinkedIn keeps its existing posting adapter but outbound connection/message steps are deferred until LinkedIn API credentials are available.
 - **Consent basis:** Pending region confirmation (see open decisions below).
-- **Sending domain:** Pending candidate list from user (see open decisions below).
+- **Sending domain:** `squidweave.com` via ProtonMail SMTP (`smtp.protonmail.ch:587`) as a temporary starting domain. The user should rotate the SMTP token after setup and consider a dedicated outbound subdomain once volume grows.
 
 ---
 
@@ -484,7 +484,7 @@ Backend has `opportunities` and `outreach_events` but no attribution resolver. F
 ### Task 4.1: Schema for attribution touches
 
 **Files:**
-- Create: `migrations/007_revenue_attribution.sql`
+- Create: `migrations/008_revenue_attribution.sql`
 - Modify: `src/lib/b2b-store.mjs`
 - Test: `tests/revenue-attribution.test.mjs`
 
@@ -504,7 +504,7 @@ test("resolveAttribution writes touches for a closed opportunity", async () => {
 });
 ```
 
-- [ ] **Step 2: Add migration `migrations/007_revenue_attribution.sql`**
+- [ ] **Step 2: Add migration `migrations/008_revenue_attribution.sql`**
 
 ```sql
 alter table opportunities add column if not exists attributed_campaign_id text;
@@ -546,7 +546,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add migrations/007_revenue_attribution.sql src/lib/b2b-store.mjs tests/revenue-attribution.test.mjs
+git add migrations/008_revenue_attribution.sql src/lib/b2b-store.mjs tests/revenue-attribution.test.mjs
 git commit -m "feat(attribution): opportunities attribution schema and resolver"
 ```
 
@@ -627,7 +627,7 @@ LinkedIn outbound connection/message steps are deferred until official LinkedIn 
 ### Task 5.1: Schema and engine for Telegram sequences
 
 **Files:**
-- Create: `migrations/008_telegram_sequences.sql`
+- Create: `migrations/007_telegram_sequences.sql`
 - Modify: `src/adapters/telegram.mjs`
 - Create: `src/lib/telegram-outreach-engine.mjs`
 - Test: `tests/telegram-outreach.test.mjs`
@@ -645,7 +645,7 @@ test("Telegram adapter simulates without token", async () => {
 });
 ```
 
-- [ ] **Step 2: Add migration `migrations/008_telegram_sequences.sql`**
+- [ ] **Step 2: Add migration `migrations/007_telegram_sequences.sql`**
 
 ```sql
 create table if not exists telegram_sequences (
@@ -683,7 +683,7 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add migrations/008_telegram_sequences.sql src/adapters/telegram.mjs src/lib/telegram-outreach-engine.mjs tests/telegram-outreach.test.mjs
+git add migrations/007_telegram_sequences.sql src/adapters/telegram.mjs src/lib/telegram-outreach-engine.mjs tests/telegram-outreach.test.mjs
 git commit -m "feat(telegram): outreach message sequences and state machine"
 ```
 
