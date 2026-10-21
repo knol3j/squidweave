@@ -157,17 +157,21 @@ export function CollaborationProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const sendMessage = useCallback(async (role: 'user' | 'assistant', content: string, image?: string) => {
-    setMessages(prev => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        role,
-        content,
-        image: image || null,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-  }, []);
+    const message: ChatMessage = {
+      id: crypto.randomUUID(),
+      role,
+      content,
+      image: image || null,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, message]);
+    if (user?.uid) {
+      dataService.addChatMessage(user.uid, role, content, {
+        messageId: message.id,
+        campaignId: CAMPAIGN_ID,
+      }).catch(error => console.warn('Failed to persist chat message', error));
+    }
+  }, [user]);
 
   const toggleModule = useCallback(async (moduleId: string) => {
     setCampaignState(prev => {

@@ -290,7 +290,7 @@ The frontend `EmailWarming.tsx` already has UI for reputation, auth records, war
 ### Task 2.1: Schema for sending domains and warmup state
 
 **Files:**
-- Create: `migrations/006_sending_domains.sql`
+- Create: `migrations/008_sending_domains.sql`
 - Modify: `src/lib/b2b-store.mjs`
 - Test: `tests/email-deliverability.test.mjs`
 
@@ -316,7 +316,7 @@ test("B2BStore records a sending domain", async () => {
 Run: `npm test -- tests/email-deliverability.test.mjs`
 Expected: FAIL because `upsertSendingDomain` does not exist.
 
-- [ ] **Step 3: Add migration `migrations/006_sending_domains.sql`**
+- [ ] **Step 3: Add migration `migrations/008_sending_domains.sql`**
 
 ```sql
 create table if not exists sending_domains (
@@ -352,7 +352,7 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add migrations/006_sending_domains.sql src/lib/b2b-store.mjs tests/email-deliverability.test.mjs
+git add migrations/008_sending_domains.sql src/lib/b2b-store.mjs tests/email-deliverability.test.mjs
 git commit -m "feat(deliverability): sending_domains schema and store methods"
 ```
 
@@ -484,7 +484,7 @@ Backend has `opportunities` and `outreach_events` but no attribution resolver. F
 ### Task 4.1: Schema for attribution touches
 
 **Files:**
-- Create: `migrations/008_revenue_attribution.sql`
+- Create: `migrations/009_revenue_attribution.sql`
 - Modify: `src/lib/b2b-store.mjs`
 - Test: `tests/revenue-attribution.test.mjs`
 
@@ -504,7 +504,7 @@ test("resolveAttribution writes touches for a closed opportunity", async () => {
 });
 ```
 
-- [ ] **Step 2: Add migration `migrations/008_revenue_attribution.sql`**
+- [ ] **Step 2: Add migration `migrations/009_revenue_attribution.sql`**
 
 ```sql
 alter table opportunities add column if not exists attributed_campaign_id text;
@@ -546,7 +546,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add migrations/008_revenue_attribution.sql src/lib/b2b-store.mjs tests/revenue-attribution.test.mjs
+git add migrations/009_revenue_attribution.sql src/lib/b2b-store.mjs tests/revenue-attribution.test.mjs
 git commit -m "feat(attribution): opportunities attribution schema and resolver"
 ```
 
@@ -834,12 +834,9 @@ git commit -m "feat(compliance): bounce and unsubscribe handlers write suppressi
 
 ## Open decisions for the user
 
-1. **Sending domain.** What domain(s) do you own or control that can be dedicated to outbound email? A good sending domain is:
-   - Separate from your main customer-facing domain (protects it if reputation drops).
-   - At least 30–60 days old with a clean history.
-   - Has working SPF, DKIM, and DMARC records.
-   - Examples: `mail.yourcompany.com`, ` outreach.yourcompany.com`, or a separate domain like `yourcompany.io`.
-   Please list the candidate domains you have available.
+1. **Sending domain.** Using `squidweave.com` as the temporary outbound domain via ProtonMail (`smtp.protonmail.ch:587`).
+   - Recommended: move to a dedicated subdomain (`mail.squidweave.com` or `outreach.squidweave.com`) or a separate domain once daily volume exceeds ~50.
+   - The ProtonMail SMTP token shared in chat should be rotated after setup.
 2. **Consent region.** What country/region are you sending from, and where are your recipients? This determines the lawful basis:
    - **US / most B2B:** CAN-SPAM allows cold B2B email with truthful headers, physical address, and a working unsubscribe. Consent basis: `legitimate_interest` (US-style) with unsubscribe honoured.
    - **EU / UK / EEA:** GDPR/PECR generally requires consent for B2C and allows legitimate interest for B2B only with a clear opt-out. Consent basis: `legitimate_interest` (B2B) with easy opt-out; avoid personal email addresses.

@@ -8,7 +8,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "supermemory": "^5.0.2"
   },
   "scripts": {
     "start": "node src/server.mjs",
@@ -80,7 +81,9 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     }

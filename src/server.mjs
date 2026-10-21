@@ -2,8 +2,10 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { timingSafeEqual } from "node:crypto";
+import { timingSafeEqual, randomUUID } from "node:crypto";
 import { config } from "./config.mjs";
+import { B2BStore } from "./lib/b2b-store.mjs";
+import { registerB2BRoutes } from "./lib/b2b-routes.mjs";
 
 // ── Auth middleware ───────────────────────────────────────────────
 // Fail closed: when a secret is configured, a missing or wrong credential is rejected.
@@ -169,6 +171,7 @@ import { JobManager } from "./lib/job-manager.mjs";
 import { SchemaRegistry } from "./lib/schema-registry.mjs";
 import { AgentOrchestrator } from "./lib/agent-orchestrator.mjs";
 import { HermesMemoryClient } from "./lib/hermes-memory.mjs";
+import { SupermemoryClient } from "./lib/supermemory-client.mjs";
 import { ContactSourcingEngine } from "./lib/contact-sourcing-engine.mjs";
 import { PipelineEngine } from "./lib/pipeline-engine.mjs";
 import { WorkflowEngine } from "./lib/workflow-engine.mjs";
@@ -691,6 +694,36 @@ async function createApp() {
     postgresTable: config.postgresStateTable,
     postgresStateKey: config.postgresStateKey,
   }).init();
+
+  // B2B database. Fails soft: when DATABASE_URL is absent the B2B endpoints simply
+  // do not register, and the rest of the server runs unchanged.
+  let b2b = null;
+  let b2bHandler = null;
+  if (config.databaseUrl) {
+    try {
+      b2b = new B2BStore(config.databaseUrl);
+      await b2b.init();
+      b2bHandler = registerB2BRoutes({
+        b2b,
+        sendJson,
+        readJsonBody: async request => {
+          try {
+            return await readBody(request);
+          } catch {
+            const err = new Error("invalid JSON body");
+            err.statusCode = 400;
+            throw err;
+          }
+        },
+        log: message => console.log(`[b2b] ${message}`),
+      });
+    } catch (error) {
+      console.warn(`[b2b] database unavailable, B2B routes not registered: ${error.message}`);
+      b2b = null;
+      b2bHandler = null;
+    }
+  }
+
   const llmProvider = createLlmProvider(config);
   const planner = new LocalPlanner(config.localizationModel, {
     defaultLocale: config.defaultLocale,
@@ -721,7 +754,8 @@ async function createApp() {
     }
   }
   const hermesClient = new HermesMemoryClient(config.hermes);
-  const memoryEngine = new MemoryEngine({ store, hermesClient });
+  const supermemoryClient = new SupermemoryClient(config.supermemory);
+  const memoryEngine = new MemoryEngine({ store, hermesClient, supermemoryClient });
   const targetingEngine = new TargetingEngine({ store });
   const schemaRegistry = new SchemaRegistry();
   const queryEngine = new QueryEngine({ store, schemaRegistry, connectors });
@@ -753,6 +787,7 @@ async function createApp() {
   const sourceIngestionEngine = new SourceIngestionEngine({
     store,
     connectors: [...createFreeSourceConnectors(), VcSourcingConnector],
+    supermemoryClient,
   });
   // fundingEngine must come after fundingDeckEngine
   const fundingEngine = new FundingEngine({ store, fundingDeckEngine, sourceIngestionEngine });
@@ -810,6 +845,18 @@ async function createApp() {
     }
 
     if (!requireApiKey(request, response, url, parts)) return;
+
+    // B2B database / scoring / compliance routes. Delegated to their own module so
+    // the frontend surface grows without this handler growing with it.
+    if (b2bHandler && url.pathname.startsWith("/b2b/")) {
+      try {
+        const handled = await b2bHandler(request, response, url);
+        if (handled) return;
+      } catch (error) {
+        sendJson(request, response, error.statusCode || 500, { error: error.message });
+        return;
+      }
+    }
 
     if (request.method === "GET" && url.pathname === "/health") {
       sendJson(request, response, 200, {
@@ -2357,6 +2404,36 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/chat/memory") {
+      const body = await readBody(request);
+      if (!body.operatorId || !body.role || body.content === undefined) {
+        sendJson(request, response, 400, { error: "operatorId, role, and content are required." });
+        return;
+      }
+      const result = await supermemoryClient.addChatMessage(String(body.operatorId), {
+        role: String(body.role),
+        content: String(body.content),
+        metadata: body.metadata || {},
+      });
+      sendJson(request, response, 200, result);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/chat/memory/search") {
+      const body = await readBody(request);
+      if (!body.operatorId || !body.query) {
+        sendJson(request, response, 400, { error: "operatorId and query are required." });
+        return;
+      }
+      const result = await supermemoryClient.searchChatMemory(
+        String(body.operatorId),
+        String(body.query),
+        Number(body.limit) || 8
+      );
+      sendJson(request, response, 200, result);
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/automation/prompt-run") {
       const body = await readBody(request);
       if (!body.prompt || !String(body.prompt).trim()) {
@@ -2370,6 +2447,11 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
         prompt: body.prompt,
         campaignId: body.campaignId,
         reason: body.reason,
+      });
+
+      const promptHistory = await supermemoryClient.searchPromptHistory(campaign.id, body.prompt).catch(error => {
+        console.warn("Supermemory prompt history search failed:", error.message);
+        return { items: [] };
       });
 
       const policy = buildAutopilotPolicy({ prompt: body.prompt, campaign });
@@ -2469,6 +2551,16 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
             pipeline: prospectActivationEngine.buildPipeline(campaign.id),
             fundingPipeline: fundingEngine.buildPipeline(campaign.id),
           };
+          const promptSummary = {
+            blocked: true,
+            blockingReason: automation.researchVerification?.blockingReason || null,
+            questions: automation.researchVerification?.questions?.length || 0,
+          };
+          supermemoryClient.addPromptRun(campaign.id, {
+            prompt: body.prompt,
+            classification: policy.classification,
+            summary: promptSummary,
+          }).catch(error => console.warn("Supermemory prompt-run persistence failed:", error.message));
           jobManager.complete(job.id, payload);
           sendJson(request, response, 200, {
             job: jobManager.getJob(job.id),
@@ -2605,6 +2697,19 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
           pipeline: prospectActivationEngine.buildPipeline(campaign.id),
           fundingPipeline: fundingEngine.buildPipeline(campaign.id),
         };
+        supermemoryClient.addPromptRun(campaign.id, {
+          prompt: body.prompt,
+          classification: policy.classification,
+          summary: {
+            sourceIngestion: sourceIngestion?.researchRecords?.length || 0,
+            agentRuns: automation?.agentRuns?.length || 0,
+            prospects: Array.isArray(prospecting?.candidates) ? prospecting.candidates.length : 0,
+            investors: funding?.sequence?.run?.processedInvestors || 0,
+            paidLaunched: paidExecution?.summary?.launched || 0,
+            socialPublished: socialPublishing?.summary?.published || 0,
+            promptHistory: promptHistory.items.length,
+          },
+        }).catch(error => console.warn("Supermemory prompt-run persistence failed:", error.message));
         jobManager.complete(job.id, payload);
         sendJson(request, response, 200, {
           job: jobManager.getJob(job.id),
@@ -2903,7 +3008,7 @@ ${deck.htmlBody || '<pre>' + (deck.markdown || '') + '</pre>'}
     if (request.method === "POST" && parts.length === 1 && ENTITY_COLLECTIONS.has(parts[0])) {
       const body = await readBody(request);
       const collection = parts[0];
-      const id = body.id || null;
+      const id = body.id || randomUUID();
       const result = await store.upsertDocument(collection, id, body);
       sendJson(request, response, 200, result);
       return;

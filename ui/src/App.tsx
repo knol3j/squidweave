@@ -8,6 +8,7 @@ import Funnels from './pages/Funnels';
 import Appointments from './pages/Appointments';
 import Analytics from './pages/Analytics';
 import Prospecting from './pages/Prospecting';
+import B2BDatabase from '@/pages/B2BDatabase';
 import Advertising from './pages/Advertising';
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/prospecting" element={<Prospecting />} />
+        <Route path="/database" element={<B2BDatabase />} />
         <Route path="/advertising" element={<Advertising />} />
         <Route path="/settings" element={<Settings />} />
       </Route>

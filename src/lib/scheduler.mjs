@@ -1,3 +1,10 @@
+function withTimeout(promise, ms, context = "operation") {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`${context} timed out after ${ms}ms`)), ms)
+  );
+  return Promise.race([promise, timeout]);
+}
+
 export class AutomationScheduler {
   constructor({
     store,
@@ -7,6 +14,7 @@ export class AutomationScheduler {
     analyticsEngine,
     executionGuard,
     intervalSeconds = 120,
+    phaseTimeoutMs = 60_000,
   }) {
     this.store = store;
     this.automationEngine = automationEngine;
@@ -15,6 +23,7 @@ export class AutomationScheduler {
     this.analyticsEngine = analyticsEngine || null;
     this.executionGuard = executionGuard || null;
     this.intervalSeconds = intervalSeconds;
+    this.phaseTimeoutMs = phaseTimeoutMs;
     this.timer = null;
     this.running = false;
     this.lastTickAt = null;
@@ -63,11 +72,14 @@ export class AutomationScheduler {
               operation: () => this.automationEngine.runCampaign(campaign.id, {
                 reason: "scheduled",
               }),
+              timeoutMs: this.phaseTimeoutMs,
             });
           } else {
-            await this.automationEngine.runCampaign(campaign.id, {
-              reason: "scheduled",
-            });
+            await withTimeout(
+              this.automationEngine.runCampaign(campaign.id, { reason: "scheduled" }),
+              this.phaseTimeoutMs,
+              `automation_run:${campaign.id}`
+            );
           }
 
           // Phase 2: Social dispatch — publish any new content packs
@@ -87,8 +99,9 @@ export class AutomationScheduler {
                   approvalToken: this.executionGuard.config.dryRun ? "" : "approved",
                   metadata: { scheduler: true },
                   operation: dispatchOperation,
+                  timeoutMs: this.phaseTimeoutMs,
                 })).result
-              : await dispatchOperation();
+              : await withTimeout(dispatchOperation(), this.phaseTimeoutMs, `social_dispatch:${campaign.id}`);
             if (dispatchResult.dispatched > 0) {
               console.log(
                 `[SCHEDULER] Campaign ${campaign.id}: published ${dispatchResult.summary.published} social posts, ${dispatchResult.summary.failed} failed`,
@@ -116,8 +129,9 @@ export class AutomationScheduler {
                   approvalToken: this.executionGuard.config.dryRun ? "" : "approved",
                   metadata: { scheduler: true, maxPerRun: 20 },
                   operation: fundingOperation,
+                  timeoutMs: this.phaseTimeoutMs,
                 })).result
-              : await fundingOperation();
+              : await withTimeout(fundingOperation(), this.phaseTimeoutMs, `funding_run:${campaign.id}`);
             const deckCount =
               fundingResult.sequence?.run?.deckOutreach?.sent || 0;
             if (deckCount > 0) {

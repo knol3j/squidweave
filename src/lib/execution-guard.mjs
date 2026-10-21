@@ -6,6 +6,13 @@ function ageSeconds(timestamp) {
   return Math.max(0, (Date.now() - new Date(timestamp).getTime()) / 1000);
 }
 
+function withTimeout(promise, ms, context = "operation") {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`${context} timed out after ${ms}ms`)), ms)
+  );
+  return Promise.race([promise, timeout]);
+}
+
 export class UnsafeExecutionError extends Error {
   constructor(message, details = {}) {
     super(message);
@@ -43,6 +50,7 @@ export class ExecutionGuard {
     idempotencyKey,
     liveSideEffect = false,
     approvalToken = "",
+    timeoutMs = null,
   }) {
     if (liveSideEffect && !this.config.dryRun && this.config.safety.requireLiveApproval && approvalToken !== "approved") {
       throw new UnsafeExecutionError(
@@ -51,7 +59,24 @@ export class ExecutionGuard {
       );
     }
 
-    const running = this.store.listExecutionReceipts({ status: "running" });
+    const staleThresholdMs = timeoutMs || 300_000; // 5 minutes default
+    const allRunning = this.store.listExecutionReceipts({ status: "running" });
+    const staleUpdates = [];
+    const running = allRunning.filter((receipt) => {
+      const ageMs = ageSeconds(receipt.createdAt) * 1000;
+      if (ageMs > staleThresholdMs) {
+        staleUpdates.push(
+          this.store.updateExecutionReceipt(receipt.id, {
+            status: "failed",
+            failedAt: isoNow(),
+            error: `Stale running receipt exceeded ${staleThresholdMs}ms timeout`,
+          }).catch(() => {}),
+        );
+        return false;
+      }
+      return true;
+    });
+    if (staleUpdates.length) await Promise.all(staleUpdates);
     if (running.length >= this.config.safety.maxConcurrentExecutions) {
       throw new UnsafeExecutionError(
         "Concurrent execution safety limit reached.",
@@ -89,6 +114,7 @@ export class ExecutionGuard {
     liveSideEffect = false,
     metadata = {},
     operation,
+    timeoutMs = null,
   }) {
     await this.assertSafeToRun({
       campaignId,
@@ -96,6 +122,7 @@ export class ExecutionGuard {
       idempotencyKey,
       liveSideEffect,
       approvalToken,
+      timeoutMs,
     });
 
     const receipt = await this.store.addExecutionReceipt({
@@ -112,7 +139,8 @@ export class ExecutionGuard {
     });
 
     try {
-      const result = await operation(receipt);
+      const op = operation(receipt);
+      const result = timeoutMs ? await withTimeout(op, timeoutMs, `${executionType}:${campaignId}`) : await op;
       await this.store.updateExecutionReceipt(receipt.id, {
         status: "completed",
         completedAt: isoNow(),

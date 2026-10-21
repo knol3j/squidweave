@@ -765,6 +765,99 @@ export function poll<T>(
 
 // ─── 4. DATA SERVICE EXPORT ──────────────────────────────────────────────────
 
+// ─── B2B database (owned companies + people, account scores, compliance) ──────
+
+/** A company row from the owned B2B database. */
+export interface B2BCompany {
+  id: string;
+  domain: string;
+  name: string | null;
+  industry: string | null;
+  employeeRange: string | null;
+  location: string | null;
+  description: string | null;
+  linkedinUrl: string | null;
+  techStack: string[];
+  confidence: number;
+  firstSeenAt?: string;
+  lastSeenAt?: string;
+  /** Populated by the list endpoint only, so a row renders without N+1 calls. */
+  peopleCount?: number;
+}
+
+/** A person row. `emailStatus` is the verification verdict, never a guess. */
+export interface B2BPerson {
+  id: string;
+  companyId: string;
+  fullName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  title: string | null;
+  seniority: string | null;
+  department: string | null;
+  email: string | null;
+  /** unknown | permuted | verified | invalid | blocked | risky */
+  emailStatus: string;
+  confidence: number;
+  sourceType: string | null;
+}
+
+/** One weighted component of an account score, with the reason it scored so. */
+export interface B2BScoreComponent {
+  value: number;
+  weight: number;
+  reason: string;
+}
+
+export interface B2BAccountScore {
+  score: number;
+  components: {
+    dataQuality: B2BScoreComponent;
+    contactability: B2BScoreComponent;
+    decisionMakerReach: B2BScoreComponent;
+    hiringSignal: B2BScoreComponent;
+    firmographicFit: B2BScoreComponent;
+  };
+  band: "hot" | "warm" | "cold";
+  scoredAt?: string;
+}
+
+export interface B2BRanking {
+  companyId: string;
+  domain: string;
+  name: string | null;
+  score: number;
+  band: string;
+  components: B2BAccountScore["components"];
+}
+
+export interface B2BStats {
+  companies: number;
+  people: number;
+  byEmailStatus: Record<string, number>;
+  byIndustry: Record<string, number>;
+  bySource: Record<string, number>;
+}
+
+/** Verdict from the compliance gate. `allowed` is authoritative — a block is a
+ *  normal answer, not an error. */
+export interface B2BComplianceVerdict {
+  allowed: boolean;
+  reason: string;
+  detail?: string;
+  checks: Array<{ check: string; passed: boolean; detail?: string }>;
+}
+
+export interface B2BComplianceEvent {
+  id: string;
+  decision: "allowed" | "blocked";
+  reason: string;
+  email: string | null;
+  domain: string | null;
+  consentBasis: string | null;
+  createdAt: string;
+}
+
 export const dataService = {
   // ─── Auth ──────────────────────────────────────────────────────────────────
   async verifyCredentials(): Promise<Record<string, unknown>> {
@@ -814,6 +907,29 @@ export const dataService = {
     return api<Record<string, unknown>>("/memory/consolidate", {
       method: "POST",
       body: JSON.stringify({ campaignId }),
+    });
+  },
+
+  async addChatMessage(
+    operatorId: string,
+    role: string,
+    content: string,
+    metadata?: Record<string, unknown>
+  ): Promise<{ added: boolean; documentId?: string; reason?: string }> {
+    return api<{ added: boolean; documentId?: string; reason?: string }>("/chat/memory", {
+      method: "POST",
+      body: JSON.stringify({ operatorId, role, content, metadata }),
+    });
+  },
+
+  async searchChatMemory(
+    operatorId: string,
+    query: string,
+    limit = 8
+  ): Promise<{ items: Array<{ text: string; similarity: number; metadata: Record<string, unknown> }> }> {
+    return api("/chat/memory/search", {
+      method: "POST",
+      body: JSON.stringify({ operatorId, query, limit }),
     });
   },
 
@@ -1617,5 +1733,123 @@ export const dataService = {
 
   addKeyword(): null {
     return null;
+  },
+
+  // ─── B2B database ─────────────────────────────────────────────────────────
+
+  /** Aggregate counts. Safe to call before anything else; an empty DB returns zeros. */
+  getB2BStats(): Promise<B2BStats> {
+    return api<B2BStats>("/b2b/stats");
+  },
+
+  getB2BCompanies(params: { limit?: number; offset?: number; industry?: string } = {}): Promise<B2BCompany[]> {
+    const query = new URLSearchParams();
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.offset) query.set("offset", String(params.offset));
+    if (params.industry) query.set("industry", params.industry);
+    const suffix = query.toString() ? `?${query}` : "";
+    return api<B2BCompany[]>(`/b2b/companies${suffix}`);
+  },
+
+  /** One company with its people and account score. Accepts a UUID or a domain. */
+  getB2BCompany(idOrDomain: string): Promise<B2BCompany & { people: B2BPerson[]; accountScore: B2BAccountScore | null }> {
+    return api(`/b2b/companies/${encodeURIComponent(idOrDomain)}`);
+  },
+
+  getB2BPeople(params: {
+    limit?: number;
+    offset?: number;
+    companyId?: string;
+    emailStatus?: string;
+    seniority?: string;
+  } = {}): Promise<B2BPerson[]> {
+    const query = new URLSearchParams();
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.offset) query.set("offset", String(params.offset));
+    if (params.companyId) query.set("companyId", params.companyId);
+    if (params.emailStatus) query.set("emailStatus", params.emailStatus);
+    if (params.seniority) query.set("seniority", params.seniority);
+    const suffix = query.toString() ? `?${query}` : "";
+    return api<B2BPerson[]>(`/b2b/people${suffix}`);
+  },
+
+  getB2BRankings(params: { limit?: number; minScore?: number } = {}): Promise<B2BRanking[]> {
+    const query = new URLSearchParams();
+    if (params.limit) query.set("limit", String(params.limit));
+    if (params.minScore) query.set("minScore", String(params.minScore));
+    const suffix = query.toString() ? `?${query}` : "";
+    return api<B2BRanking[]>(`/b2b/rankings${suffix}`);
+  },
+
+  /** Recompute every account score. Slow by design — it reads all people per company. */
+  recomputeB2BScores(): Promise<{ scored: number; top: B2BRanking[] }> {
+    return api("/b2b/scores/recompute", { method: "POST", body: JSON.stringify({}) });
+  },
+
+  /** Candidate addresses for a person. These are guesses until SMTP verification. */
+  permuteB2BEmail(body: {
+    firstName?: string;
+    lastName?: string;
+    fullName?: string;
+    domain: string;
+  }): Promise<{ candidates: Array<{ email: string; pattern: string }> }> {
+    return api("/b2b/permute", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  getB2BVerificationPending(limit = 100): Promise<Array<{
+    id: string;
+    email: string;
+    emailStatus: string;
+    domain: string;
+    companyName: string;
+  }>> {
+    return api(`/b2b/verification/pending?limit=${limit}`);
+  },
+
+  runB2BVerification(body: { batchSize?: number; paceMs?: number; maxBatches?: number } = {}): Promise<{
+    checked: number;
+    verified: number;
+    invalid: number;
+    blocked: number;
+    risky: number;
+  }> {
+    return api("/b2b/verification/run", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  /** Ask the compliance gate. Returns 200 whether allowed or blocked; read `allowed`. */
+  checkB2BCompliance(body: {
+    email: string;
+    domain?: string;
+    consentBasis?: string | null;
+    allowRoleAccounts?: boolean;
+    campaignId?: string;
+  }): Promise<B2BComplianceVerdict> {
+    return api("/b2b/compliance/check", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  suppressB2BEmail(body: {
+    email: string;
+    reason?: string;
+    source?: string;
+    detail?: string;
+  }): Promise<Record<string, unknown>> {
+    return api("/b2b/compliance/suppress", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  suppressB2BDomain(body: {
+    domain: string;
+    reason?: string;
+    source?: string;
+    detail?: string;
+  }): Promise<Record<string, unknown>> {
+    return api("/b2b/compliance/suppress-domain", { method: "POST", body: JSON.stringify(body) });
+  },
+
+  getB2BComplianceEvents(params: { decision?: string; limit?: number } = {}): Promise<B2BComplianceEvent[]> {
+    const query = new URLSearchParams();
+    if (params.decision) query.set("decision", params.decision);
+    if (params.limit) query.set("limit", String(params.limit));
+    const suffix = query.toString() ? `?${query}` : "";
+    return api<B2BComplianceEvent[]>(`/b2b/compliance/events${suffix}`);
   },
 };

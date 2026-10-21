@@ -76,6 +76,11 @@ export const config = {
     upsertPath: process.env.HERMES_MEMORY_UPSERT_PATH || "/v1/memory/upsert",
     recallPath: process.env.HERMES_MEMORY_RECALL_PATH || "/v1/memory/recall",
   },
+  supermemory: {
+    apiKey: process.env.SUPERMEMORY_API_KEY || "",
+    baseUrl: process.env.SUPERMEMORY_BASE_URL || "",
+    namespacePrefix: process.env.SUPERMEMORY_NAMESPACE_PREFIX || "squidweave",
+  },
   ghl: {
     apiKey: process.env.GHL_API_KEY || "",
     locationId: process.env.GHL_LOCATION_ID || "",

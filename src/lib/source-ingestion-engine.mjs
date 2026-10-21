@@ -10,9 +10,10 @@ function dedupeByTarget(records = []) {
 }
 
 export class SourceIngestionEngine {
-  constructor({ store, connectors = [] }) {
+  constructor({ store, connectors = [], supermemoryClient = null }) {
     this.store = store;
     this.connectors = connectors;
+    this.supermemoryClient = supermemoryClient;
   }
 
   async health() {
@@ -95,6 +96,10 @@ export class SourceIngestionEngine {
     for (const record of uniqueRecords) {
       // keep writes explicit for existing store API
       persisted.push(await this.store.addResearchRecord(record));
+      // also index in Supermemory for RAG-style recall
+      if (this.supermemoryClient?.isConfigured()) {
+        this.supermemoryClient.addResearchRecord(campaignId, record).catch(() => {});
+      }
     }
 
     let importedInvestors = [];

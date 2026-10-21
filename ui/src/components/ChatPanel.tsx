@@ -21,7 +21,7 @@ function MemoizedMessageContent({ content }: { content: string }) {
 }
 
 export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
-  const { messages, sendMessage: syncMessage, campaignState, updateCampaignState } = useCollaboration();
+  const { messages, sendMessage: syncMessage, campaignState, updateCampaignState, user } = useCollaboration();
   const enabledModules = campaignState.enabledModules || [];
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -77,10 +77,25 @@ export default function ChatPanel({ externalPrompt }: ChatPanelProps) {
         baseBody: currentInput,
       });
 
-      const result = await dataService.runPromptAutopilot(currentInput, {
+      let recalledContext = '';
+      if (user?.uid) {
+        try {
+          const memory = await dataService.searchChatMemory(user.uid, currentInput, 5);
+          if (memory.items.length) {
+            recalledContext = `Prior context from earlier conversations:\n${memory.items.map(item => `- ${item.text}`).join('\n')}\n\n`;
+          }
+        } catch (error) {
+          console.warn('Failed to recall chat memory', error);
+        }
+      }
+
+      const augmentedPrompt = recalledContext ? `${recalledContext}${currentInput}` : currentInput;
+
+      const result = await dataService.runPromptAutopilot(augmentedPrompt, {
         campaignId: campaignState.id || 'main-campaign',
         reason: currentImage ? 'asset-assisted-ui-request' : 'ui-request',
         locales: campaignState.locales,
+        originalPrompt: currentInput,
       });
       const responseText = buildAssistantReport(currentInput, result, campaignState, keywords);
       await syncMessage('assistant', responseText);

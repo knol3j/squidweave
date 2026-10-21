@@ -73,9 +73,17 @@ function summarizeTactic(observation) {
 }
 
 export class MemoryEngine {
-  constructor({ store, hermesClient = null }) {
+  constructor({ store, hermesClient = null, supermemoryClient = null }) {
     this.store = store;
     this.hermesClient = hermesClient;
+    this.supermemoryClient = supermemoryClient;
+  }
+
+  externalMemoryClient() {
+    if (this.supermemoryClient?.isConfigured()) {
+      return this.supermemoryClient;
+    }
+    return this.hermesClient?.isConfigured() ? this.hermesClient : null;
   }
 
   async consolidateCampaign(campaignId) {
@@ -216,13 +224,14 @@ export class MemoryEngine {
     };
     await this.store.addMemoryConsolidation(snapshot);
 
-    let hermesSync = {
+    const externalClient = this.externalMemoryClient();
+    let externalSync = {
       synced: false,
       mode: "not-configured",
       entries: 0,
     };
-    if (this.hermesClient?.isConfigured()) {
-      hermesSync = await this.hermesClient.syncCampaignMemory({
+    if (externalClient) {
+      externalSync = await externalClient.syncCampaignMemory({
         campaignId,
         campaign,
         snapshot,
@@ -248,7 +257,8 @@ export class MemoryEngine {
       targetProfiles,
       tacticObservations,
       playbooks,
-      hermesSync,
+      externalSync,
+      hermesSync: externalSync,
     };
   }
 
@@ -270,8 +280,9 @@ export class MemoryEngine {
         ))
       : playbooks;
 
-    const remoteRecall = this.hermesClient?.isConfigured()
-      ? await this.hermesClient.recallCampaignMemory({
+    const externalClient = this.externalMemoryClient();
+    const remoteRecall = externalClient
+      ? await externalClient.recallCampaignMemory({
           campaignId,
           targetId: options.targetId || null,
           query: options.query
@@ -320,8 +331,9 @@ export class MemoryEngine {
       .slice()
       .sort((a, b) => b.confidence - a.confidence);
     const latestSnapshot = this.store.listMemoryConsolidations(campaignId).at(-1) || null;
-    const remoteRecall = this.hermesClient?.isConfigured()
-      ? await this.hermesClient.recallCampaignMemory({
+    const externalClient = this.externalMemoryClient();
+    const remoteRecall = externalClient
+      ? await externalClient.recallCampaignMemory({
           campaignId,
           query: "best-performing strategies, warnings, and intuitive marketing memory",
           limit: 6,

@@ -2,6 +2,8 @@ import { copyFile, mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+let RelationalStoreModule;
+
 async function loadSeedState(seedFileUrl) {
   if (!seedFileUrl) {
     return null;
@@ -202,6 +204,65 @@ class PostgresStateBackend {
   }
 }
 
+class RelationalStateBackend {
+  constructor({ databaseUrl, poolSize = 10 }) {
+    if (!databaseUrl) {
+      throw new Error("STATE_BACKEND=relational requires DATABASE_URL.");
+    }
+    this.databaseUrl = databaseUrl;
+    this.poolSize = poolSize;
+    this.store = null;
+    this._initPromise = null;
+  }
+
+  async init() {
+    if (this.store) return;
+    if (this._initPromise) return this._initPromise;
+    this._initPromise = (async () => {
+      RelationalStoreModule ||= await import("./relational-store.mjs");
+      this.store = new RelationalStoreModule.RelationalStore(this.databaseUrl, {
+        poolSize: this.poolSize,
+      });
+      await this.store.init();
+    })();
+    try {
+      await this._initPromise;
+    } finally {
+      this._initPromise = null;
+    }
+  }
+
+  async load(defaultFactory) {
+    await this.init();
+    const loaded = await this.store.loadState();
+    return { ...defaultFactory(), ...loaded };
+  }
+
+  async save(state) {
+    await this.init();
+    await this.store.saveState(state);
+  }
+
+  async flush(state) {
+    await this.save(state);
+  }
+
+  async close() {
+    if (this.store) {
+      await this.store.close();
+      this.store = null;
+    }
+  }
+
+  getDescriptor() {
+    return {
+      type: "relational",
+      target: this.databaseUrl.replace(/\/\/[^/]*@/, "//***@"),
+      poolSize: this.poolSize,
+    };
+  }
+}
+
 export function createStateBackend({
   databaseUrl = "",
   fileUrl,
@@ -223,6 +284,15 @@ export function createStateBackend({
       tableName: postgresTable || "squidweave_state",
       stateKey: postgresStateKey || "primary",
       seedFileUrl,
+      poolSize: postgresPoolSize || 10,
+    });
+  }
+  if (mode === "relational") {
+    if (!databaseUrl) {
+      throw new Error("STATE_BACKEND=relational requires DATABASE_URL.");
+    }
+    return new RelationalStateBackend({
+      databaseUrl,
       poolSize: postgresPoolSize || 10,
     });
   }

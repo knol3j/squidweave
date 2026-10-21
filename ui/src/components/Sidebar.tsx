@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import {
   LayoutDashboard, Users, Send, Filter, Calendar,
-  BarChart3, Search, Megaphone, Settings, ChevronLeft, ChevronRight
+  BarChart3, Search, Megaphone, Settings, ChevronLeft, ChevronRight, Database
 } from 'lucide-react';
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { icon: Calendar, label: 'Appointments', path: '/appointments' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
   { icon: Search, label: 'Prospecting', path: '/prospecting' },
+  { icon: Database, label: 'B2B Database', path: '/database' },
   { icon: Megaphone, label: 'Ad Engine', path: '/advertising' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
