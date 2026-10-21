@@ -1,0 +1,102 @@
+SquidWeave listening on http://127.0.0.1:4010
+[SCHEDULER] Started — tick interval: 120s
+[SCHEDULER] Campaign smoke-1781248094496 tick error: funding_run:smoke-1781248094496 timed out after 60000ms
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: funding_run:generic-channel-partner-recruitment timed out after 60000ms
+[SCHEDULER] Tick completed for 6 campaigns in 127099ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: funding_run:generic-enterprise-saas-outbound timed out after 60000ms
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 72146ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: funding_run:generic-developer-tool-early-adopters timed out after 60000ms
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 63555ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 0ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 0ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: funding_run:generic-market-intel-newsletter timed out after 60000ms
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 63555ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 0ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: funding_run:smoke-1781248094496 timed out after 60000ms
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: funding_run:generic-channel-partner-recruitment timed out after 60000ms
+[SCHEDULER] Tick completed for 6 campaigns in 127101ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: funding_run:generic-enterprise-saas-outbound timed out after 60000ms
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: funding_run:generic-developer-tool-early-adopters timed out after 60000ms
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 135314ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 1ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 1ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: funding_run:generic-market-intel-newsletter timed out after 60000ms
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 63565ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-channel-partner-recruitment tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Tick completed for 6 campaigns in 1ms
+[SCHEDULER] Campaign smoke-1781248094496 tick error: funding_run:smoke-1781248094496 timed out after 60000ms
+[SCHEDULER] Campaign generic-seed-vc-fundraisers tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-enterprise-saas-outbound tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-developer-tool-early-adopters tick error: Duplicate execution blocked by idempotency window.
+[SCHEDULER] Campaign generic-market-intel-newsletter tick error: Duplicate execution blocked by idempotency window.
+
+[SHUTDOWN] SIGTERM received — draining...
+[SCHEDULER] Stopped
+[SHUTDOWN] Scheduler stopped
+[SHUTDOWN] HTTP server closed
+[SHUTDOWN] Clean exit
